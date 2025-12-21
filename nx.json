@@ -1,8 +1,39 @@
 {
   "$schema": "./node_modules/nx/schemas/nx-schema.json",
+  "npmScope": "astik",
+  "workspaceLayout": {
+    "appsDir": "apps",
+    "libsDir": "packages"
+  },
+  "cli": {
+    "packageManager": "npm"
+  },
+  "projects": {
+    "mobile": {
+      "root": "apps/mobile",
+      "sourceRoot": "apps/mobile",
+      "projectType": "application",
+      "tags": []
+    },
+    "api": {
+      "root": "apps/api",
+      "sourceRoot": "apps/api/src",
+      "projectType": "application",
+      "tags": []
+    }
+  },
+  "plugins": [
+    {
+      "plugin": "@nx/eslint/plugin",
+      "options": {
+        "targetName": "lint"
+      }
+    }
+  ],
   "targetDefaults": {
     "build": {
       "cache": true
     }
-  }
+  },
+  "nxCloudId": "69483fe5b971a20066fcc3ec"
 }
