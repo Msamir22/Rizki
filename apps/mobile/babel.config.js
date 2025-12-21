@@ -12,7 +12,6 @@ module.exports = function (api) {
             "@": "./",
             "@astik/logic": "../../packages/logic/src",
             "@astik/db": "../../packages/db/src",
-            "@astik/ui": "../../packages/ui/src",
           },
         },
       ],
