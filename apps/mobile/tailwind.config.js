@@ -1,5 +1,5 @@
 /** @type {import('tailwindcss').Config} */
-import { blue } from "react-native-reanimated/lib/typescript/Colors";
+
 import { palette, lightTheme, darkTheme } from "./constants/colors";
 
 module.exports = {
