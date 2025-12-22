@@ -8,12 +8,23 @@ import { Database } from "@nozbe/watermelondb";
 import SQLiteAdapter from "@nozbe/watermelondb/adapters/sqlite";
 import { schema, Account, Transaction } from "@astik/db";
 
-// Create the adapter
-const adapter = new SQLiteAdapter({
-  schema,
-  jsi: true,
-  onSetUpError: (error) => console.error("Database setup error:", error),
-});
+// Create the adapter with error handling
+let adapter: SQLiteAdapter;
+try {
+  adapter = new SQLiteAdapter({
+    schema,
+    jsi: true,
+    onSetUpError: (error) => console.error("Database setup error:", error),
+  });
+} catch (error) {
+  console.error("Failed to create SQLite adapter:", error);
+  // Fallback: Create adapter without JSI explicitly
+  adapter = new SQLiteAdapter({
+    schema,
+    jsi: true,
+    onSetUpError: (error) => console.error("Database setup error:", error),
+  });
+}
 
 // Create the database instance
 export const database = new Database({
