@@ -34,6 +34,13 @@ export const palette = {
     100: "#FEE2E2",
   },
 
+  // Orange (Coffee/Food)
+  orange: {
+    600: "#EA580C",
+    500: "#F97316",
+    100: "#FFEDD5",
+  },
+
   // Blue (Bank)
   blue: {
     600: "#2563EB",

@@ -11,5 +11,5 @@
 }
 
 .button-text {
-  @apply text-[13px] font-semibold text-slate-700 dark:text-slate-100 opacity-90;
+  @apply text-[13px] font-semibold text-slate-100 opacity-90;
 }

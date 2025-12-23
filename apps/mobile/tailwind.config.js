@@ -118,6 +118,11 @@ module.exports = {
           500: palette.blue[500],
           600: palette.blue[600],
         },
+        orange: {
+          100: palette.orange[100],
+          500: palette.orange[500],
+          600: palette.orange[600],
+        },
       },
     },
   },
