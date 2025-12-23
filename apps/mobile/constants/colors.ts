@@ -18,6 +18,13 @@ export const palette = {
     600: "#D97706", // main
     400: "#FBBF24",
     100: "#FEF3C7",
+    50: "#F5E6C8", // warm tan bg
+  },
+
+  // Silver
+  silver: {
+    bg: "#D2D2D4", // pill background
+    500: "#A0A0A0", // icon color
   },
 
   // Functional
@@ -103,8 +110,8 @@ export const lightTheme: ThemeColors = {
 
 export const darkTheme: ThemeColors = {
   background: palette.slate[900],
-  // A rich gradient from Deep Navy to Extra Dark Green (Rich Wealth Vibe)
-  backgroundGradient: [palette.nileGreen[900], palette.slate[900]],
+  // Solid background as requested
+  backgroundGradient: [palette.slate[900], palette.slate[900]],
 
   surface: palette.slate[800],
   surfaceHighlight: palette.slate[700],

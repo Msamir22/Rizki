@@ -1,3 +1,15 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.header-text {
+  @apply text-[15px] font-semibold text-slate-700 dark:text-slate-100 opacity-90;
+}
+
+.button {
+  @apply flex-row w-20 items-center bg-nileGreen-500 rounded-full px-3 py-1.5;
+}
+
+.button-text {
+  @apply text-[13px] font-semibold text-slate-700 dark:text-slate-100 opacity-90;
+}

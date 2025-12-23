@@ -102,10 +102,15 @@ module.exports = {
           900: palette.nileGreen[900],
         },
         gold: {
+          50: palette.gold[50],
           100: palette.gold[100],
           400: palette.gold[400],
           600: palette.gold[600],
           800: palette.gold[800],
+        },
+        silver: {
+          bg: palette.silver.bg,
+          500: palette.silver[500],
         },
         blue: {
           50: palette.blue[50],
