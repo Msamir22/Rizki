@@ -253,11 +253,290 @@ All tables: `user_id = auth.uid()` for SELECT, INSERT, UPDATE, DELETE
 
 ---
 
-## 5. Pending Questions (Section 2.3+)
+## 5. Transaction Categories
+
+### 5.1 Category Architecture
+
+**Design:** 3-level hierarchical category system with predefined + user-defined
+categories.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         CATEGORY HIERARCHY                                   │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  Level 1 (Main Category)     Level 2 (Subcategory)    Level 3 (Sub-sub)     │
+│  ────────────────────────    ────────────────────     ─────────────────     │
+│                                                                              │
+│  Food & Drinks           →   Drinks               →   Juice, Soda, etc.     │
+│  [SYSTEM, Required]          [SYSTEM, Required]       [USER, Optional]      │
+│                                                                              │
+│  My Custom Category      →   Custom Sub           →   Custom Detail         │
+│  [USER, Editable]            [USER, Editable]         [USER, Editable]      │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 5.2 Business Rules
+
+| Rule                                 | Description                                                           |
+| ------------------------------------ | --------------------------------------------------------------------- |
+| **L1 & L2 Predefined**               | System categories are read-only (cannot edit name/icon/delete)        |
+| **L3 User-defined Only**             | No predefined L3 categories; all are user-created                     |
+| **User Custom Categories**           | Users can add custom L1, L2, L3 categories                            |
+| **User Categories Editable**         | Only user-created categories can have name/icon changed or be deleted |
+| **System Categories Locked**         | System category names and icons cannot be modified by users           |
+| **Hide Any Level**                   | Users can hide any category (system or custom) from their list        |
+| **Transactions Reference Any Level** | Transactions can link to L1, L2, or L3 (user's choice)                |
+
+### 5.3 Table: `categories`
+
+Self-referential table for all category levels.
+
+| Column         | Type        | Required | Description                                                           |
+| -------------- | ----------- | -------- | --------------------------------------------------------------------- |
+| `id`           | UUID        | ✅       | Primary Key                                                           |
+| `user_id`      | UUID        | ❌       | NULL for system categories, set for user-created                      |
+| `parent_id`    | UUID        | ❌       | FK → categories.id (NULL for L1)                                      |
+| `system_name`  | TEXT        | ✅       | Internal identifier (immutable, lowercase_snake)                      |
+| `display_name` | TEXT        | ✅       | User-visible name (editable only for custom)                          |
+| `icon`         | TEXT        | ✅       | Icon identifier from predefined set                                   |
+| `level`        | SMALLINT    | ✅       | 1, 2, or 3                                                            |
+| `nature`       | ENUM        | ⚠️       | `'WANT'`, `'NEED'`, `'MUST'` (required for system, optional for user) |
+| `type`         | ENUM        | ✅       | `'EXPENSE'`, `'INCOME'` (determines transaction direction)            |
+| `is_system`    | BOOLEAN     | ✅       | true = predefined, false = user-created                               |
+| `is_hidden`    | BOOLEAN     | ✅       | User can hide any category (default: false)                           |
+| `sort_order`   | SMALLINT    | ❌       | Display order within parent                                           |
+| `created_at`   | TIMESTAMPTZ | ✅       | Auto-generated                                                        |
+| `updated_at`   | TIMESTAMPTZ | ✅       | For WatermelonDB sync                                                 |
+| `deleted`      | BOOLEAN     | ✅       | Soft delete for sync (default: false)                                 |
+
+**Constraints:**
+
+- `parent_id` required when `level > 1`
+- `user_id` required when `is_system = false`
+- Unique: `(user_id, parent_id, system_name)` — prevents duplicates per user
+
+### 5.4 Table: `user_category_settings`
+
+Per-user settings for system categories (visibility and nature override).
+
+| Column        | Type        | Required | Description                                   |
+| ------------- | ----------- | -------- | --------------------------------------------- |
+| `id`          | UUID        | ✅       | Primary Key                                   |
+| `user_id`     | UUID        | ✅       | FK → auth.users                               |
+| `category_id` | UUID        | ✅       | FK → categories.id (system category)          |
+| `is_hidden`   | BOOLEAN     | ✅       | Hide this system category (default: false)    |
+| `nature`      | ENUM        | ❌       | User's override: `'WANT'`, `'NEED'`, `'MUST'` |
+| `created_at`  | TIMESTAMPTZ | ✅       | Auto-generated                                |
+| `updated_at`  | TIMESTAMPTZ | ✅       | For WatermelonDB sync                         |
+
+**Note:** This table allows users to hide system categories and override their
+`nature` value. System category names and icons remain locked. User-created
+categories store all settings directly in the `categories` table.
+
+### 5.5 Predefined Categories (Seed Data)
+
+#### Level 1: Main Categories
+
+| system_name       | display_name      | type    | icon |
+| ----------------- | ----------------- | ------- | ---- |
+| `food_drinks`     | Food & Drinks     | EXPENSE | 🍔   |
+| `transportation`  | Transportation    | EXPENSE | 🚌   |
+| `vehicle`         | Vehicle           | EXPENSE | 🚗   |
+| `shopping`        | Shopping          | EXPENSE | 🛒   |
+| `health_medical`  | Health & Medical  | EXPENSE | 🏥   |
+| `utilities_bills` | Utilities & Bills | EXPENSE | 📄   |
+| `entertainment`   | Entertainment     | EXPENSE | 🎉   |
+| `charity`         | Charity           | EXPENSE | ❤️   |
+| `education`       | Education         | EXPENSE | 📚   |
+| `housing`         | Housing           | EXPENSE | 🏠   |
+| `income`          | Salary / Income   | INCOME  | 💰   |
+| `other`           | Other             | EXPENSE | ❓   |
+
+#### Level 2: Subcategories
+
+<details>
+<summary><b>Food & Drinks</b></summary>
+
+| system_name  | display_name |
+| ------------ | ------------ |
+| `groceries`  | Groceries    |
+| `restaurant` | Restaurant   |
+| `coffee_tea` | Coffee & Tea |
+| `snacks`     | Snacks       |
+| `drinks`     | Drinks       |
+| `food_other` | Other        |
+
+</details>
+
+<details>
+<summary><b>Transportation</b></summary>
+
+| system_name         | display_name      |
+| ------------------- | ----------------- |
+| `public_transport`  | Public Transport  |
+| `private_transport` | Private Transport |
+| `transport_other`   | Other             |
+
+</details>
+
+<details>
+<summary><b>Vehicle</b></summary>
+
+| system_name           | display_name | Notes                        |
+| --------------------- | ------------ | ---------------------------- |
+| `fuel`                | Fuel         |                              |
+| `parking`             | Parking      |                              |
+| `rental`              | Rental       |                              |
+| `license_fees`        | License Fees |                              |
+| `vehicle_tax`         | Tax          |                              |
+| `traffic_fine`        | Traffic Fine |                              |
+| `vehicle_buy`         | Buy          | 🟡 Future: migrate to assets |
+| `vehicle_sell`        | Sell         | 🟡 Future: migrate to assets |
+| `vehicle_maintenance` | Maintenance  |                              |
+| `vehicle_other`       | Other        |                              |
+
+</details>
+
+<details>
+<summary><b>Shopping</b></summary>
+
+| system_name              | display_name             |
+| ------------------------ | ------------------------ |
+| `clothes`                | Clothes                  |
+| `electronics_appliances` | Electronics & Appliances |
+| `accessories`            | Accessories              |
+| `footwear`               | Footwear                 |
+| `bags`                   | Bags                     |
+| `kids_baby`              | Kids & Baby              |
+| `beauty`                 | Beauty                   |
+| `home_garden`            | Home & Garden            |
+| `pets`                   | Pets                     |
+| `sports_fitness`         | Sports & Fitness         |
+| `toys_games`             | Toys & Games             |
+| `travel`                 | Travel                   |
+| `wedding`                | Wedding                  |
+| `detergents`             | Detergents               |
+| `decorations`            | Decorations              |
+| `shopping_other`         | Other                    |
+
+</details>
+
+<details>
+<summary><b>Health & Medical</b></summary>
+
+| system_name    | display_name |
+| -------------- | ------------ |
+| `doctor`       | Doctor       |
+| `medicine`     | Medicine     |
+| `surgery`      | Surgery      |
+| `dental`       | Dental       |
+| `health_other` | Other        |
+
+</details>
+
+<details>
+<summary><b>Utilities & Bills</b></summary>
+
+| system_name           | display_name        |
+| --------------------- | ------------------- |
+| `electricity`         | Electricity         |
+| `water`               | Water               |
+| `internet`            | Internet            |
+| `phone`               | Phone               |
+| `gas`                 | Gas                 |
+| `trash`               | Trash               |
+| `online_subscription` | Online Subscription |
+| `streaming`           | Streaming           |
+| `taxes`               | Taxes               |
+| `utilities_other`     | Other               |
+
+</details>
+
+<details>
+<summary><b>Entertainment</b></summary>
+
+| system_name           | display_name     |
+| --------------------- | ---------------- |
+| `trips_holidays`      | Trips & Holidays |
+| `events`              | Events           |
+| `tickets`             | Tickets          |
+| `entertainment_other` | Other            |
+
+</details>
+
+<details>
+<summary><b>Charity</b></summary>
+
+| system_name     | display_name |
+| --------------- | ------------ |
+| `donations`     | Donations    |
+| `fundraising`   | Fundraising  |
+| `charity_gifts` | Gifts        |
+| `charity_other` | Other        |
+
+</details>
+
+<details>
+<summary><b>Education</b></summary>
+
+| system_name       | display_name |
+| ----------------- | ------------ |
+| `books`           | Books        |
+| `tuition`         | Tuition      |
+| `education_fees`  | Fees         |
+| `education_other` | Other        |
+
+</details>
+
+<details>
+<summary><b>Housing</b></summary>
+
+| system_name           | display_name          | Notes                        |
+| --------------------- | --------------------- | ---------------------------- |
+| `rent`                | Rent                  |                              |
+| `housing_maintenance` | Maintenance & Repairs |                              |
+| `housing_tax`         | Tax                   |                              |
+| `housing_buy`         | Buy                   | 🟡 Future: migrate to assets |
+| `housing_sell`        | Sell                  | 🟡 Future: migrate to assets |
+| `housing_other`       | Other                 |                              |
+
+</details>
+
+<details>
+<summary><b>Salary / Income</b></summary>
+
+| system_name     | display_name  |
+| --------------- | ------------- |
+| `salary`        | Salary        |
+| `bonus`         | Bonus         |
+| `commission`    | Commission    |
+| `refund`        | Refund        |
+| `loan_income`   | Loan          |
+| `gift_income`   | Gift          |
+| `check`         | Check         |
+| `rental_income` | Rental Income |
+| `income_other`  | Other         |
+
+</details>
+
+<details>
+<summary><b>Other (Fallback)</b></summary>
+
+| system_name     | display_name |
+| --------------- | ------------ |
+| `uncategorized` | Other        |
+
+</details>
+
+---
+
+## 6. Pending Questions
 
 See `business-discovery.md` for remaining questions about:
 
-- Transactions (categories, types, recurring)
+- Transactions (types, recurring)
 - Budgets
 - Transfers
 - Notifications

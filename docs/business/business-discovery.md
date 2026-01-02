@@ -58,7 +58,11 @@ See [business-decisions.md](./business-decisions.md#2-database-architecture)
 
 ### 3.1 Transactions
 
-**Q1: Transaction Categories**
+**Q1: Transaction Categories** ✅ COMPLETED
+
+> **See:**
+> [business-decisions.md](./business-decisions.md#5-transaction-categories) for
+> the finalized schema
 
 - Should categories be predefined (dropdown) or user-defined (free text)?
 - If predefined, what categories do you want?
@@ -75,6 +79,102 @@ See [business-decisions.md](./business-decisions.md#2-database-architecture)
   - Salary / Income
   - Gifts
   - Other
+
+  Answer: we will have 3 levels of categories, the first level is the main
+  category, the second level is the subcategory and the third level is the
+  sub-subcategory (optional level and won't be predifend, will be
+  user-definable). so, let's go with predefined categories for the first and
+  second level and allow user to add custom categories for all levels. this will
+  give the user more flexibility and control over their categories. here are the
+  predefined categories and subcategories (Please note that first & second
+  levels will not be editable/deletable by the user unless it's a custom
+  category not system predefined category, however the user will be able to hide
+  any category/subcategory/sub-subcategory from the list) :
+  - Food & Drinks
+    - Groceries
+    - Restaurant
+    - Coffee & Tea
+    - Snacks
+    - Drinks
+  - Transportation
+    - public transport
+    - private transport
+  - Vehicle
+    - Fuel
+    - Parking
+    - Rental
+    - License Fees
+    - Tax
+    - Traffic Fine
+    - Buy (if selected in transaction, it needs migration to assets will not be
+      introduced in MVP)
+    - Sell (if selected in transaction, it needs migration to assets will not be
+      introduced in MVP)
+    - Maintenance
+  - Shopping
+    - Clothes
+    - Electronics & Appliances
+    - Accessories
+    - Footwear
+    - Bags
+    - Kids & Baby
+    - Beauty
+    - Home & Garden
+    - Pets
+    - Sports & Fitness
+    - Toys & Games
+    - Travel
+    - Wedding
+    - Detergents
+    - Decorations
+  - Health & Medical
+    - Doctor
+    - Medicine
+    - Surgery
+    - Dental
+  - Utilities & Bills
+    - Electricity
+    - Water
+    - Internet
+    - Phone
+    - Gas
+    - Trash
+    - Online Subscription
+    - Streaming
+    - Taxes
+  - Entertainment
+    - Trips , Holidays
+    - Events
+    - Tickets
+  - Charity
+    - Donations
+    - Fundraising
+    - Gifts
+  - Education
+    - Books
+    - Tuition
+    - Fees
+  - Housing
+    - Rent
+    - Maintenance & Repairs
+    - Tax
+    - Sell (if selected in transaction, it needs migration to assets will not be
+      introduced in MVP)
+    - Buy (if selected in transaction, it needs migration to assets will not be
+      introduced in MVP)
+  - Salary / Income
+    - Salary
+    - Bonus
+    - Commission
+    - Refund
+    - Loan
+    - Gift
+    - Check
+    - Rental Income
+  - Other (fallback for uncategorized)
+    - Other
+
+---
 
 **Q2: Transaction Types** Since we now have separate Account and Asset domains:
 
