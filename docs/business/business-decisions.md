@@ -101,15 +101,25 @@ Parent table for all liquid money containers.
 Child table for accounts where `type = 'BANK'`. 1-to-Many (one bank account can
 have multiple cards).
 
-| Column            | Type        | Required | Description                            |
-| ----------------- | ----------- | -------- | -------------------------------------- |
-| `id`              | UUID        | ✅       | Primary Key                            |
-| `account_id`      | UUID        | ✅       | FK → accounts.id                       |
-| `bank_name`       | TEXT        | ✅       | e.g., "HSBC", "National Bank of Egypt" |
-| `card_last_4`     | VARCHAR(4)  | ✅       | For SMS auto-detection                 |
-| `sms_sender_name` | TEXT        | ❓       | e.g., "AhlyBank" (for SMS parsing)     |
-| `account_number`  | TEXT        | ❌       | Optional IBAN                          |
-| `created_at`      | TIMESTAMPTZ | ✅       | Auto-generated                         |
+| Column            | Type        | Required | Description                                     |
+| ----------------- | ----------- | -------- | ----------------------------------------------- |
+| `id`              | UUID        | ✅       | Primary Key                                     |
+| `account_id`      | UUID        | ✅       | FK → accounts.id                                |
+| `bank_name`       | TEXT        | ✅       | e.g., "HSBC", "National Bank of Egypt"          |
+| `card_last_4`     | VARCHAR(4)  | ✅       | For SMS auto-detection                          |
+| `sms_sender_name` | TEXT        | ❌       | Optional: e.g., "CIB", "NBE" (for SMS matching) |
+| `account_number`  | TEXT        | ❌       | Optional IBAN                                   |
+| `created_at`      | TIMESTAMPTZ | ✅       | Auto-generated                                  |
+| `updated_at`      | TIMESTAMPTZ | ✅       | For WatermelonDB sync                           |
+| `deleted`         | BOOLEAN     | ✅       | Soft delete for sync (default: false)           |
+
+**SMS Matching Logic:**
+
+1. SMS arrives from sender "CIB" with transaction for card "\*\*\*\*1234"
+2. Look for `bank_details` where:
+   - `card_last_4` = "1234" AND
+   - (`sms_sender_name` = "CIB" OR `bank_name` CONTAINS "CIB")
+3. If match → create transaction for linked account
 
 ### 2.3 Assets Domain (Wealth & Investments)
 
@@ -723,27 +733,38 @@ single record (not two transactions).
 
 ### 8.2 Table: `transfers`
 
-| Column            | Type        | Required | Description                           |
-| ----------------- | ----------- | -------- | ------------------------------------- |
-| `id`              | UUID        | ✅       | Primary Key                           |
-| `user_id`         | UUID        | ✅       | FK → auth.users                       |
-| `from_account_id` | UUID        | ✅       | FK → accounts.id (source)             |
-| `to_account_id`   | UUID        | ✅       | FK → accounts.id (destination)        |
-| `amount`          | DECIMAL     | ✅       | Amount transferred                    |
-| `currency`        | CHAR(3)     | ✅       | Currency of source account            |
-| `notes`           | TEXT        | ❌       | Optional notes                        |
-| `date`            | DATE        | ✅       | When the transfer occurred            |
-| `created_at`      | TIMESTAMPTZ | ✅       | Auto-generated                        |
-| `updated_at`      | TIMESTAMPTZ | ✅       | For WatermelonDB sync                 |
-| `deleted`         | BOOLEAN     | ✅       | Soft delete for sync (default: false) |
+| Column             | Type        | Required | Description                                   |
+| ------------------ | ----------- | -------- | --------------------------------------------- |
+| `id`               | UUID        | ✅       | Primary Key                                   |
+| `user_id`          | UUID        | ✅       | FK → auth.users                               |
+| `from_account_id`  | UUID        | ✅       | FK → accounts.id (source)                     |
+| `to_account_id`    | UUID        | ✅       | FK → accounts.id (destination)                |
+| `amount`           | DECIMAL     | ✅       | Amount transferred (source currency)          |
+| `currency`         | CHAR(3)     | ✅       | Currency of source account                    |
+| `exchange_rate`    | DECIMAL     | ❌       | Rate used if cross-currency (NULL if same)    |
+| `converted_amount` | DECIMAL     | ❌       | Amount in destination currency (if different) |
+| `notes`            | TEXT        | ❌       | Optional notes                                |
+| `date`             | DATE        | ✅       | When the transfer occurred                    |
+| `created_at`       | TIMESTAMPTZ | ✅       | Auto-generated                                |
+| `updated_at`       | TIMESTAMPTZ | ✅       | For WatermelonDB sync                         |
+| `deleted`          | BOOLEAN     | ✅       | Soft delete for sync (default: false)         |
 
-### 8.3 Business Rules
+### 8.3 Cross-Currency Transfer Example
+
+```
+Transfer: $100 USD → EGP account
+- amount: 100
+- currency: USD
+- exchange_rate: 50.00
+- converted_amount: 5000
+```
+
+### 8.4 Business Rules
 
 - Transfer only between user's **own accounts**
-- Source account balance **decreases** by amount
-- Destination account balance **increases** by amount
-- If currencies differ, conversion uses live rates (❓ TBD: store converted
-  amount?)
+- Source account balance **decreases** by `amount`
+- Destination account balance **increases** by `converted_amount` (or `amount`
+  if same currency)
 - Transfers are **NOT transactions** (separate table, not in spending reports)
 
 ---
@@ -872,26 +893,217 @@ Final consolidated schema based on all business decisions:
 
 ---
 
-## 12. Future Features (Post-MVP)
+## 12. User Profiles
+
+### 12.1 Overview
+
+The `profiles` table stores user identity and preferences, synced to
+WatermelonDB for offline access.
+
+### 12.2 Table: `profiles`
+
+| Column                  | Type        | Required | Description                                       |
+| ----------------------- | ----------- | -------- | ------------------------------------------------- |
+| `id`                    | UUID        | ✅       | Primary Key (same as auth.users.id)               |
+| `user_id`               | UUID        | ✅       | FK → auth.users (unique)                          |
+| `first_name`            | TEXT        | ❌       | From Google or manual sign-up                     |
+| `last_name`             | TEXT        | ❌       | From Google or manual sign-up                     |
+| `display_name`          | TEXT        | ❌       | For greeting ("Good Morning, Mohamed")            |
+| `avatar_url`            | TEXT        | ❌       | From Google profile or custom                     |
+| `preferred_currency`    | CHAR(3)     | ✅       | Default: 'EGP'                                    |
+| `theme`                 | ENUM        | ✅       | `'LIGHT'`, `'DARK'`, `'SYSTEM'` (default: SYSTEM) |
+| `sms_detection_enabled` | BOOLEAN     | ✅       | Toggle SMS auto-detection (default: false)        |
+| `onboarding_completed`  | BOOLEAN     | ✅       | Track first-time setup (default: false)           |
+| `notification_settings` | JSONB       | ❌       | Per-notification-type toggles                     |
+| `created_at`            | TIMESTAMPTZ | ✅       | Auto-generated                                    |
+| `updated_at`            | TIMESTAMPTZ | ✅       | For WatermelonDB sync                             |
+| `deleted`               | BOOLEAN     | ✅       | Soft delete for sync (default: false)             |
+
+### 12.3 Profile Creation Flow
+
+```
+1. User opens app → signInAnonymously()
+2. System creates profile with:
+   - user_id = auth.uid()
+   - preferred_currency = 'EGP'
+   - theme = 'SYSTEM'
+   - sms_detection_enabled = false
+   - onboarding_completed = false
+
+3. User signs up with Google:
+   - first_name, last_name, display_name, avatar_url populated from Google
+
+4. User signs up with email:
+   - User enters first_name, last_name in sign-up form
+   - display_name = first_name
+```
+
+---
+
+## 13. Notifications
+
+### 13.1 Overview
+
+Local notifications only (no push for MVP). SMS auto-detection triggers
+transaction confirmations.
+
+### 13.2 Notification Types
+
+| Type                    | Trigger                                         | MVP? |
+| ----------------------- | ----------------------------------------------- | ---- |
+| **SMS Transaction**     | Auto-detected transaction from bank/wallet SMS  | ✅   |
+| **Recurring Reminder**  | Due date for `action = 'NOTIFY'` recurring      | ✅   |
+| **Budget Alert**        | Spending hits `alert_threshold` percentage      | ✅   |
+| **Low Balance Warning** | Account balance below user threshold (post-MVP) | ❌   |
+
+### 13.3 SMS Sources for Auto-Detection
+
+- Bank SMS (purchase, ATM withdrawal, branch withdrawal)
+- Digital wallet SMS (Vodafone Cash, Orange Money)
+- InstaPay SMS
+
+### 13.4 User Settings (in `profiles.notification_settings`)
+
+```json
+{
+  "sms_transaction_confirmation": true,
+  "recurring_reminders": true,
+  "budget_alerts": true,
+  "low_balance_warnings": false
+}
+```
+
+---
+
+## 14. Digital Wallets
+
+### 14.1 MVP Approach
+
+Digital wallets use the base `accounts` table with `type = 'DIGITAL_WALLET'`. No
+extra fields needed for MVP.
+
+### 14.2 Post-MVP Extension
+
+If needed, create `wallet_details` child table:
+
+| Column         | Type | Description                       |
+| -------------- | ---- | --------------------------------- |
+| `account_id`   | UUID | FK → accounts.id                  |
+| `phone_number` | TEXT | Wallet phone number               |
+| `provider`     | TEXT | e.g., "Vodafone Cash", "InstaPay" |
+
+**Schema is extensible** - follows same pattern as `bank_details`.
+
+---
+
+## 15. Data Sync Strategy
+
+### 15.1 Conflict Resolution
+
+**Strategy:** Last Write Wins (LWW)
+
+- Simpler implementation
+- Acceptable trade-off for personal finance app
+- `updated_at` timestamp determines winner
+
+### 15.2 Sync Tables
+
+| Table                    | Syncs? | Direction          |
+| ------------------------ | ------ | ------------------ |
+| `accounts`               | ✅     | Bidirectional      |
+| `bank_details`           | ✅     | Bidirectional      |
+| `transactions`           | ✅     | Bidirectional      |
+| `assets`                 | ✅     | Bidirectional      |
+| `asset_metals`           | ✅     | Bidirectional      |
+| `categories`             | ✅     | User-created only  |
+| `budgets`                | ✅     | Bidirectional      |
+| `debts`                  | ✅     | Bidirectional      |
+| `recurring_payments`     | ✅     | Bidirectional      |
+| `transfers`              | ✅     | Bidirectional      |
+| `profiles`               | ✅     | Bidirectional      |
+| `user_category_settings` | ✅     | Bidirectional      |
+| `market_rates`           | ❌     | Read-only from API |
+| `daily_snapshot_*`       | ❌     | Server-generated   |
+| `user_net_worth_summary` | ❌     | Server-calculated  |
+
+---
+
+## 16. Metals/Gold
+
+### 16.1 Gold Transaction Flow (MVP)
+
+1. User navigates to Gold/Assets page
+2. Creates new metal asset with:
+   - Name, metal_type, weight_grams, purity_karat
+   - **Optional:** "Deduct from account" checkbox + account selection
+3. If deducting:
+   - System creates transaction: `type=EXPENSE`, `category=asset_purchase`
+   - `linked_asset_id` points to created asset
+   - `asset_purchase` category is internal (hidden from user)
+4. Asset created with `purchase_price`
+
+### 16.2 Gold Valuation Formula
+
+```
+current_value = weight_grams × (purity_karat / 24) × gold_price_per_gram
+```
+
+| Karat | Purity | Example (10g at EGP 4,000/g for 24K) |
+| ----- | ------ | ------------------------------------ |
+| 24K   | 100%   | 10 × 1.00 × 4,000 = 40,000 EGP       |
+| 21K   | 87.5%  | 10 × 0.875 × 4,000 = 35,000 EGP      |
+| 18K   | 75%    | 10 × 0.75 × 4,000 = 30,000 EGP       |
+
+### 16.3 Post-MVP Enhancement
+
+- User-facing "Investment" category
+- Transaction form → Investment category → Prompt to create asset
+
+---
+
+## 17. Future Features (Post-MVP)
 
 | Feature                    | Priority | Notes                                  |
 | -------------------------- | -------- | -------------------------------------- |
+| Low Balance Warning        | Medium   | Per-account threshold in profiles      |
 | Emergency Fund Calculation | Medium   | `is_liquid` accounts + assets          |
 | Vehicle/Housing as Assets  | Low      | Migrate buy/sell categories            |
 | Crypto Assets              | Low      | `asset_crypto` child table             |
 | Real Estate Assets         | Low      | `asset_real_estate` child table        |
 | Investment Category        | Medium   | User-facing with asset creation prompt |
-| Multi-device Sync Conflict | Medium   | Conflict resolution strategy           |
+| Digital Wallet Details     | Low      | `wallet_details` child table           |
 
 ---
 
-## 13. Pending Questions
+## 18. Complete Schema Summary
 
-See `business-discovery.md` for remaining questions about:
+All tables finalized for implementation:
 
-- Gold transactions flow (Q11-Q12)
-- Notifications (Q13-Q14)
-- Data sync details (Q15-Q16)
-- Digital wallets (Q17)
-- SMS sender name (Q18)
-- User profile (Q19)
+| Table                    | Section | Status    |
+| ------------------------ | ------- | --------- |
+| `profiles`               | 12      | ✅ Ready  |
+| `accounts`               | 2.2     | ✅ Ready  |
+| `bank_details`           | 2.2     | ✅ Ready  |
+| `assets`                 | 2.3     | ✅ Ready  |
+| `asset_metals`           | 2.3     | ✅ Ready  |
+| `categories`             | 5       | ✅ Ready  |
+| `user_category_settings` | 5.4     | ✅ Ready  |
+| `transactions`           | 11      | ✅ Ready  |
+| `debts`                  | 6       | ✅ Ready  |
+| `recurring_payments`     | 7       | ✅ Ready  |
+| `transfers`              | 8       | ✅ Ready  |
+| `budgets`                | 9       | ✅ Ready  |
+| `user_net_worth_summary` | 10      | ✅ Ready  |
+| `daily_snapshot_balance` | 2.4     | ✅ Ready  |
+| `daily_snapshot_assets`  | 2.4     | ✅ Ready  |
+| `market_rates`           | 2.5     | ✅ Exists |
+| `market_rates_history`   | 2.5     | ✅ Ready  |
+
+---
+
+## 19. Next Steps
+
+1. ✅ Business discovery complete
+2. ⏳ Generate SQL migration file
+3. ⏳ Update WatermelonDB models
+4. ⏳ Proceed to implementation
