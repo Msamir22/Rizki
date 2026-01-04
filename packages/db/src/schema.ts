@@ -116,6 +116,7 @@ export const schema = appSchema({
         { name: "system_name", type: "string" },
         { name: "display_name", type: "string" },
         { name: "icon", type: "string" },
+        { name: "color", type: "string" }, // Hex color for UI (e.g., "#F59E0B")
         { name: "level", type: "number" }, // 1, 2, 3
         { name: "nature", type: "string", isOptional: true }, // WANT, NEED, MUST
         { name: "type", type: "string", isOptional: true }, // EXPENSE, INCOME

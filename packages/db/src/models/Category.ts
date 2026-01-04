@@ -30,6 +30,7 @@ export class Category extends Model {
   @field("system_name") systemName!: string;
   @field("display_name") displayName!: string;
   @field("icon") icon!: string;
+  @field("color") color!: string; // Hex color for UI
   @field("level") level!: number; // 1, 2, or 3
   @field("nature") nature?: CategoryNature;
   @field("type") type?: TransactionType;
