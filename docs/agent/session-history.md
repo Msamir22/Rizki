@@ -1,155 +1,38 @@
-# 📜 Astik Session History
+# 📜 Astik Session Index
 
-> **Purpose:** Rolling log of AI agent sessions for context continuity
-> **Retention:** Keep last 10 sessions, archive older ones
-
----
-
-## Session: 2026-01-04
-
-**Duration:** ~30 minutes **Main Topic:** Creating AI Agent Memory System
-
-### Accomplished
-
-- [x] Designed persistent memory system for cross-conversation context
-- [x] Created `docs/agent/project-memory.md` with comprehensive project context
-- [x] Created `/session-handoff` workflow for end-of-session updates
-- [x] Created this session history file
-
-### Decisions Made
-
-- Memory files placed in `docs/agent/` (not `.agent/rules/` due to gitignore
-  access issues)
-- Memory file uses `alwaysApply: true` frontmatter for automatic loading
-- Session history keeps last 10 entries
-
-### Files Changed
-
-| File                                  | Change                             |
-| ------------------------------------- | ---------------------------------- |
-| `docs/agent/project-memory.md`        | Created - main project memory file |
-| `.agent/workflows/session-handoff.md` | Created - handoff workflow         |
-| `docs/agent/session-history.md`       | Created - this file                |
-
-### Pending / Next Steps
-
-1. Verify memory system works in a new conversation
-2. Continue with category seeding implementation
-3. Dashboard enhancements (v1 spec exists)
-
-### Context Notes
-
-User wants the AI to always remember:
-
-- Business logic decisions
-- Project status and what's remaining
-- User preferences (coding style, design choices)
-- Technical architecture decisions
-- What happened in recent sessions
-
-The memory file should be updated at the end of each significant session using
-the `/session-handoff` workflow.
+> **Purpose:** Quick reference index linking to detailed session files
+> **Location:** Individual session files are stored in `docs/agent/sessions/`
 
 ---
 
-## Session: 2025-12-31 to 2026-01-04
+## How to Use
 
-**Duration:** Multiple sessions **Main Topic:** Category Seeding on App Launch
-
-### Accomplished
-
-- [x] Created `seedCategories.ts` utility function
-- [x] Defined predefined system categories (L1, L2)
-- [x] Integrated seeding with app initialization
-- [x] Fixed TypeScript decorator signature errors
-
-### Decisions Made
-
-- Categories seeded on first app launch
-- System categories are read-only (cannot edit/delete)
-- User can add custom categories at any level
-- `is_internal` flag hides system-only categories from picker
-
-### Files Changed
-
-| File                                         | Change                  |
-| -------------------------------------------- | ----------------------- |
-| `packages/db/utils/seedCategories.ts`        | Created                 |
-| `packages/db/models/Category.ts`             | Updated with new fields |
-| `packages/db/models/UserCategorySettings.ts` | Created                 |
-
-### Pending / Next Steps
-
-1. Test category seeding on fresh app install
-2. Implement category picker UI
-3. Connect categories to transaction form
+- Each session has a detailed file in `docs/agent/sessions/`
+- Files are named: `YYYY-MM-DD_HHMM_topic-slug.md`
+- This index provides quick access to recent sessions
+- For brief summaries, see Section 7 of `project-memory.md`
 
 ---
 
-## Session: 2026-01-02
+## Recent Sessions
 
-**Duration:** ~2 hours **Main Topic:** Debt & Recurring Payments Schema
-
-### Accomplished
-
-- [x] Finalized `debts` table schema
-- [x] Finalized `recurring_payments` table schema
-- [x] Defined debt-transaction linking
-- [x] Documented repayment flow
-
-### Decisions Made
-
-- Debts and recurring payments are separate tables (not merged)
-- Recurring payments can optionally link to debts (for installments)
-- Transactions have `linked_debt_id` and `linked_recurring_id` foreign keys
-- Debt status flow: ACTIVE → PARTIALLY_PAID → SETTLED/WRITTEN_OFF
-
-### Files Changed
-
-| File                                  | Change              |
-| ------------------------------------- | ------------------- |
-| `docs/business/business-decisions.md` | Added sections 6, 7 |
-| `docs/business/business-discovery.md` | Marked Q4 complete  |
-
-### Pending / Next Steps
-
-1. Create WatermelonDB models for debts and recurring_payments
-2. Design debt form UI
-3. Implement recurring payment scheduler
+| Date       | Time  | Topic                            | File                                                                                                                                                 |
+| ---------- | ----- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-01-04 | 22:35 | Memory System Enhancement        | [2026-01-04_2235_memory-system-enhancement.md](file:///e:/Work/My%20Projects/Astik/docs/agent/sessions/2026-01-04_2235_memory-system-enhancement.md) |
+| 2026-01-04 | 05:20 | AI Agent Memory System Setup     | [2026-01-04_0520_memory-system-setup.md](file:///e:/Work/My%20Projects/Astik/docs/agent/sessions/2026-01-04_0520_memory-system-setup.md)             |
+| 2026-01-04 | 01:10 | Fixing Decorator Signature Error | [2026-01-04_0110_fixing-decorator-error.md](file:///e:/Work/My%20Projects/Astik/docs/agent/sessions/2026-01-04_0110_fixing-decorator-error.md)       |
+| 2026-01-02 | —     | Debt & Recurring Payments Schema | [2026-01-02_debt-recurring-schema.md](file:///e:/Work/My%20Projects/Astik/docs/agent/sessions/2026-01-02_debt-recurring-schema.md)                   |
+| 2025-12-31 | —     | Seeding Categories on Launch     | [2025-12-31_category-seeding.md](file:///e:/Work/My%20Projects/Astik/docs/agent/sessions/2025-12-31_category-seeding.md)                             |
+| 2025-12-26 | —     | Fixing Random App Errors         | [2025-12-26_fixing-app-errors.md](file:///e:/Work/My%20Projects/Astik/docs/agent/sessions/2025-12-26_fixing-app-errors.md)                           |
+| 2025-12-23 | 09:14 | Implementing Custom Tab Bar      | [2025-12-23_0914_custom-tab-bar.md](file:///e:/Work/My%20Projects/Astik/docs/agent/sessions/2025-12-23_0914_custom-tab-bar.md)                       |
+| 2025-12-23 | 05:21 | Refactoring Recent Transactions  | [2025-12-23_0521_recent-transactions.md](file:///e:/Work/My%20Projects/Astik/docs/agent/sessions/2025-12-23_0521_recent-transactions.md)             |
+| 2025-12-22 | —     | Refining Starry Background       | [2025-12-22_starry-background.md](file:///e:/Work/My%20Projects/Astik/docs/agent/sessions/2025-12-22_starry-background.md)                           |
+| 2025-12-22 | —     | Fixing Android Build Errors      | [2025-12-22_android-build.md](file:///e:/Work/My%20Projects/Astik/docs/agent/sessions/2025-12-22_android-build.md)                                   |
 
 ---
 
-## Session: 2025-12-23
+## Archived Sessions
 
-**Duration:** ~3 hours **Main Topic:** Dashboard UI & Custom Tab Bar
+Sessions older than 30 days may be moved here or to a separate archive folder.
 
-### Accomplished
-
-- [x] Refactored RecentTransactions component
-- [x] Created custom bottom tab bar with animations
-- [x] Implemented light/dark mode support
-- [x] Added quick action buttons with animations
-
-### Decisions Made
-
-- Custom tab bar replaces default expo-router tabs
-- Floating action button for quick add
-- Tab bar uses react-native-reanimated for smooth animations
-- NativeWind for all styling (no inline styles)
-
-### Files Changed
-
-| File                                                       | Change     |
-| ---------------------------------------------------------- | ---------- |
-| `apps/mobile/components/dashboard/RecentTransactions.tsx`  | Refactored |
-| `apps/mobile/components/navigation/CustomTabBar.tsx`       | Created    |
-| `apps/mobile/components/navigation/QuickActionButtons.tsx` | Created    |
-
-### Context Notes
-
-Dashboard styling follows exact mockup specs with pixel-perfect implementation.
-Colors must come from `colors.ts` only.
-
----
-
-_[Older sessions archived]_
+_No archived sessions yet._

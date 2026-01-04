@@ -1,13 +1,12 @@
 ---
 description:
-  End-of-session workflow to update project memory and preserve context for next
-  conversation
+  End-of-session workflow to create detailed session file and update memory
 ---
 
 # Session Handoff Workflow
 
-Use this workflow at the end of a conversation to preserve context for the next
-session.
+Use this workflow at the end of a conversation to preserve detailed context for
+future sessions.
 
 ## When to Run
 
@@ -16,93 +15,157 @@ session.
 - Before switching to a different major task area
 - When significant decisions or progress has been made
 
+---
+
 ## Steps
 
-### 1. Summarize the Session
+### 1. Gather Session Information
 
-Create a brief summary of what was accomplished:
+Collect the following details about the current session:
 
-- Main topic/focus of the session
-- Key tasks completed
-- Important decisions made
-- Any new business logic established
-- Files created or significantly modified
+- **Date & Time:** Current date and approximate start time
+- **Duration:** Approximate session length
+- **Main Topic:** Primary focus of the session (2-5 words)
+- **Summary:** Brief paragraph describing what was accomplished
+- **Files Changed:** List of created/modified files with descriptions
+- **Decisions Made:** Key decisions, especially business logic
+- **Business Logic:** If any new business rules were established, document them
+  in detail
+- **Pending Items:** What's left to do
+- **Context Notes:** Important context for the next agent
 
-### 2. Update Project Memory
+### 2. Create Detailed Session File
 
-// turbo Read and update `docs/agent/project-memory.md`:
+// turbo Create a new file in `docs/agent/sessions/` with naming convention:
+`YYYY-MM-DD_HHMM_topic-slug.md`
 
-```bash
-# View current status
-cat docs/agent/project-memory.md
+Example: `2026-01-04_2235_memory-system-enhancement.md`
+
+Use this template:
+
+```markdown
+# Session: [Topic Title]
+
+**Date:** YYYY-MM-DD **Time:** HH:MM - HH:MM **Duration:** ~X minutes/hours
+
+---
+
+## Summary
+
+[1-2 paragraph description of what was accomplished]
+
+---
+
+## What Was Accomplished
+
+### Files Created
+
+| File           | Purpose     |
+| -------------- | ----------- |
+| `path/to/file` | Description |
+
+### Files Modified
+
+| File           | Changes                |
+| -------------- | ---------------------- |
+| `path/to/file` | Description of changes |
+
+### Key Decisions Made
+
+1. **Decision Name:** Description and rationale
+2. **Decision Name:** Description and rationale
+
+---
+
+## Business Logic Changes
+
+> If no business logic was changed, write: "No business logic changes in this
+> session."
+
+### [Topic of Business Logic]
+
+[Detailed description of business rule, including:]
+
+- What the rule is
+- Why it was decided
+- How it affects the system
+- Reference to business-decisions.md section if applicable
+
+---
+
+## Technical Details
+
+[Any technical implementation details, architecture decisions, or code patterns
+worth noting]
+
+---
+
+## Pending Items
+
+- [ ] Item 1
+- [ ] Item 2
+
+---
+
+## Context for Next Session
+
+[Important context that helps the next agent continue seamlessly]
 ```
 
-Update the following sections as needed:
+### 3. Update Session Index
+
+// turbo Add a new row to the table in `docs/agent/session-history.md`:
+
+```markdown
+| YYYY-MM-DD | HH:MM | Topic | [filename.md](file:///path/to/file.md) |
+```
+
+### 4. Update Project Memory
+
+// turbo Update `docs/agent/project-memory.md`:
 
 #### Section 5: Current Project Status
 
 - Move completed items from "In Progress" to "Completed"
 - Add new pending items discovered during the session
-- Update "In Progress" with current work
 
 #### Section 7: Recent Sessions
 
-- Add the current session to the top
-- Keep only the last 10 sessions
-- Remove oldest entries if needed
+- Add brief summary of current session to the top
+- Keep only the last 10 session summaries
+- Remove oldest entry if needed
 
-### 3. Update Session History
-
-// turbo Append the session details to `docs/agent/session-history.md`:
+Format for Section 7 entry:
 
 ```markdown
----
+### Session: YYYY-MM-DD (HH:MM)
 
-## Session: [DATE]
-
-**Duration:** [approximate time] **Main Topic:** [primary focus]
-
-### Accomplished
-
-- [list of completed items]
-
-### Decisions Made
-
-- [any new business logic or design decisions]
-
-### Files Changed
-
-- [list of significant files created/modified]
-
-### Pending / Next Steps
-
-- [items left for next session]
-
-### Context Notes
-
-[Any important context for the next agent to know]
+- **Topic:** [Topic Name]
+- **Accomplished:** [Brief 1-2 sentence summary]
+- **Outcome:** [Key outcome or decision]
 ```
 
-### 4. Check for Business Logic Updates
+### 5. Update Business Decisions (If Applicable)
 
-If any new business decisions were made:
+// turbo If any new business logic was established:
 
-// turbo
+- Update `docs/business/business-decisions.md` with the new rules
+- Add the section number to the session file's "Business Logic Changes" section
 
-- Update `docs/business/business-decisions.md` with the new decisions
-- Reference the section number in the session history
+### 6. Notify User
 
-### 5. Notify User
+Provide a handoff summary:
 
-Provide a brief handoff summary to the user:
-
-```
+```text
 ✅ Session handoff complete!
+
+**Session File Created:**
+- docs/agent/sessions/YYYY-MM-DD_HHMM_topic.md
 
 **What was accomplished:**
 - [brief list]
 
-**Memory updated:**
+**Memory Updated:**
 - project-memory.md ✓
 - session-history.md ✓
 
@@ -110,45 +173,34 @@ Provide a brief handoff summary to the user:
 - [recommended next steps]
 ```
 
-## Template for Session History Entry
-
-Copy and fill in:
-
-```markdown
 ---
 
-## Session: YYYY-MM-DD
+## Quick Reference
 
-**Duration:** X hours **Main Topic:** [Topic Name]
+### File Locations
 
-### Accomplished
+| File                                  | Purpose                                    |
+| ------------------------------------- | ------------------------------------------ |
+| `docs/agent/project-memory.md`        | Main memory with summaries (always loaded) |
+| `docs/agent/session-history.md`       | Index linking to session files             |
+| `docs/agent/sessions/*.md`            | Detailed individual session files          |
+| `docs/business/business-decisions.md` | Finalized business logic                   |
 
-- [ ] Item 1
-- [ ] Item 2
+### Naming Convention
 
-### Decisions Made
+Session files: `YYYY-MM-DD_HHMM_topic-slug.md`
 
-- Decision 1: [description]
+- Use lowercase with hyphens for topic slug
+- Keep topic slug to 3-5 words max
+- Examples:
+  - `2026-01-04_2235_memory-system-enhancement.md`
+  - `2026-01-05_1430_category-picker-ui.md`
 
-### Files Changed
-
-| File           | Change                               |
-| -------------- | ------------------------------------ |
-| `path/to/file` | Created/Modified - brief description |
-
-### Pending / Next Steps
-
-1. Next task
-2. Another pending item
-
-### Context Notes
-
-Important context for continuity...
-```
+---
 
 ## Notes
 
 - Always preserve the `alwaysApply: true` frontmatter in project-memory.md
-- Keep session history entries concise but informative
-- Focus on information that helps the next agent pick up where you left off
-- Don't duplicate full file contents; reference paths instead
+- Be thorough with business logic documentation - future agents will rely on it
+- Keep project-memory.md summaries brief; details go in session files
+- Link to session files from the index, not embed their content
