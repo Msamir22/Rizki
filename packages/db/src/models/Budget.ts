@@ -1,49 +1,6 @@
-/**
- * Budget Model for WatermelonDB
- * User budgets for spending limits
- */
+import { BaseBudget } from "./base/base-budget";
 
-import { Model } from "@nozbe/watermelondb";
-import {
-  field,
-  readonly,
-  date,
-  relation,
-} from "@nozbe/watermelondb/decorators";
-import type { Associations } from "@nozbe/watermelondb/Model";
-import type { Relation } from "@nozbe/watermelondb";
-import type { Category } from "./Category";
-import type {
-  Currency,
-  BudgetType,
-  BudgetPeriod,
-  BudgetStatus,
-} from "../types";
-
-export class Budget extends Model {
-  static table = "budgets";
-  static associations: Associations = {
-    categories: { type: "belongs_to", key: "category_id" },
-  };
-
-  @field("user_id") userId!: string;
-  @field("name") name!: string;
-  @field("type") type!: BudgetType;
-  @field("category_id") categoryId?: string;
-  @field("amount") amount!: number;
-  @field("currency") currency!: Currency;
-  @field("period") period!: BudgetPeriod;
-  @date("period_start") periodStart?: Date;
-  @date("period_end") periodEnd?: Date;
-  @field("alert_threshold") alertThreshold!: number; // 1-100
-  @field("status") status!: BudgetStatus;
-  @field("deleted") deleted!: boolean;
-
-  @readonly @date("created_at") createdAt!: Date;
-  @date("updated_at") updatedAt!: Date;
-
-  @relation("categories", "category_id") category?: Relation<Category>;
-
+export class Budget extends BaseBudget {
   get isActive(): boolean {
     return this.status === "ACTIVE";
   }

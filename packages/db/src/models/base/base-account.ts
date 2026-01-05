@@ -1,0 +1,40 @@
+/**
+ * BaseAccount - Abstract Base Model for WatermelonDB
+ * AUTO-GENERATED - DO NOT EDIT MANUALLY
+ * Run 'npm run db:sync' to regenerate
+ * 
+ * Extend this class in ../Account.ts to add custom methods
+ */
+
+import { Model, Query } from "@nozbe/watermelondb";
+import { field, date, readonly, children } from "@nozbe/watermelondb/decorators";
+import type { Associations } from "@nozbe/watermelondb/Model";
+import type { AccountType } from "../../types";
+
+export abstract class BaseAccount extends Model {
+  static table = "accounts";
+  static associations: Associations = {
+    bank_details: { type: "has_many", foreignKey: "account_id" },
+    debts: { type: "has_many", foreignKey: "account_id" },
+    recurring_payments: { type: "has_many", foreignKey: "account_id" },
+    transactions: { type: "has_many", foreignKey: "account_id" },
+    transfers: { type: "has_many", foreignKey: "from_account_id" },
+    transfers_to_account: { type: "has_many", foreignKey: "to_account_id" },
+  };
+
+  @field("balance") balance!: number;
+  @readonly @date("created_at") createdAt!: Date;
+  @field("currency") currency!: string;
+  @field("deleted") deleted!: boolean;
+  @field("name") name!: string;
+  @field("type") type!: AccountType;
+  @date("updated_at") updatedAt!: Date;
+  @field("user_id") userId!: string;
+
+  @children("bank_details") bankDetails!: Query<Model>;
+  @children("debts") debts!: Query<Model>;
+  @children("recurring_payments") recurringPayments!: Query<Model>;
+  @children("transactions") transactions!: Query<Model>;
+  @children("transfers") transfers!: Query<Model>;
+  @children("transfers") transfersToAccount!: Query<Model>;
+}

@@ -1,0 +1,32 @@
+/**
+ * BaseProfile - Abstract Base Model for WatermelonDB
+ * AUTO-GENERATED - DO NOT EDIT MANUALLY
+ * Run 'npm run db:sync' to regenerate
+ * 
+ * Extend this class in ../Profile.ts to add custom methods
+ */
+
+import { Model, Query } from "@nozbe/watermelondb";
+import { field, date, readonly } from "@nozbe/watermelondb/decorators";
+import type { Associations } from "@nozbe/watermelondb/Model";
+import type { ThemePreference } from "../../types";
+
+export abstract class BaseProfile extends Model {
+  static table = "profiles";
+
+
+  @field("avatar_url") avatarUrl?: string;
+  @readonly @date("created_at") createdAt!: Date;
+  @field("deleted") deleted!: boolean;
+  @field("display_name") displayName?: string;
+  @field("first_name") firstName?: string;
+  @field("last_name") lastName?: string;
+  @field("notification_settings") notificationSettingsRaw?: string;
+  @field("onboarding_completed") onboardingCompleted!: boolean;
+  @field("preferred_currency") preferredCurrency!: string;
+  @field("sms_detection_enabled") smsDetectionEnabled!: boolean;
+  @field("theme") theme!: ThemePreference;
+  @date("updated_at") updatedAt!: Date;
+  @field("user_id") userId!: string;
+
+}

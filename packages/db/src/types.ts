@@ -1,17 +1,38 @@
 /**
  * Shared Types for WatermelonDB Models
- * Centralized type definitions to avoid duplicate exports
+ * AUTO-GENERATED - DO NOT EDIT MANUALLY
+ * Run 'npm run db:sync' to regenerate
  */
 
-// ===========================================
+// =============================================================================
+// ENUM TYPES (from Supabase)
+// =============================================================================
+
+export type AccountType = "CASH" | "BANK" | "DIGITAL_WALLET";
+export type AssetType = "METAL" | "CRYPTO" | "REAL_ESTATE";
+export type BudgetPeriod = "WEEKLY" | "MONTHLY" | "CUSTOM";
+export type BudgetStatus = "ACTIVE" | "PAUSED";
+export type BudgetType = "CATEGORY" | "GLOBAL";
+export type CategoryNature = "WANT" | "NEED" | "MUST";
+export type DebtStatus = "ACTIVE" | "PARTIALLY_PAID" | "SETTLED" | "WRITTEN_OFF";
+export type DebtType = "LENT" | "BORROWED";
+export type MetalType = "GOLD" | "SILVER" | "PLATINUM";
+export type RecurringAction = "AUTO_CREATE" | "NOTIFY";
+export type RecurringFrequency = "DAILY" | "WEEKLY" | "MONTHLY" | "QUARTERLY" | "YEARLY" | "CUSTOM";
+export type RecurringStatus = "ACTIVE" | "PAUSED" | "COMPLETED";
+export type ThemePreference = "LIGHT" | "DARK" | "SYSTEM";
+export type TransactionSource = "MANUAL" | "VOICE" | "SMS" | "RECURRING";
+export type TransactionType = "EXPENSE" | "INCOME";
+
+// =============================================================================
 // COMMON TYPES
-// ===========================================
+// =============================================================================
 
 export type Currency = "EGP" | "USD" | "EUR";
 
-// ===========================================
-// PROFILE TYPES
-// ===========================================
+// =============================================================================
+// COMPLEX TYPES
+// =============================================================================
 
 export interface NotificationSettings {
   sms_transaction_confirmation: boolean;
@@ -19,64 +40,3 @@ export interface NotificationSettings {
   budget_alerts: boolean;
   low_balance_warnings: boolean;
 }
-
-export type ThemePreference = "LIGHT" | "DARK" | "SYSTEM";
-
-// ===========================================
-// ACCOUNT TYPES
-// ===========================================
-
-export type AccountType = "CASH" | "BANK" | "DIGITAL_WALLET";
-
-// ===========================================
-// ASSET TYPES
-// ===========================================
-
-export type AssetType = "METAL" | "CRYPTO" | "REAL_ESTATE";
-export type MetalType = "GOLD" | "SILVER" | "PLATINUM";
-
-// ===========================================
-// CATEGORY TYPES
-// ===========================================
-
-export type CategoryNature = "WANT" | "NEED" | "MUST";
-export type TransactionType = "EXPENSE" | "INCOME";
-
-// ===========================================
-// DEBT TYPES
-// ===========================================
-
-export type DebtType = "LENT" | "BORROWED";
-export type DebtStatus =
-  | "ACTIVE"
-  | "PARTIALLY_PAID"
-  | "SETTLED"
-  | "WRITTEN_OFF";
-
-// ===========================================
-// RECURRING PAYMENT TYPES
-// ===========================================
-
-export type RecurringFrequency =
-  | "DAILY"
-  | "WEEKLY"
-  | "MONTHLY"
-  | "QUARTERLY"
-  | "YEARLY"
-  | "CUSTOM";
-export type RecurringAction = "AUTO_CREATE" | "NOTIFY";
-export type RecurringStatus = "ACTIVE" | "PAUSED" | "COMPLETED";
-
-// ===========================================
-// TRANSACTION TYPES
-// ===========================================
-
-export type TransactionSource = "MANUAL" | "VOICE" | "SMS" | "RECURRING";
-
-// ===========================================
-// BUDGET TYPES
-// ===========================================
-
-export type BudgetType = "CATEGORY" | "GLOBAL";
-export type BudgetPeriod = "WEEKLY" | "MONTHLY" | "CUSTOM";
-export type BudgetStatus = "ACTIVE" | "PAUSED";

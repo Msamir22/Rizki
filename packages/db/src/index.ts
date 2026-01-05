@@ -1,6 +1,7 @@
 /**
  * WatermelonDB exports for Astik
- * Central export point for schema and all models
+ * AUTO-GENERATED - DO NOT EDIT MANUALLY
+ * Run 'npm run db:sync' to regenerate
  */
 
 // Schema
@@ -9,19 +10,19 @@ export { schema } from "./schema";
 // Types (exported from central location)
 export * from "./types";
 
-// Models
-export { Profile } from "./models/Profile";
+// Models (extended classes with custom logic)
 export { Account } from "./models/Account";
-export { BankDetails } from "./models/BankDetails";
-export { Asset } from "./models/Asset";
 export { AssetMetal } from "./models/AssetMetal";
+export { Asset } from "./models/Asset";
+export { BankDetails } from "./models/BankDetails";
+export { Budget } from "./models/Budget";
 export { Category } from "./models/Category";
-export { UserCategorySettings } from "./models/UserCategorySettings";
 export { Debt } from "./models/Debt";
+export { Profile } from "./models/Profile";
 export { RecurringPayment } from "./models/RecurringPayment";
 export { Transaction } from "./models/Transaction";
 export { Transfer } from "./models/Transfer";
-export { Budget } from "./models/Budget";
+export { UserCategorySettings } from "./models/UserCategorySettings";
 
 // Database
 export { database } from "./database";
