@@ -2,22 +2,26 @@
  * BaseTransfer - Abstract Base Model for WatermelonDB
  * AUTO-GENERATED - DO NOT EDIT MANUALLY
  * Run 'npm run db:sync' to regenerate
- * 
+ *
  * Extend this class in ../Transfer.ts to add custom methods
  */
 
-import { Model, Query } from "@nozbe/watermelondb";
-import { field, date, readonly, relation } from "@nozbe/watermelondb/decorators";
-import type { Associations } from "@nozbe/watermelondb/Model";
 import type { Relation } from "@nozbe/watermelondb";
-import type { BaseAccount } from "./base-account";
+import { Model } from "@nozbe/watermelondb";
+import {
+  date,
+  field,
+  readonly,
+  relation,
+} from "@nozbe/watermelondb/decorators";
+import type { Associations } from "@nozbe/watermelondb/Model";
 import type { BaseAccount } from "./base-account";
 
 export abstract class BaseTransfer extends Model {
   static table = "transfers";
   static associations: Associations = {
-    accounts: { type: "belongs_to", key: "from_account_id" },
-    accounts: { type: "belongs_to", key: "to_account_id" },
+    from_account_accounts: { type: "belongs_to", key: "from_account_id" },
+    to_account_accounts: { type: "belongs_to", key: "to_account_id" },
   };
 
   @field("amount") amount!: number;

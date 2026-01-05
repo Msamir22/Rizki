@@ -21,11 +21,21 @@ import { Transaction } from "./models/Transaction";
 import { Transfer } from "./models/Transfer";
 import { Budget } from "./models/Budget";
 
-const adapter = new SQLiteAdapter({
-  schema,
-  jsi: true,
-  onSetUpError: (error) => console.error("Database setup error:", error),
-});
+let adapter: SQLiteAdapter;
+try {
+  adapter = new SQLiteAdapter({
+    schema,
+    jsi: true,
+    onSetUpError: (error) => console.error("Database setup error:", error),
+  });
+} catch (error) {
+  console.error("Failed to create SQLite adapter:", error);
+  adapter = new SQLiteAdapter({
+    schema,
+    jsi: false,
+    onSetUpError: (error) => console.error("Database setup error:", error),
+  });
+}
 
 export const database = new Database({
   adapter,
@@ -44,19 +54,3 @@ export const database = new Database({
     Budget,
   ],
 });
-
-// Re-export models for convenience
-export {
-  Profile,
-  Account,
-  BankDetails,
-  Asset,
-  AssetMetal,
-  Category,
-  UserCategorySettings,
-  Debt,
-  RecurringPayment,
-  Transaction,
-  Transfer,
-  Budget,
-};
