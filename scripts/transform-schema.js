@@ -334,18 +334,44 @@ function generateBaseModel(tableName, columns, relationships, allTables) {
 
   // Build associations
   const associations = [];
-  const seenTables = new Set();
+  const seenBelongsToTables = new Map(); // Track table occurrences for belongs_to
+
+  // First pass: count occurrences of each referenced table for belongs_to
   for (const rel of rels) {
-    associations.push(
-      `    ${rel.referencedTable}: { type: "belongs_to", key: "${rel.foreignKey}" }`
+    seenBelongsToTables.set(
+      rel.referencedTable,
+      (seenBelongsToTables.get(rel.referencedTable) || 0) + 1
     );
   }
+
+  // Second pass: generate associations with unique keys
+  const usedBelongsToTables = new Map();
+  for (const rel of rels) {
+    const count = seenBelongsToTables.get(rel.referencedTable);
+    let assocKey = rel.referencedTable;
+
+    // If this table is referenced multiple times, prefix with foreign key
+    if (count > 1) {
+      assocKey = rel.foreignKey.replace(/_id$/, "_") + rel.referencedTable;
+    }
+
+    usedBelongsToTables.set(
+      rel.referencedTable,
+      (usedBelongsToTables.get(rel.referencedTable) || 0) + 1
+    );
+
+    associations.push(
+      `    ${assocKey}: { type: "belongs_to", key: "${rel.foreignKey}" }`
+    );
+  }
+
+  const seenHasManyTables = new Set();
   for (const rel of hasMany) {
     // Use unique key when same table has multiple foreign keys
-    const assocKey = seenTables.has(rel.table)
+    const assocKey = seenHasManyTables.has(rel.table)
       ? `${rel.table}_${rel.foreignKey.replace(/_id$/, "")}`
       : rel.table;
-    seenTables.add(rel.table);
+    seenHasManyTables.add(rel.table);
     associations.push(
       `    ${assocKey}: { type: "has_many", foreignKey: "${rel.foreignKey}" }`
     );
