@@ -18,6 +18,8 @@
 
 | Date       | Time  | Topic                            | File                                                                                                                                                       |
 | ---------- | ----- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-01-05 | 20:06 | Fix JSON Schema Handling         | [2026-01-05_2006_fix-json-schema-handling.md](file:///e:/Work/My%20Projects/Astik/docs/agent/sessions/2026-01-05_2006_fix-json-schema-handling.md)         |
+| 2026-01-05 | 15:00 | Schema Sync Automation           | [2026-01-05_1500_schema-sync-automation.md](file:///e:/Work/My%20Projects/Astik/docs/agent/sessions/2026-01-05_1500_schema-sync-automation.md)             |
 | 2026-01-05 | 00:07 | Dashboard & Quick Action FAB     | [2026-01-05_0007_dashboard-fab-implementation.md](file:///e:/Work/My%20Projects/Astik/docs/agent/sessions/2026-01-05_0007_dashboard-fab-implementation.md) |
 | 2026-01-04 | 22:35 | Memory System Enhancement        | [2026-01-04_2235_memory-system-enhancement.md](file:///e:/Work/My%20Projects/Astik/docs/agent/sessions/2026-01-04_2235_memory-system-enhancement.md)       |
 | 2026-01-04 | 05:20 | AI Agent Memory System Setup     | [2026-01-04_0520_memory-system-setup.md](file:///e:/Work/My%20Projects/Astik/docs/agent/sessions/2026-01-04_0520_memory-system-setup.md)                   |

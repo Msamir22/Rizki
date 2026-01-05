@@ -4,7 +4,7 @@ alwaysApply: true
 
 # 🧠 Astik Project Memory
 
-> **Last Updated:** 2026-01-04 **Purpose:** Persistent context for AI agents
+> **Last Updated:** 2026-01-05 **Purpose:** Persistent context for AI agents
 > across conversations
 
 ---
@@ -157,6 +157,7 @@ for asset transactions)
 - [x] AI Agent Memory System (project-memory.md + workflows)
 - [x] Dashboard real data integration (all components)
 - [x] Quick Action FAB component
+- [x] Schema sync automation (Supabase → WatermelonDB)
 
 ### 🔄 In Progress
 
@@ -220,6 +221,21 @@ for asset transactions)
 
 > Last 10 sessions for context continuity
 
+### Session: 2026-01-05 (20:06)
+
+- **Topic:** Fix JSON Field Handling in Schema
+- **Accomplished:** Updated schema transformation to handle JSON fields with
+  `Raw` suffix in base models and manual getters for parsing in extended models.
+- **Outcome:** Fixed TypeScript type mismatch for `notification_settings`.
+
+### Session: 2026-01-05 (15:00)
+
+- **Topic:** Schema Sync Automation
+- **Accomplished:** Created transform script that parses Supabase types and
+  generates WatermelonDB schema, types, and models. Implemented base/extended
+  model pattern for preserving custom getters.
+- **Outcome:** `npm run db:sync` workflow complete.
+
 ### Session: 2026-01-05 (00:07)
 
 - **Topic:** Dashboard Enhancements & Quick Action FAB
@@ -277,33 +293,6 @@ for asset transactions)
 - **Accomplished:** Created animated bottom tab bar, quick action buttons,
   replaced default Expo tabs.
 - **Reference:** `CustomTabBar.tsx`
-
-### Session: 2025-12-23 (Early Morning)
-
-- **Topic:** Refactoring Recent Transactions
-- **Accomplished:** Pixel-perfect implementation of dashboard transaction list
-  using Tailwind.
-- **Outcome:** UI matches light/dark mode mockups.
-
-### Session: 2025-12-22
-
-- **Topic:** Refining Starry Background
-- **Accomplished:** Fixed star positioning and theme checking logic for
-  background component.
-- **Outcome:** Visual polish.
-
-### Session: 2025-12-22
-
-- **Topic:** Fixing Android Build Errors
-- **Accomplished:** Resolved JSI and WatermelonDB compatibility issues on
-  Android.
-- **Outcome:** Successful Android build.
-
-### Session: 2025-12-22
-
-- **Topic:** Monorepo Maintenance
-- **Accomplished:** Investigated unexpected `node_modules` in mobile app folder.
-- **Outcome:** Verified workspaces configuration.
 
 ---
 
