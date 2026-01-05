@@ -1,5 +1,5 @@
 import React, { Component, ErrorInfo, ReactNode } from "react";
-import { StyleSheet, Text, View, ScrollView } from "react-native";
+import { Text, View, ScrollView } from "react-native";
 
 interface Props {
   children: ReactNode;
@@ -33,12 +33,22 @@ export class ErrorBoundary extends Component<Props, State> {
   public render() {
     if (this.state.hasError) {
       return (
-        <View style={styles.container}>
-          <Text style={styles.title}>Something went wrong</Text>
-          <ScrollView style={styles.scrollView}>
-            <Text style={styles.errorText}>{this.state.error?.toString()}</Text>
+        <View className="flex-1 bg-red-100 p-5 justify-center items-center">
+          <Text className="text-2xl font-bold text-red-600 mb-5 mt-[50px]">
+            Something went wrong
+          </Text>
+          <ScrollView className="w-full max-h-[500px]">
+            <Text
+              className="text-base text-red-700 mb-5"
+              style={{ fontFamily: "monospace" }}
+            >
+              {this.state.error?.toString()}
+            </Text>
             {this.state.errorInfo && (
-              <Text style={styles.stackText}>
+              <Text
+                className="text-xs text-red-900"
+                style={{ fontFamily: "monospace" }}
+              >
                 {this.state.errorInfo.componentStack}
               </Text>
             )}
@@ -50,35 +60,3 @@ export class ErrorBoundary extends Component<Props, State> {
     return this.props.children;
   }
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#FEE2E2",
-    padding: 20,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#DC2626",
-    marginBottom: 20,
-    marginTop: 50,
-  },
-  scrollView: {
-    width: "100%",
-    maxHeight: 500,
-  },
-  errorText: {
-    fontSize: 16,
-    color: "#B91C1C",
-    marginBottom: 20,
-    fontFamily: "monospace",
-  },
-  stackText: {
-    fontSize: 12,
-    color: "#7F1D1D",
-    fontFamily: "monospace",
-  },
-});
