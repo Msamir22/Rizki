@@ -123,6 +123,12 @@ module.exports = {
           500: palette.orange[500],
           600: palette.orange[600],
         },
+        tabBar: {
+          overlayLight: "rgba(0, 0, 0, 0.5)",
+          overlayDark: "rgba(0, 0, 0, 0.7)",
+          bgLight: "rgba(255, 255, 255, 0.85)",
+          bgDark: "rgba(15, 23, 42, 0.85)",
+        },
       },
     },
   },

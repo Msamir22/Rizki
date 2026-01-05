@@ -66,7 +66,7 @@ export const palette = {
   },
 };
 
-// 2. The Semantic Theme (The "Usage")
+// 2. The Semantic Theme
 export const colors = {
   primary: palette.nileGreen[700],
   secondary: palette.nileGreen[500],
