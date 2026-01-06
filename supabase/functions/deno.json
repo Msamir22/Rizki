@@ -1,0 +1,10 @@
+{
+  "imports": {
+    "edge-runtime": "jsr:@supabase/functions-js/edge-runtime.d.ts",
+    "openai": "npm:openai@^4.28.0",
+    "@supabase/supabase-js": "npm:@supabase/supabase-js@^2.49.1"
+  },
+  "compilerOptions": {
+    "lib": ["deno.ns", "deno.window"]
+  }
+}
