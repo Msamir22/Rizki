@@ -40,10 +40,16 @@ description: when working on mobile app that uses react native
   - Use `React Query`, `SWR`, or similar libraries for stateful data fetching
     and caching.
 
-  ## Testing & Debugging
-  - Write unit tests using `Jest` and `@testing-library/react-native`.
-  - Mock native modules and API responses in tests.
-  - Prefer `detox` for end-to-end testing if applicable.
+## Styling
+
+- Always use tailwind classes instead of the "styles = StyleSheet.create"
+  approach.
+
+## Testing & Debugging
+
+- Write unit tests using `Jest` and `@testing-library/react-native`.
+- Mock native modules and API responses in tests.
+- Prefer `detox` for end-to-end testing if applicable.
 
 instructions:
 
