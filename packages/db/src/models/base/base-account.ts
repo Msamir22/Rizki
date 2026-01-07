@@ -2,13 +2,20 @@
  * BaseAccount - Abstract Base Model for WatermelonDB
  * AUTO-GENERATED - DO NOT EDIT MANUALLY
  * Run 'npm run db:sync' to regenerate
- * 
+ *
  * Extend this class in ../Account.ts to add custom methods
  */
 
 import { Model, Query } from "@nozbe/watermelondb";
-import { field, date, readonly, children } from "@nozbe/watermelondb/decorators";
+import {
+  field,
+  date,
+  readonly,
+  relation,
+  children,
+} from "@nozbe/watermelondb/decorators";
 import type { Associations } from "@nozbe/watermelondb/Model";
+import type { Relation } from "@nozbe/watermelondb";
 import type { AccountType } from "../../types";
 
 export abstract class BaseAccount extends Model {

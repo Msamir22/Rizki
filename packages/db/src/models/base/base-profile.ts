@@ -2,18 +2,16 @@
  * BaseProfile - Abstract Base Model for WatermelonDB
  * AUTO-GENERATED - DO NOT EDIT MANUALLY
  * Run 'npm run db:sync' to regenerate
- * 
+ *
  * Extend this class in ../Profile.ts to add custom methods
  */
 
-import { Model, Query } from "@nozbe/watermelondb";
-import { field, date, readonly } from "@nozbe/watermelondb/decorators";
-import type { Associations } from "@nozbe/watermelondb/Model";
+import { Model } from "@nozbe/watermelondb";
+import { date, field, readonly } from "@nozbe/watermelondb/decorators";
 import type { ThemePreference } from "../../types";
 
 export abstract class BaseProfile extends Model {
   static table = "profiles";
-
 
   @field("avatar_url") avatarUrl?: string;
   @readonly @date("created_at") createdAt!: Date;
@@ -28,5 +26,4 @@ export abstract class BaseProfile extends Model {
   @field("theme") theme!: ThemePreference;
   @date("updated_at") updatedAt!: Date;
   @field("user_id") userId!: string;
-
 }

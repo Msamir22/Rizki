@@ -1,9 +1,3 @@
-/**
- * WatermelonDB exports for Astik
- * AUTO-GENERATED - DO NOT EDIT MANUALLY
- * Run 'npm run db:sync' to regenerate
- */
-
 // Schema
 export { schema } from "./schema";
 
@@ -26,3 +20,4 @@ export { UserCategorySettings } from "./models/UserCategorySettings";
 
 // Database
 export { database } from "./database";
+export type { Database as SupabaseDatabase } from "./supabase-types";

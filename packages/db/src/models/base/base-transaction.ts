@@ -2,18 +2,23 @@
  * BaseTransaction - Abstract Base Model for WatermelonDB
  * AUTO-GENERATED - DO NOT EDIT MANUALLY
  * Run 'npm run db:sync' to regenerate
- * 
+ *
  * Extend this class in ../Transaction.ts to add custom methods
  */
 
-import { Model, Query } from "@nozbe/watermelondb";
-import { field, date, readonly, relation } from "@nozbe/watermelondb/decorators";
-import type { Associations } from "@nozbe/watermelondb/Model";
 import type { Relation } from "@nozbe/watermelondb";
+import { Model } from "@nozbe/watermelondb";
+import {
+  date,
+  field,
+  readonly,
+  relation,
+} from "@nozbe/watermelondb/decorators";
+import type { Associations } from "@nozbe/watermelondb/Model";
 import type { TransactionSource, TransactionType } from "../../types";
 import type { BaseAccount } from "./base-account";
-import type { BaseCategory } from "./base-category";
 import type { BaseAsset } from "./base-asset";
+import type { BaseCategory } from "./base-category";
 import type { BaseDebt } from "./base-debt";
 import type { BaseRecurringPayment } from "./base-recurring-payment";
 
@@ -49,5 +54,6 @@ export abstract class BaseTransaction extends Model {
   @relation("categories", "category_id") category!: Relation<BaseCategory>;
   @relation("assets", "linked_asset_id") linkedAsset!: Relation<BaseAsset>;
   @relation("debts", "linked_debt_id") linkedDebt!: Relation<BaseDebt>;
-  @relation("recurring_payments", "linked_recurring_id") linkedRecurring!: Relation<BaseRecurringPayment>;
+  @relation("recurring_payments", "linked_recurring_id")
+  linkedRecurring!: Relation<BaseRecurringPayment>;
 }

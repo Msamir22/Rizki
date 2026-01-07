@@ -2,14 +2,20 @@
  * BaseDebt - Abstract Base Model for WatermelonDB
  * AUTO-GENERATED - DO NOT EDIT MANUALLY
  * Run 'npm run db:sync' to regenerate
- * 
+ *
  * Extend this class in ../Debt.ts to add custom methods
  */
 
-import { Model, Query } from "@nozbe/watermelondb";
-import { field, date, readonly, relation, children } from "@nozbe/watermelondb/decorators";
-import type { Associations } from "@nozbe/watermelondb/Model";
 import type { Relation } from "@nozbe/watermelondb";
+import { Model, Query } from "@nozbe/watermelondb";
+import {
+  children,
+  date,
+  field,
+  readonly,
+  relation,
+} from "@nozbe/watermelondb/decorators";
+import type { Associations } from "@nozbe/watermelondb/Model";
 import type { DebtStatus, DebtType } from "../../types";
 import type { BaseAccount } from "./base-account";
 

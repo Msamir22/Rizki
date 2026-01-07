@@ -2,15 +2,26 @@
  * BaseRecurringPayment - Abstract Base Model for WatermelonDB
  * AUTO-GENERATED - DO NOT EDIT MANUALLY
  * Run 'npm run db:sync' to regenerate
- * 
+ *
  * Extend this class in ../RecurringPayment.ts to add custom methods
  */
 
 import { Model, Query } from "@nozbe/watermelondb";
-import { field, date, readonly, relation, children } from "@nozbe/watermelondb/decorators";
+import {
+  field,
+  date,
+  readonly,
+  relation,
+  children,
+} from "@nozbe/watermelondb/decorators";
 import type { Associations } from "@nozbe/watermelondb/Model";
 import type { Relation } from "@nozbe/watermelondb";
-import type { RecurringAction, RecurringFrequency, RecurringStatus, TransactionType } from "../../types";
+import type {
+  RecurringAction,
+  RecurringFrequency,
+  RecurringStatus,
+  TransactionType,
+} from "../../types";
 import type { BaseAccount } from "./base-account";
 import type { BaseCategory } from "./base-category";
 import type { BaseDebt } from "./base-debt";
