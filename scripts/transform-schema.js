@@ -522,37 +522,6 @@ export class ${className} extends ${baseClassName} {
 `;
 }
 
-/**
- * Generate index.ts content
- */
-function generateIndex(tables) {
-  const modelExports = Object.keys(tables)
-    .map((tableName) => {
-      const className = tableToClassName(tableName);
-      return `export { ${className} } from "./models/${className}";`;
-    })
-    .join("\n");
-
-  return `/**
- * WatermelonDB exports for Astik
- * AUTO-GENERATED - DO NOT EDIT MANUALLY
- * Run 'npm run db:sync' to regenerate
- */
-
-// Schema
-export { schema } from "./schema";
-
-// Types (exported from central location)
-export * from "./types";
-
-// Models (extended classes with custom logic)
-${modelExports}
-
-// Database
-export { database } from "./database";
-`;
-}
-
 // =============================================================================
 // UTILITIES
 // =============================================================================
@@ -646,11 +615,6 @@ function main() {
       console.log(`   ⏭️  ${extendedFileName} (exists, skipped)`);
     }
   }
-
-  // Generate index.ts
-  console.log("📝 Generating index.ts...");
-  const indexContent = generateIndex(tables);
-  fs.writeFileSync(path.join(OUTPUT_DIR, "index.ts"), indexContent);
 
   console.log("\n✨ Schema sync complete!");
   console.log("   Base models (base-*.ts) are regenerated each time.");
