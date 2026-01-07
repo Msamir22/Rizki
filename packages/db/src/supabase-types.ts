@@ -48,7 +48,15 @@ export type Database = {
           updated_at?: string;
           user_id?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "accounts_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "v_user_net_worth";
+            referencedColumns: ["user_id"];
+          },
+        ];
       };
       asset_metals: {
         Row: {
@@ -131,7 +139,15 @@ export type Database = {
           updated_at?: string;
           user_id?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "assets_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "v_user_net_worth";
+            referencedColumns: ["user_id"];
+          },
+        ];
       };
       bank_details: {
         Row: {
@@ -237,6 +253,13 @@ export type Database = {
             referencedRelation: "categories";
             referencedColumns: ["id"];
           },
+          {
+            foreignKeyName: "budgets_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "v_user_net_worth";
+            referencedColumns: ["user_id"];
+          },
         ];
       };
       categories: {
@@ -305,6 +328,13 @@ export type Database = {
             referencedRelation: "categories";
             referencedColumns: ["id"];
           },
+          {
+            foreignKeyName: "categories_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "v_user_net_worth";
+            referencedColumns: ["user_id"];
+          },
         ];
       };
       daily_snapshot_assets: {
@@ -332,7 +362,15 @@ export type Database = {
           total_assets_egp?: number;
           user_id?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "daily_snapshot_assets_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "v_user_net_worth";
+            referencedColumns: ["user_id"];
+          },
+        ];
       };
       daily_snapshot_balance: {
         Row: {
@@ -359,7 +397,50 @@ export type Database = {
           total_accounts_egp?: number;
           user_id?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "daily_snapshot_balance_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "v_user_net_worth";
+            referencedColumns: ["user_id"];
+          },
+        ];
+      };
+      daily_snapshot_net_worth: {
+        Row: {
+          id: string;
+          total_accounts: number;
+          total_assets: number;
+          total_net_worth: number;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          id?: string;
+          total_accounts?: number;
+          total_assets?: number;
+          total_net_worth?: number;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          id?: string;
+          total_accounts?: number;
+          total_assets?: number;
+          total_net_worth?: number;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "user_net_worth_summary_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: true;
+            referencedRelation: "v_user_net_worth";
+            referencedColumns: ["user_id"];
+          },
+        ];
       };
       debts: {
         Row: {
@@ -418,32 +499,45 @@ export type Database = {
             referencedRelation: "accounts";
             referencedColumns: ["id"];
           },
+          {
+            foreignKeyName: "debts_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "v_user_net_worth";
+            referencedColumns: ["user_id"];
+          },
         ];
       };
       market_rates: {
         Row: {
           created_at: string | null;
-          currencies: Json;
+          eur_egp: number | null;
+          gold_egp_per_gram: number | null;
           id: number;
-          metals: Json;
+          silver_egp_per_gram: number | null;
           timestamp: string;
           updated_at: string | null;
+          usd_egp: number | null;
         };
         Insert: {
           created_at?: string | null;
-          currencies: Json;
+          eur_egp?: number | null;
+          gold_egp_per_gram?: number | null;
           id?: number;
-          metals: Json;
+          silver_egp_per_gram?: number | null;
           timestamp: string;
           updated_at?: string | null;
+          usd_egp?: number | null;
         };
         Update: {
           created_at?: string | null;
-          currencies?: Json;
+          eur_egp?: number | null;
+          gold_egp_per_gram?: number | null;
           id?: number;
-          metals?: Json;
+          silver_egp_per_gram?: number | null;
           timestamp?: string;
           updated_at?: string | null;
+          usd_egp?: number | null;
         };
         Relationships: [];
       };
@@ -526,7 +620,15 @@ export type Database = {
           updated_at?: string;
           user_id?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "profiles_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: true;
+            referencedRelation: "v_user_net_worth";
+            referencedColumns: ["user_id"];
+          },
+        ];
       };
       recurring_payments: {
         Row: {
@@ -613,6 +715,13 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "debts";
             referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "recurring_payments_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "v_user_net_worth";
+            referencedColumns: ["user_id"];
           },
         ];
       };
@@ -713,6 +822,13 @@ export type Database = {
             referencedRelation: "recurring_payments";
             referencedColumns: ["id"];
           },
+          {
+            foreignKeyName: "transactions_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "v_user_net_worth";
+            referencedColumns: ["user_id"];
+          },
         ];
       };
       transfers: {
@@ -776,6 +892,13 @@ export type Database = {
             referencedRelation: "accounts";
             referencedColumns: ["id"];
           },
+          {
+            foreignKeyName: "transfers_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "v_user_net_worth";
+            referencedColumns: ["user_id"];
+          },
         ];
       };
       user_category_settings: {
@@ -814,41 +937,34 @@ export type Database = {
             referencedRelation: "categories";
             referencedColumns: ["id"];
           },
+          {
+            foreignKeyName: "user_category_settings_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "v_user_net_worth";
+            referencedColumns: ["user_id"];
+          },
         ];
       };
-      user_net_worth_summary: {
+    };
+    Views: {
+      v_user_net_worth: {
         Row: {
-          id: string;
-          total_accounts: number;
-          total_assets: number;
-          total_net_worth: number;
-          updated_at: string;
-          user_id: string;
-        };
-        Insert: {
-          id?: string;
-          total_accounts?: number;
-          total_assets?: number;
-          total_net_worth?: number;
-          updated_at?: string;
-          user_id: string;
-        };
-        Update: {
-          id?: string;
-          total_accounts?: number;
-          total_assets?: number;
-          total_net_worth?: number;
-          updated_at?: string;
-          user_id?: string;
+          calculated_at: string | null;
+          total_accounts: number | null;
+          total_assets: number | null;
+          total_net_worth: number | null;
+          user_id: string | null;
         };
         Relationships: [];
       };
     };
-    Views: {
-      [_ in never]: never;
-    };
     Functions: {
-      [_ in never]: never;
+      recalculate_daily_snapshot_assets: { Args: never; Returns: undefined };
+      recalculate_daily_snapshot_balance: { Args: never; Returns: undefined };
+      recalculate_daily_snapshot_net_worth: { Args: never; Returns: undefined };
+      run_daily_snapshots: { Args: never; Returns: undefined };
+      save_market_rates_history: { Args: never; Returns: undefined };
     };
     Enums: {
       account_type: "CASH" | "BANK" | "DIGITAL_WALLET";
