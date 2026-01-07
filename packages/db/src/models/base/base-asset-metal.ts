@@ -6,15 +6,15 @@
  * Extend this class in ../AssetMetal.ts to add custom methods
  */
 
-import type { Relation } from "@nozbe/watermelondb";
-import { Model } from "@nozbe/watermelondb";
+import { Model, Query } from "@nozbe/watermelondb";
 import {
-  date,
   field,
+  date,
   readonly,
   relation,
 } from "@nozbe/watermelondb/decorators";
 import type { Associations } from "@nozbe/watermelondb/Model";
+import type { Relation } from "@nozbe/watermelondb";
 import type { MetalType } from "../../types";
 import type { BaseAsset } from "./base-asset";
 
@@ -26,9 +26,11 @@ export abstract class BaseAssetMetal extends Model {
 
   @field("asset_id") assetId!: string;
   @readonly @date("created_at") createdAt!: Date;
+  @field("deleted") deleted!: boolean;
   @field("item_form") itemForm?: string;
   @field("metal_type") metalType!: MetalType;
   @field("purity_karat") purityKarat!: number;
+  @date("updated_at") updatedAt!: Date;
   @field("weight_grams") weightGrams!: number;
 
   @relation("assets", "asset_id") asset!: Relation<BaseAsset>;

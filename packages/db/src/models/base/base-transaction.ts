@@ -6,19 +6,19 @@
  * Extend this class in ../Transaction.ts to add custom methods
  */
 
-import type { Relation } from "@nozbe/watermelondb";
-import { Model } from "@nozbe/watermelondb";
+import { Model, Query } from "@nozbe/watermelondb";
 import {
-  date,
   field,
+  date,
   readonly,
   relation,
 } from "@nozbe/watermelondb/decorators";
 import type { Associations } from "@nozbe/watermelondb/Model";
+import type { Relation } from "@nozbe/watermelondb";
 import type { TransactionSource, TransactionType } from "../../types";
 import type { BaseAccount } from "./base-account";
-import type { BaseAsset } from "./base-asset";
 import type { BaseCategory } from "./base-category";
+import type { BaseAsset } from "./base-asset";
 import type { BaseDebt } from "./base-debt";
 import type { BaseRecurringPayment } from "./base-recurring-payment";
 

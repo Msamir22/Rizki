@@ -6,16 +6,16 @@
  * Extend this class in ../Debt.ts to add custom methods
  */
 
-import type { Relation } from "@nozbe/watermelondb";
 import { Model, Query } from "@nozbe/watermelondb";
 import {
-  children,
-  date,
   field,
+  date,
   readonly,
   relation,
+  children,
 } from "@nozbe/watermelondb/decorators";
 import type { Associations } from "@nozbe/watermelondb/Model";
+import type { Relation } from "@nozbe/watermelondb";
 import type { DebtStatus, DebtType } from "../../types";
 import type { BaseAccount } from "./base-account";
 

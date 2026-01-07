@@ -11,11 +11,9 @@ import {
   field,
   date,
   readonly,
-  relation,
   children,
 } from "@nozbe/watermelondb/decorators";
 import type { Associations } from "@nozbe/watermelondb/Model";
-import type { Relation } from "@nozbe/watermelondb";
 import type { AssetType } from "../../types";
 
 export abstract class BaseAsset extends Model {

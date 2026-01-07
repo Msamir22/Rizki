@@ -6,15 +6,15 @@
  * Extend this class in ../Transfer.ts to add custom methods
  */
 
-import type { Relation } from "@nozbe/watermelondb";
-import { Model } from "@nozbe/watermelondb";
+import { Model, Query } from "@nozbe/watermelondb";
 import {
-  date,
   field,
+  date,
   readonly,
   relation,
 } from "@nozbe/watermelondb/decorators";
 import type { Associations } from "@nozbe/watermelondb/Model";
+import type { Relation } from "@nozbe/watermelondb";
 import type { BaseAccount } from "./base-account";
 
 export abstract class BaseTransfer extends Model {

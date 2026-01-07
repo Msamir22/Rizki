@@ -6,15 +6,15 @@
  * Extend this class in ../UserCategorySettings.ts to add custom methods
  */
 
-import type { Relation } from "@nozbe/watermelondb";
-import { Model } from "@nozbe/watermelondb";
+import { Model, Query } from "@nozbe/watermelondb";
 import {
-  date,
   field,
+  date,
   readonly,
   relation,
 } from "@nozbe/watermelondb/decorators";
 import type { Associations } from "@nozbe/watermelondb/Model";
+import type { Relation } from "@nozbe/watermelondb";
 import type { CategoryNature } from "../../types";
 import type { BaseCategory } from "./base-category";
 
@@ -26,6 +26,7 @@ export abstract class BaseUserCategorySettings extends Model {
 
   @field("category_id") categoryId!: string;
   @readonly @date("created_at") createdAt!: Date;
+  @field("deleted") deleted!: boolean;
   @field("is_hidden") isHidden!: boolean;
   @field("nature") nature?: CategoryNature;
   @date("updated_at") updatedAt!: Date;
