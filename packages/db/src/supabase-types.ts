@@ -62,28 +62,34 @@ export type Database = {
         Row: {
           asset_id: string;
           created_at: string;
+          deleted: boolean;
           id: string;
           item_form: string | null;
           metal_type: Database["public"]["Enums"]["metal_type"];
           purity_karat: number;
+          updated_at: string;
           weight_grams: number;
         };
         Insert: {
           asset_id: string;
           created_at?: string;
+          deleted?: boolean;
           id?: string;
           item_form?: string | null;
           metal_type: Database["public"]["Enums"]["metal_type"];
           purity_karat: number;
+          updated_at?: string;
           weight_grams: number;
         };
         Update: {
           asset_id?: string;
           created_at?: string;
+          deleted?: boolean;
           id?: string;
           item_form?: string | null;
           metal_type?: Database["public"]["Enums"]["metal_type"];
           purity_karat?: number;
+          updated_at?: string;
           weight_grams?: number;
         };
         Relationships: [
@@ -905,6 +911,7 @@ export type Database = {
         Row: {
           category_id: string;
           created_at: string;
+          deleted: boolean;
           id: string;
           is_hidden: boolean;
           nature: Database["public"]["Enums"]["category_nature"] | null;
@@ -914,6 +921,7 @@ export type Database = {
         Insert: {
           category_id: string;
           created_at?: string;
+          deleted?: boolean;
           id?: string;
           is_hidden?: boolean;
           nature?: Database["public"]["Enums"]["category_nature"] | null;
@@ -923,6 +931,7 @@ export type Database = {
         Update: {
           category_id?: string;
           created_at?: string;
+          deleted?: boolean;
           id?: string;
           is_hidden?: boolean;
           nature?: Database["public"]["Enums"]["category_nature"] | null;
