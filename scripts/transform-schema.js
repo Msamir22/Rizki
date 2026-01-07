@@ -10,6 +10,8 @@
  * Usage: node scripts/transform-schema.js
  */
 
+const { execSync } = require("child_process");
+
 const fs = require("fs");
 const path = require("path");
 
@@ -156,9 +158,14 @@ function parseSupabaseTypes(content) {
       relationships[tableName] = relationships[tableName] || [];
 
       while ((relMatch = relRegex.exec(relationshipsBlock)) !== null) {
+        const referencedTable = relMatch[3];
+        // Skip relationships to excluded tables (they won't have models)
+        if (EXCLUDED_TABLES.includes(referencedTable)) {
+          continue;
+        }
         relationships[tableName].push({
           foreignKey: relMatch[2],
-          referencedTable: relMatch[3],
+          referencedTable: referencedTable,
         });
       }
     }
@@ -317,12 +324,17 @@ export interface NotificationSettings {
 function generateBaseModel(tableName, columns, relationships, allTables) {
   const className = tableToClassName(tableName);
   const baseClassName = `Base${className}`;
-  const rels = relationships[tableName] || [];
+  // Filter relationships to only include tables that exist in allTables (not excluded)
+  const rels = (relationships[tableName] || []).filter(
+    (rel) => allTables[rel.referencedTable]
+  );
 
-  // Find reverse relationships (has_many)
+  // Find reverse relationships (has_many) - only from tables that exist in allTables
   const hasMany = [];
   for (const [otherTable, otherRels] of Object.entries(relationships)) {
     if (otherTable === tableName) continue;
+    // Skip if the referencing table is not in allTables
+    if (!allTables[otherTable]) continue;
     for (const rel of otherRels || []) {
       if (rel.referencedTable === tableName) {
         hasMany.push({
@@ -617,6 +629,17 @@ function main() {
     } else {
       console.log(`   ⏭️  ${extendedFileName} (exists, skipped)`);
     }
+  }
+
+  // Format the generated base model files with Prettier
+  console.log("\n🎨 Formatting base model files...");
+  try {
+    execSync(`npx prettier --write "${BASE_MODELS_DIR}/**/*.ts"`, {
+      stdio: "inherit",
+    });
+    console.log("   ✅ Base models formatted");
+  } catch (error) {
+    console.warn("   ⚠️  Prettier formatting failed:", error.message);
   }
 
   console.log("\n✨ Schema sync complete!");
