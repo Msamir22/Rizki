@@ -10,8 +10,11 @@ import type { Database } from "@nozbe/watermelondb";
 import type {
   SyncPullResult,
   SyncDatabaseChangeSet,
+  SyncPushResult,
+  SyncPushArgs,
 } from "@nozbe/watermelondb/sync";
 import { supabase, getCurrentUserId } from "./supabase";
+import { schema, SupabaseDatabase } from "@astik/db";
 
 // Record type that matches WatermelonDB's expected format
 interface RawRecord {
@@ -19,31 +22,26 @@ interface RawRecord {
   [key: string]: unknown;
 }
 
-// Tables that should be synced to Supabase
-const SYNCABLE_TABLES = [
-  "profiles",
-  "accounts",
-  "bank_details",
-  "assets",
-  "asset_metals",
-  "categories",
-  "user_category_settings",
-  "debts",
-  "recurring_payments",
-  "transactions",
-  "transfers",
-  "budgets",
+export const EXCLUDED_TABLES = [
+  "__InternalSupabase",
+  "daily_snapshot_assets",
+  "daily_snapshot_balance",
+  "daily_snapshot_net_worth",
+  "market_rates",
+  "market_rates_history",
+  "v_user_net_worth",
 ] as const;
 
-type SyncableTable = (typeof SYNCABLE_TABLES)[number];
+type ExcludedTableName = (typeof EXCLUDED_TABLES)[number];
+type SupabaseTablesNames = Exclude<
+  keyof SupabaseDatabase["public"]["Tables"],
+  ExcludedTableName
+>;
 
-interface SyncPushChanges {
-  [tableName: string]: {
-    created: RawRecord[];
-    updated: RawRecord[];
-    deleted: string[];
-  };
-}
+// Tables that should be synced to Supabase
+const SYNCABLE_TABLES = Object.keys(schema.tables) as SupabaseTablesNames[];
+
+type SyncableTable = (typeof SYNCABLE_TABLES)[number];
 
 /**
  * Pull changes from Supabase since last sync
@@ -52,12 +50,13 @@ async function pullChanges(
   lastPulledAt: number | null
 ): Promise<SyncPullResult> {
   const userId = await getCurrentUserId();
+  // If no user is authenticated, return an empty changeset
   if (!userId) {
     console.log("No user authenticated, skipping pull");
-    return { changes: {} as SyncDatabaseChangeSet, timestamp: Date.now() };
+    return { changes: {}, timestamp: Date.now() };
   }
 
-  const changes: SyncDatabaseChangeSet = {} as SyncDatabaseChangeSet;
+  const changes: SyncDatabaseChangeSet = {};
   const lastSyncDate = lastPulledAt
     ? new Date(lastPulledAt).toISOString()
     : null;
@@ -90,7 +89,7 @@ async function pullChanges(
 
       const activeRecords = data
         .filter((record) => record.deleted !== true)
-        .map((record) => transformFromSupabase(record, table));
+        .map((record) => transformFromSupabase(record));
 
       // For simplicity, treat all active records as "updated"
       // WatermelonDB will handle the create vs update logic
@@ -113,14 +112,18 @@ async function pullChanges(
 /**
  * Push local changes to Supabase
  */
-async function pushChanges(changes: SyncPushChanges): Promise<void> {
+async function pushChanges(
+  pushArgs: SyncPushArgs
+): Promise<SyncPushResult | undefined | void> {
   const userId = await getCurrentUserId();
   if (!userId) {
     console.log("No user authenticated, skipping push");
     return;
   }
 
+  const { changes } = pushArgs;
   for (const [tableName, tableChanges] of Object.entries(changes)) {
+    const table = tableName as SyncableTable;
     if (!SYNCABLE_TABLES.includes(tableName as SyncableTable)) {
       continue;
     }
@@ -129,23 +132,23 @@ async function pushChanges(changes: SyncPushChanges): Promise<void> {
       // Handle created records
       if (tableChanges.created.length > 0) {
         const records = tableChanges.created.map((record) =>
-          transformToSupabase(record, tableName, userId)
+          transformToSupabase(record, userId)
         );
-        const { error } = await supabase.from(tableName).insert(records);
+        const { error } = await supabase.from(table).insert(records);
         if (error) {
-          console.error(`Error inserting ${tableName}:`, error);
+          console.error(`Error inserting ${table}:`, error);
         }
       }
 
       // Handle updated records
       if (tableChanges.updated.length > 0) {
         for (const record of tableChanges.updated) {
-          const transformed = transformToSupabase(record, tableName, userId);
+          const transformed = transformToSupabase(record, userId);
           const { error } = await supabase
-            .from(tableName)
+            .from(table)
             .upsert(transformed, { onConflict: "id" });
           if (error) {
-            console.error(`Error upserting ${tableName}:`, error);
+            console.error(`Error upserting ${table}:`, error);
           }
         }
       }
@@ -153,25 +156,26 @@ async function pushChanges(changes: SyncPushChanges): Promise<void> {
       // Handle deleted records (soft delete)
       if (tableChanges.deleted.length > 0) {
         const { error } = await supabase
-          .from(tableName)
+          .from(table)
           .update({ deleted: true, updated_at: new Date().toISOString() })
           .in("id", tableChanges.deleted);
         if (error) {
-          console.error(`Error deleting ${tableName}:`, error);
+          console.error(`Error deleting ${table}:`, error);
         }
       }
     } catch (err) {
-      console.error(`Exception pushing ${tableName}:`, err);
+      console.error(`Exception pushing ${table}:`, err);
     }
   }
 }
+
+// TODO: Refactor this function to be more simple
 
 /**
  * Transform Supabase record to WatermelonDB format
  */
 function transformFromSupabase(
-  record: Record<string, unknown>,
-  _tableName: string
+  record: Record<string, unknown>
 ): Record<string, unknown> {
   const transformed: Record<string, unknown> = { ...record };
 
@@ -210,14 +214,19 @@ function transformFromSupabase(
   return transformed;
 }
 
+// Type helper for Supabase insert types
+type SupabaseInsert<T extends SyncableTable> =
+  SupabaseDatabase["public"]["Tables"][T]["Insert"];
+
+// TODO: Refactor this function to be more simple
+
 /**
  * Transform WatermelonDB record to Supabase format
  */
-function transformToSupabase(
+function transformToSupabase<T extends SyncableTable>(
   record: unknown,
-  _tableName: string,
   userId: string
-): Record<string, unknown> {
+): SupabaseInsert<T> {
   const wmRecord = record as Record<string, unknown>;
   const transformed: Record<string, unknown> = { ...wmRecord };
 
@@ -270,7 +279,7 @@ function transformToSupabase(
       .split("T")[0];
   }
 
-  return transformed;
+  return transformed as SupabaseInsert<T>;
 }
 
 /**
@@ -291,8 +300,8 @@ export async function syncDatabase(database: Database): Promise<void> {
         const result = await pullChanges(lastPulledAt ?? null);
         return result as SyncPullResult;
       },
-      pushChanges: async ({ changes }) => {
-        await pushChanges(changes as SyncPushChanges);
+      pushChanges: async ({ changes, lastPulledAt }) => {
+        await pushChanges({ changes, lastPulledAt });
       },
       migrationsEnabledAtVersion: 2,
     });
