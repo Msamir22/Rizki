@@ -18,6 +18,7 @@
 
 | Date       | Time  | Topic                              | File                                                                                                                                                                   |
 | ---------- | ----- | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-01-09 | 19:20 | RLS Policies - Authenticated Only  | [2026-01-09_1920_rls-policies-authenticated-only.md](file:///e:/Work/My%20Projects/Astik/docs/agent/sessions/2026-01-09_1920_rls-policies-authenticated-only.md)       |
 | 2026-01-09 | 00:52 | Transaction Analytics Architecture | [2026-01-09_0052_transaction-analytics-architecture.md](file:///e:/Work/My%20Projects/Astik/docs/agent/sessions/2026-01-09_0052_transaction-analytics-architecture.md) |
 | 2026-01-07 | 19:37 | Fix WatermelonDB Schema Sync       | [2026-01-07_1937_fix-watermelon-schema-sync.md](file:///e:/Work/My%20Projects/Astik/docs/agent/sessions/2026-01-07_1937_fix-watermelon-schema-sync.md)                 |
 | 2026-01-07 | 08:30 | Fix Schema Transformation Script   | [2026-01-07_0830_fix-schema-transformation-script.md](file:///e:/Work/My%20Projects/Astik/docs/agent/sessions/2026-01-07_0830_fix-schema-transformation-script.md)     |

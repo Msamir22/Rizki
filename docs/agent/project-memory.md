@@ -4,7 +4,7 @@ alwaysApply: true
 
 # 🧠 Astik Project Memory
 
-> **Last Updated:** 2026-01-06 **Purpose:** Persistent context for AI agents
+> **Last Updated:** 2026-01-09 **Purpose:** Persistent context for AI agents
 > across conversations
 
 ---
@@ -226,6 +226,15 @@ for asset transactions)
 ## 7. Recent Sessions
 
 > Last 10 sessions for context continuity
+
+### Session: 2026-01-09 (19:20)
+
+- **Topic:** RLS Policies - Authenticated Only
+- **Accomplished:** Updated all RLS policies to require `authenticated` role
+  only. Created and applied migration
+  `008_update_rls_policies_to_authenticated.sql`.
+- **Outcome:** All data access now requires signed-in users (including anonymous
+  sign-in).
 
 ### Session: 2026-01-09 (00:52)
 
