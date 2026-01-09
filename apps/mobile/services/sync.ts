@@ -5,22 +5,16 @@
  * Strategy: "Last Write Wins" - most recent updated_at timestamp wins conflicts
  */
 
-import { synchronize } from "@nozbe/watermelondb/sync";
+import { schema, SupabaseDatabase } from "@astik/db";
 import type { Database } from "@nozbe/watermelondb";
 import type {
-  SyncPullResult,
   SyncDatabaseChangeSet,
-  SyncPushResult,
+  SyncPullResult,
   SyncPushArgs,
+  SyncPushResult,
 } from "@nozbe/watermelondb/sync";
-import { supabase, getCurrentUserId } from "./supabase";
-import { schema, SupabaseDatabase } from "@astik/db";
-
-// Record type that matches WatermelonDB's expected format
-interface RawRecord {
-  id: string;
-  [key: string]: unknown;
-}
+import { synchronize } from "@nozbe/watermelondb/sync";
+import { getCurrentUserId, supabase } from "./supabase";
 
 export const EXCLUDED_TABLES = [
   "__InternalSupabase",
