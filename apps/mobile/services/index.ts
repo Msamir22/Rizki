@@ -19,3 +19,4 @@ export {
   calculateSilverValue,
 } from "./rates";
 export type { MarketRates } from "./rates";
+export { apiGet, apiPost, apiConfig } from "./api";

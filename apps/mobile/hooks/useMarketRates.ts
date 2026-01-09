@@ -1,73 +1,86 @@
-/**
- * useMarketRates Hook
- * Hook for fetching and refreshing market rates from Supabase
- */
-
-import { useState, useEffect, useCallback } from "react";
-import {
-  fetchMarketRates,
-  refreshMarketRates,
-  MarketRates,
-} from "../services/rates";
+import { MarketRates } from "@astik/logic";
+import { RealtimeChannel } from "@supabase/supabase-js";
+import { useEffect, useRef, useState } from "react";
+import { getLatestMarketRates } from "../services/rates";
+import { supabase } from "../services/supabase";
 
 interface UseMarketRatesResult {
   rates: MarketRates | null;
   isLoading: boolean;
   error: Error | null;
-  refresh: () => Promise<void>;
+  isConnected: boolean;
 }
 
 /**
- * Hook to get market rates with auto-refresh
- * @param autoRefreshMs - Auto-refresh interval in milliseconds (default: 30 minutes)
+ * Hook to get latest market rates with realtime updates.
  */
-export function useMarketRates(
-  autoRefreshMs: number = 30 * 60 * 1000
-): UseMarketRatesResult {
+export function useMarketRates(): UseMarketRatesResult {
   const [rates, setRates] = useState<MarketRates | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
 
-  const loadRates = useCallback(async (forceRefresh: boolean = false) => {
-    try {
-      setIsLoading(true);
-      const result = forceRefresh
-        ? await refreshMarketRates()
-        : await fetchMarketRates();
-      setRates(result);
-      setError(null);
-    } catch (err) {
-      console.error("Error fetching rates:", err);
-      setError(err instanceof Error ? err : new Error("Failed to fetch rates"));
-    } finally {
-      setIsLoading(false);
-    }
+  const channelRef = useRef<RealtimeChannel | null>(null);
+
+  useEffect(() => {
+    const fetchInitialRates = async (): Promise<void> => {
+      try {
+        setIsLoading(true);
+        const result = await getLatestMarketRates();
+        setRates(result);
+        setError(null);
+      } catch (err) {
+        console.error("Error fetching initial rates:", err);
+        setError(
+          err instanceof Error ? err : new Error("Failed to fetch rates")
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchInitialRates();
+
+    const channel = supabase
+      .channel("market-rates-realtime")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "market_rates",
+        },
+        (payload) => {
+          // New rate inserted - update state
+          console.log("🔄 Market rates updated via realtime:", payload.new);
+          setRates(payload.new as MarketRates);
+        }
+      )
+      .subscribe((status) => {
+        // Track connection status
+        setIsConnected(status === "SUBSCRIBED");
+        if (status === "SUBSCRIBED") {
+          console.log("✅ Subscribed to market rates realtime updates");
+        } else if (status === "CHANNEL_ERROR") {
+          console.error("❌ Failed to subscribe to market rates");
+        }
+      });
+
+    channelRef.current = channel;
+
+    return () => {
+      if (channelRef.current) {
+        console.log("🔌 Unsubscribing from market rates realtime");
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+    };
   }, []);
-
-  const refresh = useCallback(async () => {
-    await loadRates(true);
-  }, [loadRates]);
-
-  // Initial fetch
-  useEffect(() => {
-    loadRates(false);
-  }, [loadRates]);
-
-  // Auto-refresh interval
-  useEffect(() => {
-    if (autoRefreshMs <= 0) return;
-
-    const interval = setInterval(() => {
-      loadRates(false);
-    }, autoRefreshMs);
-
-    return () => clearInterval(interval);
-  }, [autoRefreshMs, loadRates]);
 
   return {
     rates,
     isLoading,
     error,
-    refresh,
+    isConnected,
   };
 }
