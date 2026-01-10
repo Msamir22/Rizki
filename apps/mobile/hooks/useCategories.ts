@@ -1,8 +1,3 @@
-/**
- * useCategories Hook
- * Reactive hook for category data from WatermelonDB
- */
-
 import { useState, useEffect } from "react";
 import { database, Category, TransactionType } from "@astik/db";
 import { Q } from "@nozbe/watermelondb";
@@ -18,11 +13,8 @@ interface UseCategoriesResult {
 }
 
 interface UseCategoriesOptions {
-  /** Only show level 1 categories (top-level) */
   topLevelOnly?: boolean;
-  /** Filter by transaction type (EXPENSE or INCOME) */
   type?: TransactionType;
-  /** Include hidden categories */
   includeHidden?: boolean;
 }
 
@@ -49,7 +41,6 @@ export function useCategories(
 
     const categoriesCollection = database.get<Category>("categories");
 
-    // Build query conditions (Q.sortBy not compatible with Q.where array, so we sort in-memory)
     const conditions = [
       Q.where("deleted", false),
       Q.where("is_internal", false),
@@ -67,14 +58,14 @@ export function useCategories(
       conditions.push(Q.where("is_hidden", false));
     }
 
-    const query = categoriesCollection.query(Q.and(...conditions));
+    const query = categoriesCollection.query(
+      Q.and(...conditions),
+      Q.sortBy("sort_order", "asc")
+    );
 
-    // Subscribe to changes
     const subscription = query.observe().subscribe({
       next: (result) => {
-        // Sort by sort_order in memory
-        const sorted = [...result].sort((a, b) => a.sortOrder - b.sortOrder);
-        setCategories(sorted);
+        setCategories(result);
         setIsLoading(false);
       },
       error: (err) => {
