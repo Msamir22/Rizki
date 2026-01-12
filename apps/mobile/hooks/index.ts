@@ -11,3 +11,4 @@ export {
 } from "./useTransactions";
 export { useMarketRates } from "./useMarketRates";
 export { useCategories, useCategory } from "./useCategories";
+export { useNetWorthSummary, useNetWorth } from "./useNetWorthSummary";

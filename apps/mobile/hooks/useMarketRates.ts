@@ -1,7 +1,7 @@
 import { MarketRates } from "@astik/logic";
 import { RealtimeChannel } from "@supabase/supabase-js";
 import { useEffect, useRef, useState } from "react";
-import { getLatestMarketRates } from "../services/rates";
+import { getLatestMarketRates } from "../services/market-rates.service";
 import { supabase } from "../services/supabase";
 
 interface UseMarketRatesResult {
