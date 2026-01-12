@@ -15,7 +15,11 @@ import {
 } from "@nozbe/watermelondb/decorators";
 import type { Associations } from "@nozbe/watermelondb/Model";
 import type { Relation } from "@nozbe/watermelondb";
-import type { TransactionSource, TransactionType } from "../../types";
+import type {
+  CurrencyType,
+  TransactionSource,
+  TransactionType,
+} from "../../types";
 import type { BaseAccount } from "./base-account";
 import type { BaseCategory } from "./base-category";
 import type { BaseAsset } from "./base-asset";
@@ -36,7 +40,7 @@ export abstract class BaseTransaction extends Model {
   @field("amount") amount!: number;
   @field("category_id") categoryId!: string;
   @readonly @date("created_at") createdAt!: Date;
-  @field("currency") currency!: string;
+  @field("currency") currency!: CurrencyType;
   @date("date") date!: Date;
   @field("deleted") deleted!: boolean;
   @field("is_draft") isDraft!: boolean;

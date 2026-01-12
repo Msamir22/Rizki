@@ -31,7 +31,7 @@ export const schema = appSchema({
         { name: "deleted", type: "boolean" },
         { name: "item_form", type: "string", isOptional: true },
         { name: "metal_type", type: "string" },
-        { name: "purity_karat", type: "number" },
+        { name: "purity_fraction", type: "number" },
         { name: "updated_at", type: "number" },
         { name: "weight_grams", type: "number" },
       ],

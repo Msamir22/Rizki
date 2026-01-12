@@ -18,7 +18,7 @@ export type Database = {
         Row: {
           balance: number;
           created_at: string;
-          currency: string;
+          currency: Database["public"]["Enums"]["currency_type"];
           deleted: boolean;
           id: string;
           name: string;
@@ -29,7 +29,7 @@ export type Database = {
         Insert: {
           balance?: number;
           created_at?: string;
-          currency?: string;
+          currency?: Database["public"]["Enums"]["currency_type"];
           deleted?: boolean;
           id?: string;
           name: string;
@@ -40,7 +40,7 @@ export type Database = {
         Update: {
           balance?: number;
           created_at?: string;
-          currency?: string;
+          currency?: Database["public"]["Enums"]["currency_type"];
           deleted?: boolean;
           id?: string;
           name?: string;
@@ -48,15 +48,7 @@ export type Database = {
           updated_at?: string;
           user_id?: string;
         };
-        Relationships: [
-          {
-            foreignKeyName: "accounts_user_id_fkey";
-            columns: ["user_id"];
-            isOneToOne: false;
-            referencedRelation: "v_user_net_worth";
-            referencedColumns: ["user_id"];
-          },
-        ];
+        Relationships: [];
       };
       asset_metals: {
         Row: {
@@ -66,7 +58,7 @@ export type Database = {
           id: string;
           item_form: string | null;
           metal_type: Database["public"]["Enums"]["metal_type"];
-          purity_karat: number;
+          purity_fraction: number;
           updated_at: string;
           weight_grams: number;
         };
@@ -77,7 +69,7 @@ export type Database = {
           id?: string;
           item_form?: string | null;
           metal_type: Database["public"]["Enums"]["metal_type"];
-          purity_karat: number;
+          purity_fraction?: number;
           updated_at?: string;
           weight_grams: number;
         };
@@ -88,7 +80,7 @@ export type Database = {
           id?: string;
           item_form?: string | null;
           metal_type?: Database["public"]["Enums"]["metal_type"];
-          purity_karat?: number;
+          purity_fraction?: number;
           updated_at?: string;
           weight_grams?: number;
         };
@@ -105,7 +97,7 @@ export type Database = {
       assets: {
         Row: {
           created_at: string;
-          currency: string;
+          currency: Database["public"]["Enums"]["currency_type"];
           deleted: boolean;
           id: string;
           is_liquid: boolean;
@@ -119,7 +111,7 @@ export type Database = {
         };
         Insert: {
           created_at?: string;
-          currency?: string;
+          currency?: Database["public"]["Enums"]["currency_type"];
           deleted?: boolean;
           id?: string;
           is_liquid?: boolean;
@@ -133,7 +125,7 @@ export type Database = {
         };
         Update: {
           created_at?: string;
-          currency?: string;
+          currency?: Database["public"]["Enums"]["currency_type"];
           deleted?: boolean;
           id?: string;
           is_liquid?: boolean;
@@ -145,15 +137,7 @@ export type Database = {
           updated_at?: string;
           user_id?: string;
         };
-        Relationships: [
-          {
-            foreignKeyName: "assets_user_id_fkey";
-            columns: ["user_id"];
-            isOneToOne: false;
-            referencedRelation: "v_user_net_worth";
-            referencedColumns: ["user_id"];
-          },
-        ];
+        Relationships: [];
       };
       bank_details: {
         Row: {
@@ -205,7 +189,7 @@ export type Database = {
           amount: number;
           category_id: string | null;
           created_at: string;
-          currency: string;
+          currency: Database["public"]["Enums"]["currency_type"];
           deleted: boolean;
           id: string;
           name: string;
@@ -222,7 +206,7 @@ export type Database = {
           amount: number;
           category_id?: string | null;
           created_at?: string;
-          currency?: string;
+          currency?: Database["public"]["Enums"]["currency_type"];
           deleted?: boolean;
           id?: string;
           name: string;
@@ -239,7 +223,7 @@ export type Database = {
           amount?: number;
           category_id?: string | null;
           created_at?: string;
-          currency?: string;
+          currency?: Database["public"]["Enums"]["currency_type"];
           deleted?: boolean;
           id?: string;
           name?: string;
@@ -258,13 +242,6 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "categories";
             referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "budgets_user_id_fkey";
-            columns: ["user_id"];
-            isOneToOne: false;
-            referencedRelation: "v_user_net_worth";
-            referencedColumns: ["user_id"];
           },
         ];
       };
@@ -334,21 +311,148 @@ export type Database = {
             referencedRelation: "categories";
             referencedColumns: ["id"];
           },
-          {
-            foreignKeyName: "categories_user_id_fkey";
-            columns: ["user_id"];
-            isOneToOne: false;
-            referencedRelation: "v_user_net_worth";
-            referencedColumns: ["user_id"];
-          },
         ];
+      };
+      daily_market_rates_snapshot: {
+        Row: {
+          aed_egp: number;
+          aud_egp: number;
+          bhd_egp: number;
+          btc_egp: number;
+          cad_egp: number;
+          chf_egp: number;
+          cnh_egp: number;
+          cny_egp: number;
+          created_at: string;
+          dkk_egp: number;
+          dzd_egp: number;
+          eur_egp: number;
+          gbp_egp: number;
+          gold_egp_per_gram: number;
+          hkd_egp: number;
+          id: string;
+          inr_egp: number;
+          iqd_egp: number;
+          isk_egp: number;
+          jod_egp: number;
+          jpy_egp: number;
+          kpw_egp: number;
+          krw_egp: number;
+          kwd_egp: number;
+          lyd_egp: number;
+          mad_egp: number;
+          myr_egp: number;
+          nok_egp: number;
+          nzd_egp: number;
+          omr_egp: number;
+          palladium_egp_per_gram: number;
+          platinum_egp_per_gram: number;
+          qar_egp: number;
+          rub_egp: number;
+          sar_egp: number;
+          sek_egp: number;
+          sgd_egp: number;
+          silver_egp_per_gram: number;
+          tnd_egp: number;
+          try_egp: number;
+          usd_egp: number;
+          zar_egp: number;
+        };
+        Insert: {
+          aed_egp: number;
+          aud_egp: number;
+          bhd_egp: number;
+          btc_egp: number;
+          cad_egp: number;
+          chf_egp: number;
+          cnh_egp: number;
+          cny_egp: number;
+          created_at?: string;
+          dkk_egp: number;
+          dzd_egp: number;
+          eur_egp: number;
+          gbp_egp: number;
+          gold_egp_per_gram: number;
+          hkd_egp: number;
+          id?: string;
+          inr_egp: number;
+          iqd_egp: number;
+          isk_egp: number;
+          jod_egp: number;
+          jpy_egp: number;
+          kpw_egp: number;
+          krw_egp: number;
+          kwd_egp: number;
+          lyd_egp: number;
+          mad_egp: number;
+          myr_egp: number;
+          nok_egp: number;
+          nzd_egp: number;
+          omr_egp: number;
+          palladium_egp_per_gram: number;
+          platinum_egp_per_gram: number;
+          qar_egp: number;
+          rub_egp: number;
+          sar_egp: number;
+          sek_egp: number;
+          sgd_egp: number;
+          silver_egp_per_gram: number;
+          tnd_egp: number;
+          try_egp: number;
+          usd_egp: number;
+          zar_egp: number;
+        };
+        Update: {
+          aed_egp?: number;
+          aud_egp?: number;
+          bhd_egp?: number;
+          btc_egp?: number;
+          cad_egp?: number;
+          chf_egp?: number;
+          cnh_egp?: number;
+          cny_egp?: number;
+          created_at?: string;
+          dkk_egp?: number;
+          dzd_egp?: number;
+          eur_egp?: number;
+          gbp_egp?: number;
+          gold_egp_per_gram?: number;
+          hkd_egp?: number;
+          id?: string;
+          inr_egp?: number;
+          iqd_egp?: number;
+          isk_egp?: number;
+          jod_egp?: number;
+          jpy_egp?: number;
+          kpw_egp?: number;
+          krw_egp?: number;
+          kwd_egp?: number;
+          lyd_egp?: number;
+          mad_egp?: number;
+          myr_egp?: number;
+          nok_egp?: number;
+          nzd_egp?: number;
+          omr_egp?: number;
+          palladium_egp_per_gram?: number;
+          platinum_egp_per_gram?: number;
+          qar_egp?: number;
+          rub_egp?: number;
+          sar_egp?: number;
+          sek_egp?: number;
+          sgd_egp?: number;
+          silver_egp_per_gram?: number;
+          tnd_egp?: number;
+          try_egp?: number;
+          usd_egp?: number;
+          zar_egp?: number;
+        };
+        Relationships: [];
       };
       daily_snapshot_assets: {
         Row: {
           breakdown: Json;
           created_at: string;
           id: string;
-          snapshot_date: string;
           total_assets_egp: number;
           user_id: string;
         };
@@ -356,7 +460,6 @@ export type Database = {
           breakdown?: Json;
           created_at?: string;
           id?: string;
-          snapshot_date: string;
           total_assets_egp: number;
           user_id: string;
         };
@@ -364,26 +467,16 @@ export type Database = {
           breakdown?: Json;
           created_at?: string;
           id?: string;
-          snapshot_date?: string;
           total_assets_egp?: number;
           user_id?: string;
         };
-        Relationships: [
-          {
-            foreignKeyName: "daily_snapshot_assets_user_id_fkey";
-            columns: ["user_id"];
-            isOneToOne: false;
-            referencedRelation: "v_user_net_worth";
-            referencedColumns: ["user_id"];
-          },
-        ];
+        Relationships: [];
       };
       daily_snapshot_balance: {
         Row: {
           breakdown: Json;
           created_at: string;
           id: string;
-          snapshot_date: string;
           total_accounts_egp: number;
           user_id: string;
         };
@@ -391,7 +484,6 @@ export type Database = {
           breakdown?: Json;
           created_at?: string;
           id?: string;
-          snapshot_date: string;
           total_accounts_egp: number;
           user_id: string;
         };
@@ -399,54 +491,37 @@ export type Database = {
           breakdown?: Json;
           created_at?: string;
           id?: string;
-          snapshot_date?: string;
           total_accounts_egp?: number;
           user_id?: string;
         };
-        Relationships: [
-          {
-            foreignKeyName: "daily_snapshot_balance_user_id_fkey";
-            columns: ["user_id"];
-            isOneToOne: false;
-            referencedRelation: "v_user_net_worth";
-            referencedColumns: ["user_id"];
-          },
-        ];
+        Relationships: [];
       };
       daily_snapshot_net_worth: {
         Row: {
+          created_at: string;
           id: string;
           total_accounts: number;
           total_assets: number;
           total_net_worth: number;
-          updated_at: string;
           user_id: string;
         };
         Insert: {
+          created_at?: string;
           id?: string;
           total_accounts?: number;
           total_assets?: number;
           total_net_worth?: number;
-          updated_at?: string;
           user_id: string;
         };
         Update: {
+          created_at?: string;
           id?: string;
           total_accounts?: number;
           total_assets?: number;
           total_net_worth?: number;
-          updated_at?: string;
           user_id?: string;
         };
-        Relationships: [
-          {
-            foreignKeyName: "user_net_worth_summary_user_id_fkey";
-            columns: ["user_id"];
-            isOneToOne: true;
-            referencedRelation: "v_user_net_worth";
-            referencedColumns: ["user_id"];
-          },
-        ];
+        Relationships: [];
       };
       debts: {
         Row: {
@@ -505,75 +580,149 @@ export type Database = {
             referencedRelation: "accounts";
             referencedColumns: ["id"];
           },
-          {
-            foreignKeyName: "debts_user_id_fkey";
-            columns: ["user_id"];
-            isOneToOne: false;
-            referencedRelation: "v_user_net_worth";
-            referencedColumns: ["user_id"];
-          },
         ];
       };
       market_rates: {
         Row: {
-          created_at: string | null;
-          eur_egp: number | null;
-          gold_egp_per_gram: number | null;
-          id: number;
-          silver_egp_per_gram: number | null;
-          timestamp: string;
-          updated_at: string | null;
-          usd_egp: number | null;
-        };
-        Insert: {
-          created_at?: string | null;
-          eur_egp?: number | null;
-          gold_egp_per_gram?: number | null;
-          id?: number;
-          silver_egp_per_gram?: number | null;
-          timestamp: string;
-          updated_at?: string | null;
-          usd_egp?: number | null;
-        };
-        Update: {
-          created_at?: string | null;
-          eur_egp?: number | null;
-          gold_egp_per_gram?: number | null;
-          id?: number;
-          silver_egp_per_gram?: number | null;
-          timestamp?: string;
-          updated_at?: string | null;
-          usd_egp?: number | null;
-        };
-        Relationships: [];
-      };
-      market_rates_history: {
-        Row: {
+          aed_egp: number;
+          aud_egp: number;
+          bhd_egp: number;
+          btc_egp: number;
+          cad_egp: number;
+          chf_egp: number;
+          cnh_egp: number;
+          cny_egp: number;
           created_at: string;
+          dkk_egp: number;
+          dzd_egp: number;
           eur_egp: number;
+          gbp_egp: number;
           gold_egp_per_gram: number;
-          id: string;
+          hkd_egp: number;
+          id: number;
+          inr_egp: number;
+          iqd_egp: number;
+          isk_egp: number;
+          jod_egp: number;
+          jpy_egp: number;
+          kpw_egp: number;
+          krw_egp: number;
+          kwd_egp: number;
+          lyd_egp: number;
+          mad_egp: number;
+          myr_egp: number;
+          nok_egp: number;
+          nzd_egp: number;
+          omr_egp: number;
+          palladium_egp_per_gram: number;
+          platinum_egp_per_gram: number;
+          qar_egp: number;
+          rub_egp: number;
+          sar_egp: number;
+          sek_egp: number;
+          sgd_egp: number;
           silver_egp_per_gram: number;
-          snapshot_date: string;
+          timestamp_currency: string;
+          timestamp_metal: string;
+          tnd_egp: number;
+          try_egp: number;
+          updated_at: string | null;
           usd_egp: number;
+          zar_egp: number;
         };
         Insert: {
+          aed_egp: number;
+          aud_egp: number;
+          bhd_egp: number;
+          btc_egp: number;
+          cad_egp: number;
+          chf_egp: number;
+          cnh_egp: number;
+          cny_egp: number;
           created_at?: string;
+          dkk_egp: number;
+          dzd_egp: number;
           eur_egp: number;
+          gbp_egp: number;
           gold_egp_per_gram: number;
-          id?: string;
+          hkd_egp: number;
+          id?: number;
+          inr_egp: number;
+          iqd_egp: number;
+          isk_egp: number;
+          jod_egp: number;
+          jpy_egp: number;
+          kpw_egp: number;
+          krw_egp: number;
+          kwd_egp: number;
+          lyd_egp: number;
+          mad_egp: number;
+          myr_egp: number;
+          nok_egp: number;
+          nzd_egp: number;
+          omr_egp: number;
+          palladium_egp_per_gram: number;
+          platinum_egp_per_gram: number;
+          qar_egp: number;
+          rub_egp: number;
+          sar_egp: number;
+          sek_egp: number;
+          sgd_egp: number;
           silver_egp_per_gram: number;
-          snapshot_date: string;
+          timestamp_currency: string;
+          timestamp_metal: string;
+          tnd_egp: number;
+          try_egp: number;
+          updated_at?: string | null;
           usd_egp: number;
+          zar_egp: number;
         };
         Update: {
+          aed_egp?: number;
+          aud_egp?: number;
+          bhd_egp?: number;
+          btc_egp?: number;
+          cad_egp?: number;
+          chf_egp?: number;
+          cnh_egp?: number;
+          cny_egp?: number;
           created_at?: string;
+          dkk_egp?: number;
+          dzd_egp?: number;
           eur_egp?: number;
+          gbp_egp?: number;
           gold_egp_per_gram?: number;
-          id?: string;
+          hkd_egp?: number;
+          id?: number;
+          inr_egp?: number;
+          iqd_egp?: number;
+          isk_egp?: number;
+          jod_egp?: number;
+          jpy_egp?: number;
+          kpw_egp?: number;
+          krw_egp?: number;
+          kwd_egp?: number;
+          lyd_egp?: number;
+          mad_egp?: number;
+          myr_egp?: number;
+          nok_egp?: number;
+          nzd_egp?: number;
+          omr_egp?: number;
+          palladium_egp_per_gram?: number;
+          platinum_egp_per_gram?: number;
+          qar_egp?: number;
+          rub_egp?: number;
+          sar_egp?: number;
+          sek_egp?: number;
+          sgd_egp?: number;
           silver_egp_per_gram?: number;
-          snapshot_date?: string;
+          timestamp_currency?: string;
+          timestamp_metal?: string;
+          tnd_egp?: number;
+          try_egp?: number;
+          updated_at?: string | null;
           usd_egp?: number;
+          zar_egp?: number;
         };
         Relationships: [];
       };
@@ -626,15 +775,7 @@ export type Database = {
           updated_at?: string;
           user_id?: string;
         };
-        Relationships: [
-          {
-            foreignKeyName: "profiles_user_id_fkey";
-            columns: ["user_id"];
-            isOneToOne: true;
-            referencedRelation: "v_user_net_worth";
-            referencedColumns: ["user_id"];
-          },
-        ];
+        Relationships: [];
       };
       recurring_payments: {
         Row: {
@@ -722,13 +863,6 @@ export type Database = {
             referencedRelation: "debts";
             referencedColumns: ["id"];
           },
-          {
-            foreignKeyName: "recurring_payments_user_id_fkey";
-            columns: ["user_id"];
-            isOneToOne: false;
-            referencedRelation: "v_user_net_worth";
-            referencedColumns: ["user_id"];
-          },
         ];
       };
       transactions: {
@@ -737,7 +871,7 @@ export type Database = {
           amount: number;
           category_id: string;
           created_at: string;
-          currency: string;
+          currency: Database["public"]["Enums"]["currency_type"];
           date: string;
           deleted: boolean;
           id: string;
@@ -757,7 +891,7 @@ export type Database = {
           amount: number;
           category_id: string;
           created_at?: string;
-          currency: string;
+          currency: Database["public"]["Enums"]["currency_type"];
           date: string;
           deleted?: boolean;
           id?: string;
@@ -777,7 +911,7 @@ export type Database = {
           amount?: number;
           category_id?: string;
           created_at?: string;
-          currency?: string;
+          currency?: Database["public"]["Enums"]["currency_type"];
           date?: string;
           deleted?: boolean;
           id?: string;
@@ -828,13 +962,6 @@ export type Database = {
             referencedRelation: "recurring_payments";
             referencedColumns: ["id"];
           },
-          {
-            foreignKeyName: "transactions_user_id_fkey";
-            columns: ["user_id"];
-            isOneToOne: false;
-            referencedRelation: "v_user_net_worth";
-            referencedColumns: ["user_id"];
-          },
         ];
       };
       transfers: {
@@ -842,7 +969,7 @@ export type Database = {
           amount: number;
           converted_amount: number | null;
           created_at: string;
-          currency: string;
+          currency: Database["public"]["Enums"]["currency_type"];
           date: string;
           deleted: boolean;
           exchange_rate: number | null;
@@ -857,7 +984,7 @@ export type Database = {
           amount: number;
           converted_amount?: number | null;
           created_at?: string;
-          currency: string;
+          currency: Database["public"]["Enums"]["currency_type"];
           date: string;
           deleted?: boolean;
           exchange_rate?: number | null;
@@ -872,7 +999,7 @@ export type Database = {
           amount?: number;
           converted_amount?: number | null;
           created_at?: string;
-          currency?: string;
+          currency?: Database["public"]["Enums"]["currency_type"];
           date?: string;
           deleted?: boolean;
           exchange_rate?: number | null;
@@ -897,13 +1024,6 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "accounts";
             referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "transfers_user_id_fkey";
-            columns: ["user_id"];
-            isOneToOne: false;
-            referencedRelation: "v_user_net_worth";
-            referencedColumns: ["user_id"];
           },
         ];
       };
@@ -946,34 +1066,18 @@ export type Database = {
             referencedRelation: "categories";
             referencedColumns: ["id"];
           },
-          {
-            foreignKeyName: "user_category_settings_user_id_fkey";
-            columns: ["user_id"];
-            isOneToOne: false;
-            referencedRelation: "v_user_net_worth";
-            referencedColumns: ["user_id"];
-          },
         ];
       };
     };
     Views: {
-      v_user_net_worth: {
-        Row: {
-          calculated_at: string | null;
-          total_accounts: number | null;
-          total_assets: number | null;
-          total_net_worth: number | null;
-          user_id: string | null;
-        };
-        Relationships: [];
-      };
+      [_ in never]: never;
     };
     Functions: {
       recalculate_daily_snapshot_assets: { Args: never; Returns: undefined };
       recalculate_daily_snapshot_balance: { Args: never; Returns: undefined };
       recalculate_daily_snapshot_net_worth: { Args: never; Returns: undefined };
       run_daily_snapshots: { Args: never; Returns: undefined };
-      save_market_rates_history: { Args: never; Returns: undefined };
+      save_daily_market_rates_snapshot: { Args: never; Returns: undefined };
     };
     Enums: {
       account_type: "CASH" | "BANK" | "DIGITAL_WALLET";
@@ -982,9 +1086,47 @@ export type Database = {
       budget_status: "ACTIVE" | "PAUSED";
       budget_type: "CATEGORY" | "GLOBAL";
       category_nature: "WANT" | "NEED" | "MUST";
+      currency_type:
+        | "AED"
+        | "AUD"
+        | "BHD"
+        | "BTC"
+        | "CAD"
+        | "CHF"
+        | "CNH"
+        | "CNY"
+        | "DKK"
+        | "DZD"
+        | "EGP"
+        | "EUR"
+        | "GBP"
+        | "HKD"
+        | "INR"
+        | "IQD"
+        | "ISK"
+        | "JOD"
+        | "JPY"
+        | "KPW"
+        | "KRW"
+        | "KWD"
+        | "LYD"
+        | "MAD"
+        | "MYR"
+        | "NOK"
+        | "NZD"
+        | "OMR"
+        | "QAR"
+        | "RUB"
+        | "SAR"
+        | "SEK"
+        | "SGD"
+        | "TND"
+        | "TRY"
+        | "USD"
+        | "ZAR";
       debt_status: "ACTIVE" | "PARTIALLY_PAID" | "SETTLED" | "WRITTEN_OFF";
       debt_type: "LENT" | "BORROWED";
-      metal_type: "GOLD" | "SILVER" | "PLATINUM";
+      metal_type: "GOLD" | "SILVER" | "PLATINUM" | "PALLADIUM";
       recurring_action: "AUTO_CREATE" | "NOTIFY";
       recurring_frequency:
         | "DAILY"
@@ -1133,9 +1275,48 @@ export const Constants = {
       budget_status: ["ACTIVE", "PAUSED"],
       budget_type: ["CATEGORY", "GLOBAL"],
       category_nature: ["WANT", "NEED", "MUST"],
+      currency_type: [
+        "AED",
+        "AUD",
+        "BHD",
+        "BTC",
+        "CAD",
+        "CHF",
+        "CNH",
+        "CNY",
+        "DKK",
+        "DZD",
+        "EGP",
+        "EUR",
+        "GBP",
+        "HKD",
+        "INR",
+        "IQD",
+        "ISK",
+        "JOD",
+        "JPY",
+        "KPW",
+        "KRW",
+        "KWD",
+        "LYD",
+        "MAD",
+        "MYR",
+        "NOK",
+        "NZD",
+        "OMR",
+        "QAR",
+        "RUB",
+        "SAR",
+        "SEK",
+        "SGD",
+        "TND",
+        "TRY",
+        "USD",
+        "ZAR",
+      ],
       debt_status: ["ACTIVE", "PARTIALLY_PAID", "SETTLED", "WRITTEN_OFF"],
       debt_type: ["LENT", "BORROWED"],
-      metal_type: ["GOLD", "SILVER", "PLATINUM"],
+      metal_type: ["GOLD", "SILVER", "PLATINUM", "PALLADIUM"],
       recurring_action: ["AUTO_CREATE", "NOTIFY"],
       recurring_frequency: [
         "DAILY",

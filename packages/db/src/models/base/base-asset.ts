@@ -14,7 +14,7 @@ import {
   children,
 } from "@nozbe/watermelondb/decorators";
 import type { Associations } from "@nozbe/watermelondb/Model";
-import type { AssetType } from "../../types";
+import type { CurrencyType, AssetType } from "../../types";
 
 export abstract class BaseAsset extends Model {
   static table = "assets";
@@ -24,7 +24,7 @@ export abstract class BaseAsset extends Model {
   };
 
   @readonly @date("created_at") createdAt!: Date;
-  @field("currency") currency!: string;
+  @field("currency") currency!: CurrencyType;
   @field("deleted") deleted!: boolean;
   @field("is_liquid") isLiquid!: boolean;
   @field("name") name!: string;

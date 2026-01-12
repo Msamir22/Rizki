@@ -29,7 +29,7 @@ export abstract class BaseAssetMetal extends Model {
   @field("deleted") deleted!: boolean;
   @field("item_form") itemForm?: string;
   @field("metal_type") metalType!: MetalType;
-  @field("purity_karat") purityKarat!: number;
+  @field("purity_fraction") purityFraction!: number;
   @date("updated_at") updatedAt!: Date;
   @field("weight_grams") weightGrams!: number;
 

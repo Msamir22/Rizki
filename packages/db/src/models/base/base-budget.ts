@@ -15,7 +15,12 @@ import {
 } from "@nozbe/watermelondb/decorators";
 import type { Associations } from "@nozbe/watermelondb/Model";
 import type { Relation } from "@nozbe/watermelondb";
-import type { BudgetPeriod, BudgetStatus, BudgetType } from "../../types";
+import type {
+  CurrencyType,
+  BudgetPeriod,
+  BudgetStatus,
+  BudgetType,
+} from "../../types";
 import type { BaseCategory } from "./base-category";
 
 export abstract class BaseBudget extends Model {
@@ -28,7 +33,7 @@ export abstract class BaseBudget extends Model {
   @field("amount") amount!: number;
   @field("category_id") categoryId?: string;
   @readonly @date("created_at") createdAt!: Date;
-  @field("currency") currency!: string;
+  @field("currency") currency!: CurrencyType;
   @field("deleted") deleted!: boolean;
   @field("name") name!: string;
   @field("period") period!: BudgetPeriod;

@@ -15,6 +15,7 @@ import {
 } from "@nozbe/watermelondb/decorators";
 import type { Associations } from "@nozbe/watermelondb/Model";
 import type { Relation } from "@nozbe/watermelondb";
+import type { CurrencyType } from "../../types";
 import type { BaseAccount } from "./base-account";
 
 export abstract class BaseTransfer extends Model {
@@ -27,7 +28,7 @@ export abstract class BaseTransfer extends Model {
   @field("amount") amount!: number;
   @field("converted_amount") convertedAmount?: number;
   @readonly @date("created_at") createdAt!: Date;
-  @field("currency") currency!: string;
+  @field("currency") currency!: CurrencyType;
   @date("date") date!: Date;
   @field("deleted") deleted!: boolean;
   @field("exchange_rate") exchangeRate?: number;

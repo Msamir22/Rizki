@@ -14,7 +14,7 @@ import {
   children,
 } from "@nozbe/watermelondb/decorators";
 import type { Associations } from "@nozbe/watermelondb/Model";
-import type { AccountType } from "../../types";
+import type { CurrencyType, AccountType } from "../../types";
 
 export abstract class BaseAccount extends Model {
   static table = "accounts";
@@ -29,7 +29,7 @@ export abstract class BaseAccount extends Model {
 
   @field("balance") balance!: number;
   @readonly @date("created_at") createdAt!: Date;
-  @field("currency") currency!: string;
+  @field("currency") currency!: CurrencyType;
   @field("deleted") deleted!: boolean;
   @field("name") name!: string;
   @field("type") type!: AccountType;
