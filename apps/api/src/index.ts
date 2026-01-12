@@ -41,7 +41,6 @@ import { globalErrorHandler } from "./lib/errors";
 import { Auth } from "./middleware/auth";
 import ratesRouter from "./routes/market-rates";
 import mockRouter from "./routes/mock";
-import netWorthRouter from "./routes/net-worth";
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -55,7 +54,6 @@ app.use(Auth);
 // Routes
 app.use("/api/market-rates", ratesRouter);
 app.use("/api/mock", mockRouter);
-app.use("/api/net-worth", netWorthRouter);
 
 // Health check
 app.get("/", (_req, res) => {
@@ -63,9 +61,7 @@ app.get("/", (_req, res) => {
     status: "ok",
     service: "Astik API Server",
     endpoints: [
-      "GET /api/rates - Get cached metal & currency rates",
-      "POST /api/rates/update - Update rates from metals.dev (cron only)",
-      "GET /api/net-worth - Get user's net worth (requires auth)",
+      "GET /api/market-rates - Get cached metal & currency rates",
       "GET /api/mock/rates - Mock data for development",
     ],
   });
