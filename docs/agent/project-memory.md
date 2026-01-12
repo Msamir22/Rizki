@@ -4,7 +4,7 @@ alwaysApply: true
 
 # 🧠 Astik Project Memory
 
-> **Last Updated:** 2026-01-09 **Purpose:** Persistent context for AI agents
+> **Last Updated:** 2026-01-12 **Purpose:** Persistent context for AI agents
 > across conversations
 
 ---
@@ -99,18 +99,18 @@ Astik/
 
 ### 4.2 Database Schema (17 Tables)
 
-| Domain       | Tables                                                                      |
-| ------------ | --------------------------------------------------------------------------- |
-| User         | `profiles`                                                                  |
-| Accounts     | `accounts`, `bank_details`                                                  |
-| Assets       | `assets`, `asset_metals`                                                    |
-| Transactions | `transactions`, `categories`, `user_category_settings`                      |
-| Debts        | `debts`                                                                     |
-| Recurring    | `recurring_payments`                                                        |
-| Transfers    | `transfers`                                                                 |
-| Budgets      | `budgets`                                                                   |
-| Analytics    | `user_net_worth_summary`, `daily_snapshot_balance`, `daily_snapshot_assets` |
-| Market       | `market_rates`, `market_rates_history`                                      |
+| Domain       | Tables                                                                        |
+| ------------ | ----------------------------------------------------------------------------- |
+| User         | `profiles`                                                                    |
+| Accounts     | `accounts`, `bank_details`                                                    |
+| Assets       | `assets`, `asset_metals`                                                      |
+| Transactions | `transactions`, `categories`, `user_category_settings`                        |
+| Debts        | `debts`                                                                       |
+| Recurring    | `recurring_payments`                                                          |
+| Transfers    | `transfers`                                                                   |
+| Budgets      | `budgets`                                                                     |
+| Analytics    | `daily_snapshot_balance`, `daily_snapshot_assets`, `daily_snapshot_net_worth` |
+| Market       | `market_rates`, `daily_market_rates_snapshot`                                 |
 
 ### 4.3 Key Business Rules
 
@@ -153,23 +153,20 @@ for asset transactions)
 - [x] Custom bottom tab bar with animations
 - [x] RecentTransactions component
 - [x] Egyptian color palette (@astik/ui)
-- [x] Voice parser, notification parser, currency utilities (@astik/logic)
+- [x] Voice parser, notification parser (@astik/logic)
 - [x] AI Agent Memory System (project-memory.md + workflows)
 - [x] Dashboard real data integration (all components)
 - [x] Quick Action FAB component
 - [x] Schema sync automation (Supabase → WatermelonDB)
-- [x] Net worth API architecture (VIEW, API endpoint, mobile hook)
-- [x] Market rates edge function (metals.dev integration)
-- [x] Daily snapshot functions with pg_cron
-- [x] Transaction analytics package (@astik/logic/analytics)
-- [x] Analytics hooks (useMonthlyChartData, useCategoryBreakdown, useComparison)
-- [x] Smart sync (15min/30min adaptive intervals, data-cleared detection)
+- [x] Net worth local-first calculations (removed API, use @astik/logic)
+- [x] Fixed snapshot functions (latest rates, no hardcoded fallbacks)
+- [x] Database schema overhaul (37 currencies, 4 precious metals)
+- [x] Metal schema refactoring (purity_fraction, removed industrial/LBMA)
+- [x] Purity conversion utilities (karat ↔ fineness ↔ fraction)
 
 ### 🔄 In Progress
 
 - [ ] Analytics UI (charts, comparison cards)
-- [ ] Complete migration 006 (column cleanup)
-- [ ] Test net worth API end-to-end
 
 ### ⏳ Pending
 
@@ -227,6 +224,30 @@ for asset transactions)
 
 > Last 10 sessions for context continuity
 
+### Session: 2026-01-12 (21:09)
+
+- **Topic:** Metal Schema Refactoring
+- **Accomplished:** Replaced `purity_karat` with `purity_fraction` for unified
+  metal valuation. Removed industrial metals and LBMA columns from market_rates.
+  Created purity-utils.ts for karat/fineness conversions.
+- **Outcome:** All precious metals now use unified valuation formula.
+
+### Session: 2026-01-12 (08:37)
+
+- **Topic:** Database Schema Overhaul
+- **Accomplished:** Created `currency_type` enum (37 currencies), expanded
+  `metal_type` (9 metals), added 50+ columns to `market_rates`, standardized
+  snapshot tables, updated all functions, applied NOT NULL constraints.
+- **Outcome:** Full market rates schema with all metals.dev API data.
+
+### Session: 2026-01-11 (17:39)
+
+- **Topic:** Remove v_user_net_worth View
+- **Accomplished:** Removed PostgreSQL view, implemented local-first net worth
+  calculations in `@astik/logic`, deleted API endpoint, rewrote mobile hook,
+  fixed snapshot functions.
+- **Outcome:** Net worth now calculated on-device using WatermelonDB.
+
 ### Session: 2026-01-09 (19:20)
 
 - **Topic:** RLS Policies - Authenticated Only
@@ -235,15 +256,6 @@ for asset transactions)
   `008_update_rls_policies_to_authenticated.sql`.
 - **Outcome:** All data access now requires signed-in users (including anonymous
   sign-in).
-
-### Session: 2026-01-09 (00:52)
-
-- **Topic:** Transaction Analytics Architecture
-- **Accomplished:** Created shared analytics package in `@astik/logic`,
-  analytics hooks (`useMonthlyChartData`, `useCategoryBreakdown`,
-  `useComparison`), and smart sync with adaptive intervals and data-cleared
-  detection.
-- **Outcome:** Fully local analytics ready for chart UI implementation.
 
 ### Session: 2026-01-07 (19:37)
 
