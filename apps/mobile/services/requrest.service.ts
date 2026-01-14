@@ -1,4 +1,19 @@
-import { ApiEndpoint } from "@astik/logic";
+import {
+  ApiBodyType,
+  ApiPathParamsType,
+  ApiResponseType,
+  ApiSuccessResponse,
+  DeleteEndpoint,
+  DeleteOptions,
+  GetEndpoint,
+  GetOptions,
+  PatchEndpoint,
+  PatchOptions,
+  PostEndpoint,
+  PostOptions,
+  PutEndpoint,
+  PutOptions,
+} from "@astik/logic";
 import { supabase } from "./supabase";
 
 // API base URLs
@@ -20,10 +35,50 @@ async function getAuthToken(): Promise<string | null> {
 }
 
 /**
- * Make an authenticated API request
+ * Replace path parameters in endpoint URL
+ * Example: "/api/users/:id" with { id: "123" } => "/api/users/123"
  */
-async function apiRequest<T>(
-  endpoint: ApiEndpoint,
+function replacePathParams(
+  endpoint: string,
+  pathParams?: Record<string, string | number>
+): string {
+  if (!pathParams) return endpoint;
+
+  let result = endpoint;
+  Object.entries(pathParams).forEach(([key, value]) => {
+    result = result.replace(`:${key}`, String(value));
+  });
+  return result;
+}
+
+/**
+ * Build URL with path params and query parameters
+ */
+function buildUrl(
+  baseUrl: string,
+  endpoint: string,
+  options?: {
+    pathParams?: Record<string, string | number> | never;
+    queryParams?: Record<string, string | number | boolean> | never;
+  }
+): string {
+  const pathWithParams = replacePathParams(endpoint, options?.pathParams);
+  const url = new URL(`${baseUrl}${pathWithParams}`);
+
+  if (options?.queryParams) {
+    Object.entries(options.queryParams).forEach(([key, value]) => {
+      url.searchParams.append(key, String(value));
+    });
+  }
+
+  return url.toString();
+}
+
+/**
+ * Make an authenticated API request (internal)
+ */
+async function request<T>(
+  url: string,
   options: RequestInit = {}
 ): Promise<ApiResponse<T>> {
   try {
@@ -38,7 +93,7 @@ async function apiRequest<T>(
       (headers as Record<string, string>)["Authorization"] = `Bearer ${token}`;
     }
 
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const response = await fetch(url, {
       ...options,
       headers,
     });
@@ -52,8 +107,8 @@ async function apiRequest<T>(
       };
     }
 
-    const data = await response.json();
-    return { data, error: null };
+    const result = (await response.json()) as ApiSuccessResponse<T>;
+    return { data: result.data, error: null };
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : "Network error";
     return { data: null, error: errorMessage };
@@ -61,30 +116,95 @@ async function apiRequest<T>(
 }
 
 /**
- * GET request with authentication
+ * Type-safe GET request with authentication
+ *
+ * @example
+ * // Simple GET - response type is automatically inferred
+ * const { data } = await apiGet(ApiEndpoints.marketRates);
+ *
+ * @example
+ * // GET with query params
+ * const { data } = await apiGet(ApiEndpoints.netWorthComparison, {
+ *   queryParams: { date: "2025-12-13" }
+ * });
+ *
+ * @example
+ * // GET with path params (when endpoint has :param)
+ * const { data } = await apiGet(ApiEndpoints.userById, {
+ *   pathParams: { id: "123" }
+ * });
  */
-export async function apiGet<T>(
-  endpoint: ApiEndpoint
-): Promise<ApiResponse<T>> {
-  return apiRequest<T>(endpoint, { method: "GET" });
+export async function get<E extends GetEndpoint>(
+  endpoint: E,
+  options?: GetOptions<E>
+): Promise<ApiResponse<ApiResponseType<E>>> {
+  const url = buildUrl(API_BASE_URL, endpoint, {
+    pathParams: options?.pathParams ?? undefined,
+    queryParams: options?.queryParams ?? undefined,
+  });
+  return request<ApiResponseType<E>>(url, { method: "GET" });
 }
 
 /**
- * POST request with authentication
+ * Type-safe POST request with authentication
  */
-export async function apiPost<T>(
-  endpoint: ApiEndpoint,
-  body: unknown
-): Promise<ApiResponse<T>> {
-  return apiRequest<T>(endpoint, {
+export async function post<E extends PostEndpoint>(
+  endpoint: E,
+  body: ApiBodyType<E>,
+  options?: PostOptions<E>
+): Promise<ApiResponse<ApiResponseType<E>>> {
+  const url = buildUrl(API_BASE_URL, endpoint, {
+    pathParams: options?.pathParams ?? undefined,
+  });
+  return request<ApiResponseType<E>>(url, {
     method: "POST",
     body: JSON.stringify(body),
   });
 }
 
 /**
- * API configuration
+ * Type-safe PUT request with authentication
  */
-export const apiConfig = {
-  baseUrl: API_BASE_URL,
-};
+export async function put<E extends PutEndpoint>(
+  endpoint: E,
+  body: ApiBodyType<E>,
+  options?: PutOptions<E>
+): Promise<ApiResponse<ApiResponseType<E>>> {
+  const url = buildUrl(API_BASE_URL, endpoint, {
+    pathParams: options?.pathParams ?? undefined,
+  });
+  return request<ApiResponseType<E>>(url, {
+    method: "PUT",
+    body: JSON.stringify(body),
+  });
+}
+
+/**
+ * Type-safe PATCH request with authentication
+ */
+export async function patch<E extends PatchEndpoint>(
+  endpoint: E,
+  body: ApiBodyType<E>,
+  options?: PatchOptions<E>
+): Promise<ApiResponse<ApiResponseType<E>>> {
+  const url = buildUrl(API_BASE_URL, endpoint, {
+    pathParams: options?.pathParams ?? undefined,
+  });
+  return request<ApiResponseType<E>>(url, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+}
+
+/**
+ * Type-safe DELETE request with authentication
+ */
+export async function Delete<E extends DeleteEndpoint>(
+  endpoint: E,
+  options?: DeleteOptions<E>
+): Promise<ApiResponse<ApiResponseType<E>>> {
+  const url = buildUrl(API_BASE_URL, endpoint, {
+    pathParams: options?.pathParams ?? undefined,
+  });
+  return request<ApiResponseType<E>>(url, { method: "DELETE" });
+}
