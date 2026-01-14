@@ -72,11 +72,6 @@ export function useMarketRates(): UseMarketRatesResult {
       .subscribe((status) => {
         // Track connection status
         setIsConnected(status === "SUBSCRIBED");
-        if (status === "SUBSCRIBED") {
-          console.log("✅ Subscribed to market rates realtime updates");
-        } else if (status === "CHANNEL_ERROR") {
-          console.error("❌ Failed to subscribe to market rates");
-        }
       });
 
     channelRef.current = channel;

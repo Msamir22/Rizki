@@ -4,7 +4,8 @@
  * Based on specification in notification_parser_spec.md
  */
 
-import { Currency, ParsedNotification } from '../types';
+import { CurrencyType } from "@astik/db";
+import { ParsedNotification } from "../types";
 
 /**
  * Parse InstaPay (IPN) transfer sent notification
@@ -18,17 +19,17 @@ function parseInstPaySent(text: string): ParsedNotification | null {
   if (!match) return null;
 
   const [, currency, amountStr, accountNumber, date, time, reference] = match;
-  const amount = parseFloat(amountStr.replace(/,/g, ''));
+  const amount = parseFloat(amountStr.replace(/,/g, ""));
 
   return {
-    type: 'EXPENSE',
+    type: "EXPENSE",
     amount,
-    currency: currency as Currency,
-    description: 'InstaPay Transfer',
-    merchant: 'InstaPay',
+    currency: currency as CurrencyType,
+    description: "InstaPay Transfer",
+    merchant: "InstaPay",
     accountNumber,
     reference,
-    detectedCategory: 'Transfer',
+    detectedCategory: "Transfer",
   };
 }
 
@@ -44,17 +45,17 @@ function parseInstPayReceived(text: string): ParsedNotification | null {
   if (!match) return null;
 
   const [, currency, amountStr, accountNumber, date, time, reference] = match;
-  const amount = parseFloat(amountStr.replace(/,/g, ''));
+  const amount = parseFloat(amountStr.replace(/,/g, ""));
 
   return {
-    type: 'INCOME',
+    type: "INCOME",
     amount,
-    currency: currency as Currency,
-    description: 'InstaPay Received',
-    merchant: 'InstaPay',
+    currency: currency as CurrencyType,
+    description: "InstaPay Received",
+    merchant: "InstaPay",
     accountNumber,
     reference,
-    detectedCategory: 'Income',
+    detectedCategory: "Income",
   };
 }
 
@@ -69,17 +70,18 @@ function parseDebitCardTransaction(text: string): ParsedNotification | null {
 
   if (!match) return null;
 
-  const [, cardLast4, currency, amountStr, merchant, balCurrency, balanceStr] = match;
-  const amount = parseFloat(amountStr.replace(/,/g, ''));
-  const availableBalance = parseFloat(balanceStr.replace(/,/g, ''));
+  const [, cardLast4, currency, amountStr, merchant, balCurrency, balanceStr] =
+    match;
+  const amount = parseFloat(amountStr.replace(/,/g, ""));
+  const availableBalance = parseFloat(balanceStr.replace(/,/g, ""));
 
   // Detect category from merchant name (will use categories utils)
   const detectedCategory = detectCategoryFromMerchant(merchant);
 
   return {
-    type: 'EXPENSE',
+    type: "EXPENSE",
     amount,
-    currency: currency as Currency,
+    currency: currency as CurrencyType,
     merchant: merchant.trim(),
     description: `Purchase at ${merchant.trim()}`,
     cardLast4,
@@ -100,16 +102,16 @@ function parseDebitCardReversal(text: string): ParsedNotification | null {
   if (!match) return null;
 
   const [, cardLast4, merchant, currency, amountStr] = match;
-  const amount = parseFloat(amountStr.replace(/,/g, ''));
+  const amount = parseFloat(amountStr.replace(/,/g, ""));
 
   return {
-    type: 'INCOME', // Reversal means money returned
+    type: "INCOME", // Reversal means money returned
     amount,
-    currency: currency as Currency,
+    currency: currency as CurrencyType,
     merchant: merchant.trim(),
     description: `Reversal: ${merchant.trim()}`,
     cardLast4,
-    detectedCategory: 'Income',
+    detectedCategory: "Income",
   };
 }
 
@@ -122,41 +124,41 @@ function detectCategoryFromMerchant(merchant: string): string | null {
 
   // Fuel/Transport
   if (
-    lowerMerchant.includes('fuel') ||
-    lowerMerchant.includes('petrol') ||
-    lowerMerchant.includes('gas') ||
-    lowerMerchant.includes('total')
+    lowerMerchant.includes("fuel") ||
+    lowerMerchant.includes("petrol") ||
+    lowerMerchant.includes("gas") ||
+    lowerMerchant.includes("total")
   ) {
-    return 'Transport';
+    return "Transport";
   }
 
   // Utilities/Bills
   if (
-    lowerMerchant.includes('vodafone') ||
-    lowerMerchant.includes('etisalat') ||
-    lowerMerchant.includes('bill payment') ||
-    lowerMerchant.includes('top up')
+    lowerMerchant.includes("vodafone") ||
+    lowerMerchant.includes("etisalat") ||
+    lowerMerchant.includes("bill payment") ||
+    lowerMerchant.includes("top up")
   ) {
-    return 'Utilities';
+    return "Utilities";
   }
 
   // Food
   if (
-    lowerMerchant.includes('restaurant') ||
-    lowerMerchant.includes('cafe') ||
-    lowerMerchant.includes('coffee') ||
-    lowerMerchant.includes('pizza')
+    lowerMerchant.includes("restaurant") ||
+    lowerMerchant.includes("cafe") ||
+    lowerMerchant.includes("coffee") ||
+    lowerMerchant.includes("pizza")
   ) {
-    return 'Food';
+    return "Food";
   }
 
   // Entertainment
   if (
-    lowerMerchant.includes('cinema') ||
-    lowerMerchant.includes('netflix') ||
-    lowerMerchant.includes('spotify')
+    lowerMerchant.includes("cinema") ||
+    lowerMerchant.includes("netflix") ||
+    lowerMerchant.includes("spotify")
   ) {
-    return 'Entertainment';
+    return "Entertainment";
   }
 
   return null; // Unknown category
@@ -165,7 +167,9 @@ function detectCategoryFromMerchant(merchant: string): string | null {
 /**
  * Main notification parser - attempts all patterns
  */
-export function parseNotification(notificationText: string): ParsedNotification | null {
+export function parseNotification(
+  notificationText: string
+): ParsedNotification | null {
   if (!notificationText || notificationText.trim().length === 0) {
     return null;
   }

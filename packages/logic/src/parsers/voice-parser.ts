@@ -3,8 +3,8 @@
  * Parses Egyptian Arabic and English voice input to extract transaction details
  */
 
-import { Currency, ParsedVoiceTransaction } from "../types";
-import { detectCategory } from "../utils/categories";
+import { CurrencyType } from "@astik/db";
+import { ParsedVoiceTransaction } from "../types";
 
 // Arabic character detection regex
 const ARABIC_REGEX = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/;
@@ -123,7 +123,7 @@ function extractAmount(text: string): number | null {
 /**
  * Extract currency from voice text
  */
-function extractCurrency(text: string): Currency {
+function extractCurrency(text: string): CurrencyType {
   const lowerText = text.toLowerCase();
 
   // Check for USD keywords
@@ -185,8 +185,8 @@ export function parseVoiceTransaction(
   const isIncome = isIncomeTransaction(voiceText);
 
   // Use category detection from utils
-  const { category: detectedCategory, confidence } =
-    detectCategory(description);
+  // const { category: detectedCategory, confidence } =
+  //   detectCategory(description);
 
   // Auto-detect language
   const detectedLanguage = detectLanguage(voiceText);
@@ -196,8 +196,8 @@ export function parseVoiceTransaction(
     currency,
     description,
     merchant: description !== "Transaction" ? description : undefined,
-    detectedCategory: isIncome ? "Income" : detectedCategory,
-    confidence: isIncome ? 0.9 : confidence,
+    detectedCategory: isIncome ? "Income" : "Other",
+    confidence: isIncome ? 0.9 : 1,
     isIncome,
     detectedLanguage,
   };

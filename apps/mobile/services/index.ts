@@ -4,7 +4,6 @@
  */
 
 export { getLatestMarketRates } from "./market-rates.service";
-export { apiConfig, apiGet, apiPost } from "./requrest.service";
 export {
   getCurrentUserId,
   isAuthenticated,
