@@ -3,7 +3,7 @@
  * Local-first net worth calculation using WatermelonDB
  */
 
-import { Account, Asset, AssetMetal, database } from "@astik/db";
+import { Account, AssetMetal, database } from "@astik/db";
 import {
   calculateNetWorth,
   calculateTotalAssets,
@@ -13,6 +13,7 @@ import {
 import { Q } from "@nozbe/watermelondb";
 import { useEffect, useMemo, useState } from "react";
 import { useMarketRates } from "./useMarketRates";
+import { getNetWorthComparison } from "@/services/net-worth.service";
 
 interface UseNetWorthSummaryResult {
   summary: NetWorthSummary | null;
@@ -96,16 +97,38 @@ export function useNetWorthSummary(): UseNetWorthSummaryResult {
 /**
  * Simplified hook that just returns the net worth value
  * Useful for components that only need the total
+ * Also fetches monthly percentage change from API via service layer
  */
 export function useNetWorth(): {
-  netWorth: number;
+  netWorth: number | null;
+  monthlyPercentageChange: number | null;
   isLoading: boolean;
 } {
   const { summary, isLoading } = useNetWorthSummary();
+  const [monthlyPercentageChange, setMonthlyPercentageChange] = useState<
+    number | null
+  >(null);
+  const [isComparisonLoading, setIsComparisonLoading] = useState(true);
 
   const netWorth = useMemo(() => {
-    return summary?.totalNetWorth ?? 0;
+    return summary?.totalNetWorth ?? null;
   }, [summary]);
 
-  return { netWorth, isLoading };
+  useEffect(() => {
+    async function fetchComparison(): Promise<void> {
+      const data = await getNetWorthComparison();
+      setMonthlyPercentageChange(data?.percentageChange ?? null);
+      setIsComparisonLoading(false);
+    }
+
+    if (!isLoading) {
+      fetchComparison();
+    }
+  }, [isLoading]);
+
+  return {
+    netWorth,
+    monthlyPercentageChange,
+    isLoading: isLoading || isComparisonLoading,
+  };
 }
