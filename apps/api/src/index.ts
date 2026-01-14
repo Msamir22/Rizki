@@ -1,25 +1,29 @@
 /**
  * Astik API Server - Express.js
  *
- * IMPORTANT: Environment variables must be loaded before importing routes
- * because routes/rates.ts creates Supabase clients at module load time
+ * Supports both local development and Vercel serverless deployment.
  */
 
+import cors from "cors";
 import dotenv from "dotenv";
+import express from "express";
 import { existsSync } from "fs";
 import path from "path";
 
-const envPath = path.resolve(__dirname, "../.env.local");
-if (!existsSync(envPath)) {
-  console.error("❌ Error: .env.local file not found!");
-  console.error(`   Expected location: ${envPath}`);
-  console.error("   Please create this file from .env.example");
-  process.exit(1);
+// Load environment variables in development
+const isProduction = process.env.NODE_ENV === "production";
+const isVercel = process.env.VERCEL === "1";
+
+if (!isProduction && !isVercel) {
+  const envPath = path.resolve(__dirname, "../.env.local");
+  if (existsSync(envPath)) {
+    dotenv.config({ path: envPath });
+  } else {
+    console.warn("⚠️ .env.local not found, using environment variables");
+  }
 }
 
-dotenv.config({ path: envPath });
-
-// Validate environment variables
+// Validate required environment variables
 const requiredEnvVars = [
   "EXPRESS_PUBLIC_SUPABASE_URL",
   "EXPRESS_PUBLIC_SUPABASE_ANON_KEY",
@@ -28,15 +32,13 @@ const requiredEnvVars = [
 
 const missingVars = requiredEnvVars.filter((varName) => !process.env[varName]);
 if (missingVars.length > 0) {
-  console.error("❌ Missing required environment variables:");
-  missingVars.forEach((varName) => console.error(`   - ${varName}`));
-  console.error("\n   Please add them to apps/api/.env.local");
-  process.exit(1);
+  console.error("❌ Missing required environment variables:", missingVars);
+  if (!isProduction) {
+    console.error("   Please add them to apps/api/.env.local");
+  }
 }
 
-// NOW it's safe to import routes (they can access env vars)
-import cors from "cors";
-import express from "express";
+// Import routes after environment is configured
 import { globalErrorHandler } from "./lib/errors";
 import { Auth } from "./middleware/auth";
 import ratesRouter from "./routes/market-rates";
@@ -45,12 +47,10 @@ import mockRouter from "./routes/mock";
 import netWorthRouter from "./routes/net-worth-comparison";
 
 const app = express();
-const PORT = process.env.PORT || 3001;
 
 // Middleware
 app.use(cors());
 app.use(express.json());
-
 app.use(Auth);
 
 // Routes
@@ -64,10 +64,16 @@ app.get("/", (_req, res) => {
   res.json({
     status: "ok",
     service: "Astik API Server",
+    environment: isVercel
+      ? "vercel"
+      : isProduction
+        ? "production"
+        : "development",
     endpoints: [
       "GET /api/market-rates - Get cached metal & currency rates",
+      "GET /api/market-rates/previous-day - Get previous day snapshot",
       "GET /api/mock/rates - Mock data for development",
-      "GET /api/net-worth/comparison - Compare current vs historical net worth",
+      "GET /api/net-worth/comparison - Compare net worth over time",
     ],
   });
 });
@@ -75,13 +81,14 @@ app.get("/", (_req, res) => {
 // Global error handler (must be last)
 app.use(globalErrorHandler);
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`🚀 Astik API server running on http://localhost:${PORT}`);
-  console.log(`📊 Environment: ${process.env.NODE_ENV || "development"}`);
-  console.log(
-    `✅ Supabase connected: ${process.env.EXPRESS_PUBLIC_SUPABASE_URL}`
-  );
-});
+// Start server only in local development (not on Vercel)
+if (!isVercel) {
+  const PORT = process.env.PORT || 3001;
+  app.listen(PORT, () => {
+    console.log(`🚀 Astik API server running on http://localhost:${PORT}`);
+    console.log(`📊 Environment: ${process.env.NODE_ENV || "development"}`);
+  });
+}
 
+// Export for Vercel serverless
 export default app;

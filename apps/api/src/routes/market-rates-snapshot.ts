@@ -26,16 +26,10 @@ router.get(
       .lt("snapshot_date", today)
       .order("snapshot_date", { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle(); // Use maybeSingle() - returns null instead of error for empty result
 
-    if (error && error.code !== "PGRST116") {
+    if (error) {
       throw Errors.supabaseError(error);
-    }
-
-    // If no snapshot exists, return null values
-    if (!data) {
-      res.json({ status: "success", data: null });
-      return;
     }
 
     res.json({ status: "success", data });
