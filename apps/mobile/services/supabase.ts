@@ -61,3 +61,36 @@ export async function signInAnonymously(): Promise<string | null> {
   }
   return data.user?.id ?? null;
 }
+
+/**
+ * Ensure user is authenticated (anonymous or real)
+ * Retries with exponential backoff, then continues offline if all fail
+ *
+ * @param maxRetries - Maximum number of retry attempts (default: 3)
+ * @returns true if authenticated, false if failed (app continues offline)
+ */
+export async function ensureAuthenticated(maxRetries = 3): Promise<boolean> {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    // Check if already authenticated
+    const hasSession = await isAuthenticated();
+    if (hasSession) {
+      return true;
+    }
+
+    // Attempt anonymous sign-in
+    const userId = await signInAnonymously();
+    if (userId) {
+      return true;
+    }
+
+    // Wait before retry with exponential backoff (500ms, 1s, 2s)
+    if (attempt < maxRetries - 1) {
+      const delay = 500 * Math.pow(2, attempt);
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
+
+  // All attempts failed - continue offline (WatermelonDB works locally)
+  console.warn("Authentication failed after retries, continuing offline");
+  return false;
+}

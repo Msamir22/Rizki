@@ -1,3 +1,5 @@
+import { palette } from "@/constants/colors";
+import { ensureAuthenticated } from "@/services/supabase";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Redirect } from "expo-router";
 import { useEffect, useState } from "react";
@@ -8,17 +10,21 @@ export default function Index() {
   const [hasOnboarded, setHasOnboarded] = useState(false);
 
   useEffect(() => {
-    checkOnboarding();
+    initializeApp();
   }, []);
 
-  const checkOnboarding = async () => {
+  const initializeApp = async () => {
     try {
+      // 1. Ensure user is authenticated (anonymous or real)
+      await ensureAuthenticated();
+
+      // 2. Check onboarding status
       const value = await AsyncStorage.getItem("hasOnboarded");
       if (value === "true") {
         setHasOnboarded(true);
       }
     } catch (e) {
-      console.error(e);
+      console.error("App initialization error:", e);
     } finally {
       setIsReady(true);
     }
@@ -31,10 +37,10 @@ export default function Index() {
           flex: 1,
           justifyContent: "center",
           alignItems: "center",
-          backgroundColor: "#0F172A", // Use dark background before theme loads
+          backgroundColor: palette.slate[900],
         }}
       >
-        <ActivityIndicator size="large" color="#10B981" />
+        <ActivityIndicator size="large" color={palette.nileGreen[500]} />
       </View>
     );
   }

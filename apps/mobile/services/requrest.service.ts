@@ -16,8 +16,8 @@ import {
 } from "@astik/logic";
 import { supabase } from "./supabase";
 
-// API base URLs
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:3001";
+const API_BASE_URL =
+  process.env.EXPO_PUBLIC_API_BASE_URL || "http://localhost:3001";
 
 interface ApiResponse<T> {
   data: T | null;
