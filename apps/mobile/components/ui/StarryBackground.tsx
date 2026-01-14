@@ -1,3 +1,4 @@
+import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
 import React, { useEffect } from "react";
 import { Dimensions, View } from "react-native";
@@ -12,8 +13,6 @@ import Animated, {
 } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Circle, Defs, RadialGradient, Stop } from "react-native-svg";
-
-// Width/Height removed as we use percentages for positioning now
 
 interface Props {
   children: React.ReactNode;
@@ -138,10 +137,10 @@ const STATIC_STARS: StarConfig[] = [
 ];
 
 const COLOR_MAP: Record<string, string> = {
-  "bg-nileGreen-400": "#34D399",
-  "bg-nileGreen-500": "#10B981",
-  "bg-gold-400": "#FBBF24",
-  "bg-gold-600": "#D97706",
+  "bg-nileGreen-400": palette.nileGreen[400],
+  "bg-nileGreen-500": palette.nileGreen[500],
+  "bg-gold-400": palette.gold[400],
+  "bg-gold-600": palette.gold[600],
 };
 
 const Star = ({ data }: { data: StarConfig }) => {
