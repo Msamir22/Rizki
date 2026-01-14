@@ -1,7 +1,8 @@
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
+import { MarketRates, PreviousDayRates } from "@astik/logic";
 import { FontAwesome5, MaterialIcons } from "@expo/vector-icons";
-import { ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, ScrollView, Text, View } from "react-native";
 
 interface Rate {
   id: string;
@@ -11,23 +12,11 @@ interface Rate {
   type: "currency" | "gold" | "silver";
 }
 
-const MOCK_RATES: Rate[] = [
-  { id: "1", label: "USD/EGP", value: "50.02", trend: "up", type: "currency" },
-  {
-    id: "2",
-    label: "Gold 24K",
-    value: "EGP 4,250/g",
-    trend: "up",
-    type: "gold",
-  },
-  {
-    id: "3",
-    label: "Silver",
-    value: "EGP 52/g",
-    trend: "down",
-    type: "silver",
-  },
-];
+interface LiveRatesProps {
+  rates: MarketRates | null;
+  previousDayRates: PreviousDayRates | null;
+  isLoading: boolean;
+}
 
 // Pill style configurations using Tailwind classes
 const pillConfig = {
@@ -45,9 +34,69 @@ const pillConfig = {
   },
 };
 
-export function LiveRates(): React.JSX.Element {
+/**
+ * Calculate trend direction by comparing current vs previous values
+ */
+function calculateTrend(
+  current: number,
+  previous: number | null | undefined
+): "up" | "down" | "flat" {
+  if (previous === null || previous === undefined || previous === 0) {
+    return "flat";
+  }
+  if (current > previous) return "up";
+  if (current < previous) return "down";
+  return "flat";
+}
+
+function buildRatesDisplay(
+  rates: MarketRates | null,
+  previousDayRates: PreviousDayRates | null
+): Rate[] {
+  if (!rates) {
+    return [];
+  }
+
+  return [
+    {
+      id: "1",
+      label: "USD/EGP",
+      value: rates.usd_egp.toFixed(2),
+      trend: calculateTrend(rates.usd_egp, previousDayRates?.usd_egp),
+      type: "currency",
+    },
+    {
+      id: "2",
+      label: "Gold 24K",
+      value: `EGP ${Math.round(rates.gold_egp_per_gram).toLocaleString()}/g`,
+      trend: calculateTrend(
+        rates.gold_egp_per_gram,
+        previousDayRates?.gold_egp_per_gram
+      ),
+      type: "gold",
+    },
+    {
+      id: "3",
+      label: "Silver",
+      value: `EGP ${Math.round(rates.silver_egp_per_gram).toLocaleString()}/g`,
+      trend: calculateTrend(
+        rates.silver_egp_per_gram,
+        previousDayRates?.silver_egp_per_gram
+      ),
+      type: "silver",
+    },
+  ];
+}
+
+export function LiveRates({
+  rates,
+  previousDayRates,
+  isLoading = false,
+}: LiveRatesProps): React.JSX.Element {
   const { mode } = useTheme();
   const isDark = mode === "dark";
+
+  const ratesDisplay = buildRatesDisplay(rates, previousDayRates);
 
   const getIconColor = (type: Rate["type"]): string => {
     switch (type) {
@@ -73,13 +122,22 @@ export function LiveRates(): React.JSX.Element {
 
   return (
     <View className="my-3">
-      <Text className="ml-1 mb-3 header-text">Live Rates</Text>
+      <View className="mb-3 flex-row items-center">
+        <Text className="header-text ml-1">Live Rates</Text>
+        {isLoading && (
+          <ActivityIndicator
+            size="small"
+            className="ml-2"
+            color={palette.nileGreen[500]}
+          />
+        )}
+      </View>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ gap: 10, paddingHorizontal: 4 }}
       >
-        {MOCK_RATES.map((rate) => {
+        {ratesDisplay.map((rate) => {
           const config = pillConfig[rate.type];
           const iconColor = getIconColor(rate.type);
           return (
@@ -96,16 +154,20 @@ export function LiveRates(): React.JSX.Element {
                 {rate.value}
               </Text>
 
-              <MaterialIcons
-                name={rate.trend === "up" ? "arrow-drop-up" : "arrow-drop-down"}
-                size={22}
-                color={
-                  rate.trend === "up"
-                    ? palette.nileGreen[500]
-                    : palette.red[500]
-                }
-                style={{ marginLeft: 2, marginRight: -4 }}
-              />
+              {rate.trend !== "flat" && (
+                <MaterialIcons
+                  name={
+                    rate.trend === "up" ? "arrow-drop-up" : "arrow-drop-down"
+                  }
+                  size={22}
+                  color={
+                    rate.trend === "up"
+                      ? palette.nileGreen[500]
+                      : palette.red[500]
+                  }
+                  style={{ marginLeft: 2, marginRight: -4 }}
+                />
+              )}
             </View>
           );
         })}
