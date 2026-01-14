@@ -68,6 +68,46 @@ export function useAccounts(): UseAccountsResult {
 }
 
 /**
+ * Hook to get top N accounts ordered by balance (highest first)
+ * Used for dashboard display
+ */
+export function useTopAccounts(limit: number = 3): {
+  accounts: Account[];
+  isLoading: boolean;
+} {
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    setIsLoading(true);
+
+    const accountsCollection = database.get<Account>("accounts");
+
+    // Query non-deleted accounts, ordered by balance descending, limited
+    const query = accountsCollection.query(
+      Q.where("deleted", false),
+      Q.sortBy("balance", Q.desc),
+      Q.take(limit)
+    );
+
+    const subscription = query.observe().subscribe({
+      next: (result) => {
+        setAccounts(result);
+        setIsLoading(false);
+      },
+      error: (err) => {
+        console.error("Error observing top accounts:", err);
+        setIsLoading(false);
+      },
+    });
+
+    return () => subscription.unsubscribe();
+  }, [limit]);
+
+  return { accounts, isLoading };
+}
+
+/**
  * Hook to get a single account by ID
  */
 export function useAccount(accountId: string | null): {
