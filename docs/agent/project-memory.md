@@ -4,7 +4,7 @@ alwaysApply: true
 
 # 🧠 Astik Project Memory
 
-> **Last Updated:** 2026-01-12 **Purpose:** Persistent context for AI agents
+> **Last Updated:** 2026-01-15 **Purpose:** Persistent context for AI agents
 > across conversations
 
 ---
@@ -110,7 +110,7 @@ Astik/
 | Transfers    | `transfers`                                                                   |
 | Budgets      | `budgets`                                                                     |
 | Analytics    | `daily_snapshot_balance`, `daily_snapshot_assets`, `daily_snapshot_net_worth` |
-| Market       | `market_rates`, `daily_market_rates_snapshot`                                 |
+| Market       | `market_rates` (unified history table)                                        |
 
 ### 4.3 Key Business Rules
 
@@ -163,6 +163,10 @@ for asset transactions)
 - [x] Database schema overhaul (37 currencies, 4 precious metals)
 - [x] Metal schema refactoring (purity_fraction, removed industrial/LBMA)
 - [x] Purity conversion utilities (karat ↔ fineness ↔ fraction)
+- [x] Anonymous sign-in with retry logic
+- [x] Vercel API deployment (dev/prod projects)
+- [x] Market rates table consolidation (dropped daily_snapshot_market_rates)
+- [x] React Query integration for API caching
 
 ### 🔄 In Progress
 
@@ -223,6 +227,14 @@ for asset transactions)
 ## 7. Recent Sessions
 
 > Last 10 sessions for context continuity
+
+### Session: 2026-01-15 (06:33)
+
+- **Topic:** API Deployment & Market Rates Consolidation
+- **Accomplished:** Implemented anonymous sign-in, deployed API to Vercel,
+  consolidated market_rates tables, integrated React Query for caching.
+- **Outcome:** Market rates now stored with history, API caching prevents
+  duplicate calls.
 
 ### Session: 2026-01-12 (21:09)
 
