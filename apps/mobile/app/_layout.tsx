@@ -8,7 +8,6 @@ import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
-import { useEffect } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ThemeProvider, useTheme } from "../context/ThemeContext";
 import "../global.css";
@@ -17,6 +16,7 @@ import { DatabaseProvider } from "../providers/DatabaseProvider";
 import { darkTheme, lightTheme } from "@/constants/colors";
 import { ErrorBoundary } from "../components/ErrorBoundary";
 import { QueryProvider } from "../providers/QueryProvider";
+import { SyncProvider } from "../providers/SyncProvider";
 
 // Prevent splash screen from auto-hiding until fonts are loaded
 SplashScreen.preventAutoHideAsync();
@@ -29,12 +29,6 @@ export default function RootLayout() {
     Inter_700Bold,
   });
 
-  useEffect(() => {
-    if (fontsLoaded || fontError) {
-      SplashScreen.hideAsync();
-    }
-  }, [fontsLoaded, fontError]);
-
   // Don't render until fonts are loaded
   if (!fontsLoaded && !fontError) {
     return null;
@@ -44,11 +38,13 @@ export default function RootLayout() {
     <ErrorBoundary>
       <QueryProvider>
         <DatabaseProvider>
-          <ThemeProvider>
-            <SafeAreaProvider>
-              <RootLayoutNav />
-            </SafeAreaProvider>
-          </ThemeProvider>
+          <SyncProvider>
+            <ThemeProvider>
+              <SafeAreaProvider>
+                <RootLayoutNav />
+              </SafeAreaProvider>
+            </ThemeProvider>
+          </SyncProvider>
         </DatabaseProvider>
       </QueryProvider>
     </ErrorBoundary>
