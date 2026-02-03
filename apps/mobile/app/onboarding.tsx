@@ -71,7 +71,7 @@ export default function OnboardingScreen() {
   const handleFinish = async () => {
     try {
       await AsyncStorage.setItem("hasOnboarded", "true");
-      router.replace("/(tabs)");
+      router.replace("/(drawer)/(tabs)");
     } catch (error) {
       console.error("Failed to save onboarding status", error);
     }

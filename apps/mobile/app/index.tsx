@@ -47,7 +47,7 @@ export default function Index() {
 
   // Redirect based on status
   if (hasOnboarded) {
-    return <Redirect href="/(tabs)" />;
+    return <Redirect href="/(drawer)/(tabs)" />;
   } else {
     return <Redirect href="/onboarding" />;
   }

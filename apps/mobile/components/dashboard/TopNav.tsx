@@ -1,16 +1,18 @@
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useNavigation } from "expo-router";
 import React from "react";
 import { Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AstikLogo } from "../ui/AstikLogo";
 import { useTheme } from "@/context/ThemeContext";
+import { DrawerActions } from "@react-navigation/native";
 
 // TODO: Replace with user context when available
 const USER_NAME = "Mohamed";
 
 export function TopNav(): React.ReactElement {
   const { theme } = useTheme();
+  const navigation = useNavigation();
 
   const getGreeting = () => {
     const hours = new Date().getHours();
@@ -22,8 +24,17 @@ export function TopNav(): React.ReactElement {
   return (
     <SafeAreaView edges={["top"]} className="pb-2">
       <View className=" flex-row items-center mb-5 mt-2">
-        {/* Left Side: Logo & Greeting */}
+        {/* Left Side: Menu, Logo & Greeting */}
         <View className="flex-row items-center gap-3 flex-1">
+          {/* Menu Button */}
+          <TouchableOpacity
+            onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
+            accessibilityLabel="Open Menu"
+            accessibilityRole="button"
+          >
+            <Ionicons name="menu-outline" size={28} color={theme.text.primary} />
+          </TouchableOpacity>
+
           <AstikLogo width={80} height={25} color={theme.text.primary} />
 
           {/* Vertical Divider */}
