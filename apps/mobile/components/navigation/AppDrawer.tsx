@@ -149,6 +149,7 @@ export function AppDrawer({
       transparent
       animationType="fade"
       onRequestClose={onClose}
+      statusBarTranslucent
     >
       {/* Backdrop */}
       <Pressable className="flex-1 bg-black/50" onPress={onClose}>
@@ -158,11 +159,12 @@ export function AppDrawer({
             width: DRAWER_WIDTH,
             height: "100%",
             transform: [{ translateX: slideAnim }],
+            backgroundColor: isDark ? palette.slate[900] : "white", // Ensure bg color
           }}
         >
-          <Pressable
+          <View // Changed from Pressable to View to avoid conflict, content handles touches
             className={`flex-1 ${containerBg}`}
-            style={{ paddingTop: insets.top }}
+            style={{ paddingTop: 0 }} // Remove duplicate padding if header handles insets
           >
             {/* Header with gradient */}
             <LinearGradient
@@ -170,6 +172,7 @@ export function AppDrawer({
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               className="p-5 pb-6"
+              style={{ paddingTop: insets.top + 20 }} // Add insets to header
             >
               {/* Avatar */}
               <View className="w-16 h-16 rounded-full bg-nileGreen-500/20 items-center justify-center mb-3 border-2 border-nileGreen-500/30">
