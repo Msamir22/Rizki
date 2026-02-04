@@ -22,6 +22,8 @@ import { QueryProvider } from "../providers/QueryProvider";
 import { SyncProvider } from "../providers/SyncProvider";
 import { ServerStatusProvider } from "../context/ServerStatusContext";
 import { ServiceUnavailableBanner } from "../components/common/ServiceUnavailableBanner";
+import { DrawerProvider } from "../context/DrawerContext";
+import { useEffect } from "react";
 
 // Prevent splash screen from auto-hiding until fonts are loaded
 SplashScreen.preventAutoHideAsync();
@@ -33,6 +35,12 @@ export default function RootLayout() {
     Inter_600SemiBold,
     Inter_700Bold,
   });
+
+  useEffect(() => {
+    if (fontsLoaded || fontError) {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded, fontError]);
 
   // Don't render until fonts are loaded
   if (!fontsLoaded && !fontError) {
@@ -47,14 +55,16 @@ export default function RootLayout() {
             <AuthProvider>
               <SyncProvider>
                 <ThemeProvider>
-                  <SafeAreaProvider>
-                    <ServerStatusProvider>
-                      <ToastProvider>
-                        <RootLayoutNav />
-                        <ServiceUnavailableBanner />
-                      </ToastProvider>
-                    </ServerStatusProvider>
-                  </SafeAreaProvider>
+                  <DrawerProvider>
+                    <SafeAreaProvider>
+                      <ServerStatusProvider>
+                        <ToastProvider>
+                          <RootLayoutNav />
+                          <ServiceUnavailableBanner />
+                        </ToastProvider>
+                      </ServerStatusProvider>
+                    </SafeAreaProvider>
+                  </DrawerProvider>
                 </ThemeProvider>
               </SyncProvider>
             </AuthProvider>
