@@ -74,7 +74,7 @@ function AddTransaction({ accounts }: AddTransactionProps) {
     incomeCategories,
     isLoading: categoriesLoading,
   } = useCategories();
-  const { latestRate } = useMarketRates();
+  const { latestRates } = useMarketRates();
 
   // Derived Values
   const selectedAccount = accounts.find((a) => a.id === selectedAccountId);
@@ -152,13 +152,16 @@ function AddTransaction({ accounts }: AddTransactionProps) {
     ) {
       const numAmount = calculateResult(amount);
       if (numAmount > 0) {
-        const rate = latestRate?.getRate(selectedAccount.currency, toAccount.currency);
+        const rate = latestRates?.getRate(
+          selectedAccount.currency,
+          toAccount.currency
+        );
         if (rate) {
           setTargetAmount((numAmount * rate).toFixed(2));
         }
       }
     }
-  }, [type, selectedAccount, toAccount, amount, latestRate]);
+  }, [type, selectedAccount, toAccount, amount, latestRates]);
 
   // Handle Save
   const handleSave = async () => {
@@ -300,7 +303,10 @@ function AddTransaction({ accounts }: AddTransactionProps) {
               onChangeTargetAmount={setTargetAmount}
               exchangeRate={
                 selectedAccount && toAccount
-                  ?latestRate?.getRate(selectedAccount.currency, toAccount.currency)
+                  ? latestRates?.getRate(
+                      selectedAccount.currency,
+                      toAccount.currency
+                    )
                   : undefined
               }
             />

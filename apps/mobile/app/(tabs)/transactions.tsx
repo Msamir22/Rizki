@@ -2,6 +2,7 @@ import { DeleteConfirmationModal } from "@/components/modals/DeleteConfirmationM
 import { PeriodFilterModal } from "@/components/modals/PeriodFilterModal";
 import { TypeFilterModal } from "@/components/modals/TypeFilterModal";
 import { RecurringEditModal } from "@/components/modals/RecurringEditModal";
+import { AppDrawer } from "@/components/navigation/AppDrawer";
 import { QuickEditModal } from "@/components/transactions/QuickEditModal";
 import { IconLibrary } from "@/components/common/CategoryIcon";
 import { GroupHeader } from "@/components/transactions/GroupHeader";
@@ -35,6 +36,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { updateTransaction, updateTransfer } from "@/utils/transactions";
 import * as Haptics from "expo-haptics";
 export default function TransactionsPlaceholder() {
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [period, setPeriod] = useState<GroupingPeriod>("this_month");
   const [selectedTypes, setSelectedTypes] = useState<TransactionTypeFilter[]>([
     "Income",
@@ -370,9 +372,21 @@ export default function TransactionsPlaceholder() {
           }}
         >
           <View className="flex-row justify-between items-center mb-4 h-10">
-            <Text className="text-3xl font-extrabold text-slate-800 dark:text-slate-50">
-              Transactions
-            </Text>
+            <View className="flex-row items-center">
+              <TouchableOpacity
+                onPress={() => setIsDrawerOpen(true)}
+                className="mr-3"
+              >
+                <Ionicons
+                  name="menu-outline"
+                  size={30}
+                  color={isDark ? "#f8fafc" : "#1e293b"}
+                />
+              </TouchableOpacity>
+              <Text className="text-3xl font-extrabold text-slate-800 dark:text-slate-50">
+                Transactions
+              </Text>
+            </View>
 
             {isSelectionMode && (
               <View className="flex-row items-center">
@@ -639,6 +653,10 @@ export default function TransactionsPlaceholder() {
         onCancel={() =>
           setRecurringEditModal((prev) => ({ ...prev, visible: false }))
         }
+      />
+      <AppDrawer
+        visible={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
       />
     </>
   );

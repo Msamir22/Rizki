@@ -31,7 +31,7 @@ export function useNetWorth(): UseNetWorthResult {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
-  const { latestRate, isLoading: isRatesLoading } = useMarketRates();
+  const { latestRates, isLoading: isRatesLoading } = useMarketRates();
 
   const refresh = (): void => {
     setRefreshKey((prev) => prev + 1);
@@ -74,18 +74,18 @@ export function useNetWorth(): UseNetWorthResult {
 
   // Calculate net worth when data changes
   const netWorthData = useMemo<NetWorthData | null>(() => {
-    if (isLoading || isRatesLoading || !latestRate) {
+    if (isLoading || isRatesLoading || !latestRates) {
       return null;
     }
 
     // Calculate total accounts in EGP
-    const totalAccounts = calculateTotalBalance(accounts, latestRate);
+    const totalAccounts = calculateTotalBalance(accounts, latestRates);
 
     // Calculate total assets in EGP
-    const totalAssets = calculateTotalAssets(assetMetals, latestRate);
+    const totalAssets = calculateTotalAssets(assetMetals, latestRates);
 
     return calculateNetWorth(totalAccounts, totalAssets);
-  }, [accounts, assetMetals, latestRate, isLoading, isRatesLoading]);
+  }, [accounts, assetMetals, latestRates, isLoading, isRatesLoading]);
 
   return {
     netWorthData,

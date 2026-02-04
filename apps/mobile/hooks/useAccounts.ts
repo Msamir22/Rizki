@@ -25,7 +25,7 @@ export function useAccounts(): UseAccountsResult {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
-  const { latestRate } = useMarketRates();
+  const { latestRates } = useMarketRates();
 
   const refetch = (): void => {
     setRefreshKey((prev) => prev + 1);
@@ -59,7 +59,7 @@ export function useAccounts(): UseAccountsResult {
     return () => subscription.unsubscribe();
   }, [refreshKey]);
 
-  const totalBalanceEgp = calculateTotalBalance(accounts, latestRate);
+  const totalBalanceEgp = calculateTotalBalance(accounts, latestRates);
 
   return {
     accounts,

@@ -1,9 +1,12 @@
+import { AppDrawer } from "@/components/navigation/AppDrawer";
+import { useNetWorth } from "@/hooks/useNetWorth";
 import { Account, AccountType, database } from "@astik/db";
 import { convertToEGP } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
 import { Q } from "@nozbe/watermelondb";
 import { withObservables } from "@nozbe/watermelondb/react";
 import { useRouter } from "expo-router";
+import { useState } from "react";
 import {
   ScrollView,
   StatusBar,
@@ -14,7 +17,6 @@ import {
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useMarketRates } from "../../hooks/useMarketRates";
-import { useNetWorth } from "@/hooks/useNetWorth";
 
 interface AccountsProps {
   accounts: Account[];
@@ -23,7 +25,8 @@ interface AccountsProps {
 function Accounts({ accounts }: AccountsProps) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { rates } = useMarketRates();
+  const { latestRates } = useMarketRates();
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   // Calculate total net worth in EGP
   const { netWorthData } = useNetWorth();
@@ -41,8 +44,12 @@ function Accounts({ accounts }: AccountsProps) {
 
   const getAccountSubtitle = (account: Account): string => {
     // For non-EGP accounts, show EGP equivalent
-    if (account.currency !== "EGP" && rates) {
-      const egpValue = convertToEGP(account.balance, account.currency, rates);
+    if (account.currency !== "EGP" && latestRates) {
+      const egpValue = convertToEGP(
+        account.balance,
+        account.currency,
+        latestRates
+      );
       return `≈ EGP ${egpValue.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
     }
 
@@ -86,13 +93,20 @@ function Accounts({ accounts }: AccountsProps) {
           paddingTop: insets.top + 16,
           paddingBottom: 32,
           paddingHorizontal: 20,
-          borderBottomLeftRadius: 32,
           borderBottomRightRadius: 32,
         }}
       >
-        <Text style={{ color: "white", fontSize: 28, fontWeight: "bold" }}>
-          Accounts
-        </Text>
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          <TouchableOpacity
+            onPress={() => setIsDrawerOpen(true)}
+            style={{ marginRight: 12 }}
+          >
+            <Ionicons name="menu-outline" size={32} color="white" />
+          </TouchableOpacity>
+          <Text style={{ color: "white", fontSize: 28, fontWeight: "bold" }}>
+            Accounts
+          </Text>
+        </View>
 
         <View style={{ marginTop: 20 }}>
           <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: 14 }}>
@@ -305,6 +319,11 @@ function Accounts({ accounts }: AccountsProps) {
           </Text>
         </View>
       </ScrollView>
+
+      <AppDrawer
+        visible={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+      />
     </View>
   );
 }

@@ -14,7 +14,7 @@ interface Rate {
 }
 
 interface LiveRatesProps {
-  latestRate: MarketRate | null;
+  latestRates: MarketRate | null;
   previousDayRate: MarketRate | null;
   isLoading: boolean;
   lastUpdated: Date | null;
@@ -53,10 +53,10 @@ function calculateTrend(
 }
 
 function buildRatesDisplay(
-  latestRate: MarketRate | null,
+  latestRates: MarketRate | null,
   previousDayRate: MarketRate | null
 ): Rate[] {
-  if (!latestRate) {
+  if (!latestRates) {
     return [];
   }
 
@@ -64,16 +64,16 @@ function buildRatesDisplay(
     {
       id: "1",
       label: "USD/EGP",
-      value: latestRate.usdEgp.toFixed(2),
-      trend: calculateTrend(latestRate.usdEgp, previousDayRate?.usdEgp),
+      value: latestRates.usdEgp.toFixed(2),
+      trend: calculateTrend(latestRates.usdEgp, previousDayRate?.usdEgp),
       type: "currency",
     },
     {
       id: "2",
       label: "Gold 24K",
-      value: `EGP ${Math.round(latestRate.goldEgpPerGram).toLocaleString()}/g`,
+      value: `EGP ${Math.round(latestRates.goldEgpPerGram).toLocaleString()}/g`,
       trend: calculateTrend(
-        latestRate.goldEgpPerGram,
+        latestRates.goldEgpPerGram,
         previousDayRate?.goldEgpPerGram
       ),
       type: "gold",
@@ -81,9 +81,9 @@ function buildRatesDisplay(
     {
       id: "3",
       label: "Silver",
-      value: `EGP ${Math.round(latestRate.silverEgpPerGram).toLocaleString()}/g`,
+      value: `EGP ${Math.round(latestRates.silverEgpPerGram).toLocaleString()}/g`,
       trend: calculateTrend(
-        latestRate.silverEgpPerGram,
+        latestRates.silverEgpPerGram,
         previousDayRate?.silverEgpPerGram
       ),
       type: "silver",
@@ -92,7 +92,7 @@ function buildRatesDisplay(
 }
 
 export function LiveRates({
-  latestRate,
+  latestRates,
   previousDayRate,
   isLoading = false,
   lastUpdated,
@@ -101,7 +101,7 @@ export function LiveRates({
   const { mode } = useTheme();
   const isDark = mode === "dark";
 
-  const ratesDisplay = buildRatesDisplay(latestRate, previousDayRate);
+  const ratesDisplay = buildRatesDisplay(latestRates, previousDayRate);
 
   const getIconColor = (type: Rate["type"]): string => {
     switch (type) {

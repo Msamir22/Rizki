@@ -7,7 +7,7 @@ import { supabase } from "../services/supabase";
 import { useSync } from "@/providers/SyncProvider";
 
 interface UseMarketRatesResult {
-  latestRate: MarketRate | null;
+  latestRates: MarketRate | null;
   previousDayRate: MarketRate | null;
   isLoading: boolean;
   isConnected: boolean;
@@ -21,7 +21,7 @@ interface UseMarketRatesResult {
  */
 export function useMarketRates(): UseMarketRatesResult {
   const database = useDatabase();
-  const [latestRate, setLatestRate] = useState<MarketRate | null>(null);
+  const [latestRates, setLatestRates] = useState<MarketRate | null>(null);
   const [previousDayRate, setPreviousDayRate] = useState<MarketRate | null>(
     null
   );
@@ -37,8 +37,8 @@ export function useMarketRates(): UseMarketRatesResult {
       .query(Q.sortBy("created_at", Q.desc), Q.take(1))
       .observe()
       .subscribe((rates) => {
-        const rate = rates.at(0) ?? null;
-        setLatestRate(rate);
+        const latest = rates.at(0) ?? null;
+        setLatestRates(latest);
         setIsLoading(false);
       });
 
@@ -68,7 +68,7 @@ export function useMarketRates(): UseMarketRatesResult {
     };
 
     fetchPreviousDay();
-  }, [database, latestRate]); // Re-fetch when latest rate changes
+  }, [database, latestRates]); // Re-fetch when latest rate changes
 
   // Set up realtime subscription for instant updates
   useEffect(() => {
@@ -100,11 +100,11 @@ export function useMarketRates(): UseMarketRatesResult {
   }, [database]);
 
   return {
-    latestRate,
+    latestRates,
     previousDayRate,
     isLoading,
     isConnected,
-    lastUpdated: latestRate?.createdAt || null,
-    isStale: latestRate?.isStale() ?? false,
+    lastUpdated: latestRates?.createdAt || null,
+    isStale: latestRates?.isStale() ?? false,
   };
 }

@@ -1,3 +1,4 @@
+import { AppDrawer } from "@/components/navigation/AppDrawer";
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
 import { getMetalPrices, MetalPrices } from "@/utils/api";
@@ -168,6 +169,7 @@ const AddSectionButton = ({
 );
 
 export default function MyMetalsScreen() {
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { mode } = useTheme();
@@ -210,11 +212,11 @@ export default function MyMetalsScreen() {
         style={{ paddingTop: insets.top + 12 }}
       >
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={() => setIsDrawerOpen(true)}
           className="h-10 w-10 items-center justify-center rounded-xl bg-surface-highlight dark:bg-white/10"
         >
           <Ionicons
-            name="arrow-back"
+            name="menu-outline"
             size={24}
             color={isDark ? "#FFF" : palette.slate[800]}
           />
@@ -447,6 +449,11 @@ export default function MyMetalsScreen() {
           </View>
         </TouchableWithoutFeedback>
       </Modal>
+
+      <AppDrawer
+        visible={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+      />
     </View>
   );
 }

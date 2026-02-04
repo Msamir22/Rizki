@@ -40,7 +40,6 @@ if (missingVars.length > 0) {
 // Import routes after environment is configured
 import { globalErrorHandler } from "./lib/errors";
 import { Auth } from "./middleware/auth";
-import ratesRouter from "./routes/market-rates";
 import mockRouter from "./routes/mock";
 import netWorthRouter from "./routes/net-worth-comparison";
 
@@ -52,7 +51,6 @@ app.use(express.json());
 app.use(Auth);
 
 // Routes
-app.use("/api/market-rates", ratesRouter);
 app.use("/api/mock", mockRouter);
 app.use("/api/net-worth", netWorthRouter);
 
@@ -63,8 +61,6 @@ app.get("/", (_req, res) => {
     service: "Astik API Server",
     environment,
     endpoints: [
-      "GET /api/market-rates - Get cached metal & currency rates",
-      "GET /api/market-rates/previous-day - Get previous day snapshot",
       "GET /api/mock/rates - Mock data for development",
       "GET /api/net-worth/comparison - Compare net worth over time",
     ],

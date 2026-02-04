@@ -23,7 +23,7 @@ export default function DashboardScreen(): React.JSX.Element {
   const isDbReady = useDatabaseReady();
   const { accounts, isLoading: accountsLoading } = useTopAccounts(3);
   const {
-    latestRate,
+    latestRates,
     previousDayRate,
     isLoading: ratesLoading,
     lastUpdated,
@@ -63,15 +63,15 @@ export default function DashboardScreen(): React.JSX.Element {
           <TotalNetWorthCard
             totalEgp={totalNetWorth}
             totalUsd={
-              totalNetWorth && latestRate
-                ? egpToCurrency(totalNetWorth, latestRate.usdEgp)
+              totalNetWorth && latestRates
+                ? egpToCurrency(totalNetWorth, latestRates.usdEgp)
                 : null
             }
             monthlyPercentageChange={monthlyPercentageChange}
             isLoading={isLoading}
           />
           <LiveRates
-            latestRate={latestRate}
+            latestRates={latestRates}
             previousDayRate={previousDayRate}
             isLoading={ratesLoading}
             lastUpdated={lastUpdated}
