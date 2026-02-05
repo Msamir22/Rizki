@@ -59,8 +59,8 @@ export const schema = appSchema({
       columns: [
         { name: "account_id", type: "string", isIndexed: true },
         { name: "account_number", type: "string", isOptional: true },
-        { name: "bank_name", type: "string" },
-        { name: "card_last_4", type: "string" },
+        { name: "bank_name", type: "string", isOptional: true },
+        { name: "card_last_4", type: "string", isOptional: true },
         { name: "created_at", type: "number" },
         { name: "deleted", type: "boolean" },
         { name: "sms_sender_name", type: "string", isOptional: true },
