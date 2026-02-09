@@ -1,9 +1,9 @@
 import React, {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useState,
-  useCallback,
 } from "react";
 import { DeviceEventEmitter } from "react-native";
 
@@ -52,7 +52,7 @@ export const ServerStatusProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 };
 
-export const useServerStatus = () => {
+export const useServerStatus = (): ServerStatusContextType => {
   const context = useContext(ServerStatusContext);
   if (!context) {
     throw new Error(

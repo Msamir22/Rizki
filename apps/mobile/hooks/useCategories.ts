@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
-import { database, Category, TransactionType } from "@astik/db";
+import { Category, database, TransactionType } from "@astik/db";
 import { Q } from "@nozbe/watermelondb";
+import { useEffect, useState } from "react";
 
 interface UseCategoriesResult {
   categories: Category[];
@@ -68,9 +68,9 @@ export function useCategories(
         setCategories(result);
         setIsLoading(false);
       },
-      error: (err) => {
+      error: (err: unknown) => {
         console.error("Error observing categories:", err);
-        setError(err);
+        setError(err instanceof Error ? err : new Error(String(err)));
         setIsLoading(false);
       },
     });
@@ -98,14 +98,16 @@ export function useCategories(
   };
 }
 
-/**
- * Hook to get a single category by ID or systemName
- */
-export function useCategory(categoryId: string | null): {
+export interface UseCategoryResult {
   category: Category | null;
   isLoading: boolean;
   error: Error | null;
-} {
+}
+
+/**
+ * Hook to get a single category by ID or systemName
+ */
+export function useCategory(categoryId: string | null): UseCategoryResult {
   const [category, setCategory] = useState<Category | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -129,9 +131,9 @@ export function useCategory(categoryId: string | null): {
         setCategory(result);
         setIsLoading(false);
       },
-      error: (err) => {
+      error: (err: unknown) => {
         console.error("Error observing category:", err);
-        setError(err);
+        setError(err instanceof Error ? err : new Error(String(err)));
         setIsLoading(false);
       },
     });

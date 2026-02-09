@@ -6,15 +6,14 @@
  * Extend this class in ../BankDetails.ts to add custom methods
  */
 
-import { Model, Query } from "@nozbe/watermelondb";
+import { Model, type Relation } from "@nozbe/watermelondb";
 import {
-  field,
   date,
+  field,
   readonly,
   relation,
 } from "@nozbe/watermelondb/decorators";
 import type { Associations } from "@nozbe/watermelondb/Model";
-import type { Relation } from "@nozbe/watermelondb";
 import type { BaseAccount } from "./base-account";
 
 export abstract class BaseBankDetails extends Model {

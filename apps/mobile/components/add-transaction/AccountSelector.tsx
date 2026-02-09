@@ -1,8 +1,6 @@
 import { palette } from "@/constants/colors";
-import { useTheme } from "@/context/ThemeContext";
 import { Account } from "@astik/db";
 import { Ionicons } from "@expo/vector-icons";
-import React from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 
 interface AccountSelectorProps {
@@ -19,9 +17,7 @@ export function AccountSelector({
   onSelect,
   label,
   mainColor = palette.nileGreen[600],
-}: AccountSelectorProps) {
-  const { isDark } = useTheme();
-
+}: AccountSelectorProps): React.JSX.Element {
   return (
     <View className="mb-4">
       {label && (
@@ -47,37 +43,40 @@ export function AccountSelector({
               key={account.id}
               onPress={() => onSelect(account.id)}
               activeOpacity={0.7}
-              className={`flex-row items-center px-4 py-3 rounded-xl border ${
+              className={`flex-row items-center px-5 py-4 rounded-2xl border ${
                 isSelected
-                  ? "border-transparent"
+                  ? "border-transparent bg-white dark:bg-slate-800"
                   : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
               }`}
               style={
                 isSelected
                   ? {
-                      backgroundColor: isDark
-                        ? "rgba(255,255,255,0.1)"
-                        : "white",
                       borderColor: mainColor,
                       borderWidth: 2,
+                      shadowColor: mainColor,
+                      shadowOffset: { width: 0, height: 4 },
+                      shadowOpacity: 0.1,
+                      shadowRadius: 8,
+                      elevation: 4,
                     }
                   : {}
               }
             >
               <View
-                className={`w-8 h-8 rounded-full items-center justify-center mr-2`}
+                className="w-10 h-10 rounded-2xl items-center justify-center mr-3 bg-slate-100 dark:bg-slate-700/50"
                 style={{
-                  backgroundColor: isSelected
-                    ? mainColor
-                    : isDark
-                      ? "rgba(255,255,255,0.05)"
-                      : "#F1F5F9",
+                  backgroundColor: isSelected ? mainColor : undefined,
                 }}
               >
                 <Ionicons
                   name={iconName}
-                  size={16}
-                  color={isSelected ? "#FFF" : isDark ? "#A0AEC0" : "#64748B"}
+                  size={20}
+                  className={
+                    isSelected
+                      ? "text-white"
+                      : "text-slate-500 dark:text-slate-400"
+                  }
+                  color={isSelected ? palette.slate[25] : palette.slate[500]}
                 />
               </View>
               <View>
@@ -98,10 +97,10 @@ export function AccountSelector({
               </View>
 
               {isSelected && (
-                <View className="ml-2 bg-white dark:bg-slate-900 rounded-full p-0.5">
+                <View className="ml-2 bg-white dark:bg-slate-900 rounded-full">
                   <Ionicons
                     name="checkmark-circle"
-                    size={16}
+                    size={22}
                     color={mainColor}
                   />
                 </View>

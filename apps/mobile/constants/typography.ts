@@ -33,100 +33,99 @@ export const fontWeightToFamily: Record<string, string> = {
  * Predefined Text Styles
  * Use these for consistent typography across the app
  */
-export const textStyles = {
+export const textStyles: Record<string, TextStyle> = {
   // Headings
   h1: {
     fontFamily: fontFamily.bold,
     fontSize: 28,
     lineHeight: 34,
-  } as TextStyle,
+  },
 
   h2: {
     fontFamily: fontFamily.bold,
     fontSize: 24,
     lineHeight: 30,
-  } as TextStyle,
+  },
 
   h3: {
     fontFamily: fontFamily.semiBold,
     fontSize: 20,
     lineHeight: 26,
-  } as TextStyle,
+  },
 
   h4: {
     fontFamily: fontFamily.semiBold,
     fontSize: 18,
     lineHeight: 24,
-  } as TextStyle,
+  },
 
   // Body text
   bodyLarge: {
     fontFamily: fontFamily.regular,
     fontSize: 16,
     lineHeight: 24,
-  } as TextStyle,
+  },
 
   body: {
     fontFamily: fontFamily.regular,
     fontSize: 14,
     lineHeight: 20,
-  } as TextStyle,
+  },
 
   bodySmall: {
     fontFamily: fontFamily.regular,
     fontSize: 12,
     lineHeight: 16,
-  } as TextStyle,
-
+  },
   // Labels
   label: {
     fontFamily: fontFamily.medium,
     fontSize: 14,
     lineHeight: 20,
-  } as TextStyle,
+  },
 
   labelSmall: {
     fontFamily: fontFamily.medium,
     fontSize: 12,
     lineHeight: 16,
-  } as TextStyle,
+  },
 
   // Captions
   caption: {
     fontFamily: fontFamily.regular,
     fontSize: 12,
     lineHeight: 16,
-  } as TextStyle,
+  },
 
   captionSmall: {
     fontFamily: fontFamily.regular,
     fontSize: 10,
     lineHeight: 14,
-  } as TextStyle,
+  },
 
   // Special styles
   amount: {
     fontFamily: fontFamily.medium,
     fontSize: 16,
     lineHeight: 22,
-  } as TextStyle,
+  },
 
   amountLarge: {
     fontFamily: fontFamily.bold,
     fontSize: 32,
     lineHeight: 40,
-  } as TextStyle,
+  },
 
   button: {
     fontFamily: fontFamily.semiBold,
     fontSize: 14,
     lineHeight: 20,
-  } as TextStyle,
+  },
 
   // Brand
   logo: {
     fontFamily: fontFamily.bold,
     fontSize: 20,
     lineHeight: 24,
-  } as TextStyle,
+  },
 } as const;

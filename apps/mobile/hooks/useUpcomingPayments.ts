@@ -94,9 +94,9 @@ export function useUpcomingPayments(
         setRecurringPayments(result);
         setIsLoading(false);
       },
-      error: (err) => {
+      error: (err: unknown) => {
         console.error("Error observing upcoming payments:", err);
-        setError(err);
+        setError(err instanceof Error ? err : new Error(String(err)));
         setIsLoading(false);
       },
     });

@@ -6,7 +6,6 @@
  */
 
 import { palette } from "@/constants/colors";
-import { useTheme } from "@/context/ThemeContext";
 import { Ionicons } from "@expo/vector-icons";
 import React, { createContext, useCallback, useContext, useState } from "react";
 import { Text, View } from "react-native";
@@ -86,7 +85,6 @@ const TOAST_COLORS: Record<
 };
 
 function Toast({ config, onHide }: ToastProps): React.JSX.Element {
-  const { isDark } = useTheme();
   const colors = TOAST_COLORS[config.type];
   const icon = TOAST_ICONS[config.type];
 

@@ -13,12 +13,12 @@ import { ParsedNotification } from "../types";
  */
 function parseInstPaySent(text: string): ParsedNotification | null {
   const pattern =
-    /IPN transfer sent with amount of (EGP|USD) ([\d,]+\.\d{2}) from (\d+) on ([\d\/]+) at ([\d:]+\s*[AP]M)\. Ref# ([a-f0-9]+)/i;
+    /IPN transfer sent with amount of (EGP|USD) ([\d,]+\.\d{2}) from (\d+) on ([\d/]+) at ([\d:]+\s*[AP]M)\. Ref# ([a-f0-9]+)/i;
   const match = text.match(pattern);
 
   if (!match) return null;
 
-  const [, currency, amountStr, accountNumber, date, time, reference] = match;
+  const [, currency, amountStr, accountNumber, , , reference] = match;
   const amount = parseFloat(amountStr.replace(/,/g, ""));
 
   return {
@@ -39,12 +39,12 @@ function parseInstPaySent(text: string): ParsedNotification | null {
  */
 function parseInstPayReceived(text: string): ParsedNotification | null {
   const pattern =
-    /IPN transfer received with amount of (EGP|USD) ([\d,]+\.\d{2}) on (\d+) on ([\d\/]+) at ([\d:]+\s*[AP]M)\. Ref# ([a-f0-9]+)/i;
+    /IPN transfer received with amount of (EGP|USD) ([\d,]+\.\d{2}) on (\d+) on ([\d/]+) at ([\d:]+\s*[AP]M)\. Ref# ([a-f0-9]+)/i;
   const match = text.match(pattern);
 
   if (!match) return null;
 
-  const [, currency, amountStr, accountNumber, date, time, reference] = match;
+  const [, currency, amountStr, accountNumber, , , reference] = match;
   const amount = parseFloat(amountStr.replace(/,/g, ""));
 
   return {
@@ -70,8 +70,7 @@ function parseDebitCardTransaction(text: string): ParsedNotification | null {
 
   if (!match) return null;
 
-  const [, cardLast4, currency, amountStr, merchant, balCurrency, balanceStr] =
-    match;
+  const [, cardLast4, currency, amountStr, merchant, , balanceStr] = match;
   const amount = parseFloat(amountStr.replace(/,/g, ""));
   const availableBalance = parseFloat(balanceStr.replace(/,/g, ""));
 

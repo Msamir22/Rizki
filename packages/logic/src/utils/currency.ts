@@ -1,4 +1,4 @@
-import { MarketRate } from "@astik/db";
+import { CurrencyType, MarketRate } from "@astik/db";
 
 export function egpToCurrency(
   amountInEgp: number,
@@ -40,17 +40,94 @@ export function convertToEGP(
   }
 }
 
-export const formatCurrency = (
-  amount: number,
-  currency: string,
-  minimumFractionDigits: number = 0,
-  maximumFractionDigits: number = 0
-): string => {
-  return (
-    new Intl.NumberFormat("en-US", {
-      style: "decimal",
-      minimumFractionDigits,
-      maximumFractionDigits,
-    }).format(amount) + (currency ? ` ${currency}` : "")
-  );
+const CURRENCY_SYMBOLS: Partial<Record<CurrencyType, string>> = {
+  // Major currencies with symbols
+  USD: "$",
+  EUR: "€",
+  GBP: "£",
+  JPY: "¥",
+  CNY: "¥",
+  INR: "₹",
+  RUB: "₽",
+  TRY: "₺",
+  KRW: "₩",
+
+  // Middle Eastern & African currencies - use codes for clarity
+  EGP: "EGP",
+  SAR: "SAR",
+  AED: "AED",
+  KWD: "KWD",
+  BHD: "BHD",
+  OMR: "OMR",
+  QAR: "QAR",
+  JOD: "JOD",
+  IQD: "IQD",
+  LYD: "LYD",
+  TND: "TND",
+  MAD: "MAD",
+  DZD: "DZD",
+
+  // Crypto
+  BTC: "₿",
+
+  // Others
+  CAD: "C$",
+  AUD: "A$",
+  NZD: "NZ$",
+  SGD: "S$",
+  HKD: "HK$",
+  CHF: "CHF",
+  SEK: "SEK",
+  NOK: "NOK",
+  DKK: "DKK",
+  ZAR: "ZAR",
+  MYR: "MYR",
+};
+
+export const formatCurrency = ({
+  amount,
+  currency,
+  signDisplay = "never",
+  minimumFractionDigits = 0,
+  maximumFractionDigits = 0,
+}: {
+  amount: number;
+  currency: CurrencyType;
+  signDisplay?: "always" | "exceptZero" | "negative" | "never";
+  minimumFractionDigits?: number;
+  maximumFractionDigits?: number;
+}): string => {
+  const formattedNumber = new Intl.NumberFormat("en-US", {
+    style: "decimal",
+    minimumFractionDigits,
+    maximumFractionDigits,
+    signDisplay,
+  }).format(amount);
+
+  const symbol = CURRENCY_SYMBOLS[currency] || currency;
+
+  // For currencies with prefix symbols (USD, EUR, GBP, etc.)
+  const prefixCurrencies = [
+    "USD",
+    "EUR",
+    "GBP",
+    "JPY",
+    "CNY",
+    "INR",
+    "RUB",
+    "TRY",
+    "KRW",
+    "BTC",
+    "CAD",
+    "AUD",
+    "NZD",
+    "SGD",
+    "HKD",
+  ];
+  if (prefixCurrencies.includes(currency)) {
+    return `${symbol}${formattedNumber}`;
+  }
+
+  // For currencies with suffix (EGP, SAR, and other Middle Eastern currencies)
+  return `${formattedNumber} ${symbol}`;
 };

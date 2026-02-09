@@ -24,18 +24,28 @@ export class MarketRate extends BaseMarketRate {
   }
 
   getRate(fromCurrency: CurrencyType, toCurrency: CurrencyType): number {
-    const toCurrencySplitted = toCurrency.split("");
-    const firstLetterUpperCase = toCurrencySplitted.shift()?.toUpperCase();
-    if (!firstLetterUpperCase) {
-      throw new Error("Invalid to currency");
+    if (fromCurrency === toCurrency) return 1;
+
+    if (fromCurrency === "EGP") {
+      // currently we only support currency conversion to egp
+      const key = `${toCurrency.toLowerCase()}Egp` as keyof MarketRate;
+      const rate = this[key] as number;
+      if (!rate) {
+        throw new Error(`Rate not found for ${fromCurrency} to ${toCurrency}`);
+      }
+      return rate;
     }
-    const rest = toCurrencySplitted.join("");
-    const key =
-      `${fromCurrency.toLowerCase()}_${firstLetterUpperCase}${rest}` as keyof MarketRate;
-    const rate = this[key as keyof MarketRate] as number;
-    if (!rate) {
-      throw new Error(`Rate not found for ${fromCurrency} to ${toCurrency}`);
+
+    if (toCurrency === "EGP") {
+      // currently we only support currency conversion from egp
+      const key = `${fromCurrency.toLowerCase()}Egp` as keyof MarketRate;
+      const rate = this[key] as number;
+      if (!rate) {
+        throw new Error(`Rate not found for ${fromCurrency} to ${toCurrency}`);
+      }
+      return rate;
     }
-    return rate;
+
+    throw new Error(`Rate not found for ${fromCurrency} to ${toCurrency}`);
   }
 }

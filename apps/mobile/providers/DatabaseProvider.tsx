@@ -4,7 +4,7 @@
  */
 
 import { Account, Category, database, Transaction } from "@astik/db";
-import { Database } from "@nozbe/watermelondb";
+import { Collection, Database } from "@nozbe/watermelondb";
 import {
   createContext,
   ReactNode,
@@ -31,7 +31,7 @@ export function DatabaseProvider({
 
   // Initialize database
   useEffect(() => {
-    const initializeDatabase = async (): Promise<void> => {
+    const initializeDatabase = (): void => {
       try {
         setIsReady(true);
       } catch (error) {
@@ -66,19 +66,19 @@ export function useDatabaseReady(): boolean {
 }
 
 // Hook to get accounts collection
-export function useAccountsCollection() {
+export function useAccountsCollection(): Collection<Account> {
   const db = useDatabase();
   return db.get<Account>("accounts");
 }
 
 // Hook to get transactions collection
-export function useTransactionsCollection() {
+export function useTransactionsCollection(): Collection<Transaction> {
   const db = useDatabase();
   return db.get<Transaction>("transactions");
 }
 
 // Hook to get categories collection
-export function useCategoriesCollection() {
+export function useCategoriesCollection(): Collection<Category> {
   const db = useDatabase();
   return db.get<Category>("categories");
 }

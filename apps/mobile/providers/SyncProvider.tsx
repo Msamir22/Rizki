@@ -45,7 +45,7 @@ export function SyncProvider({ children }: SyncProviderProps): JSX.Element {
   const syncIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const sync = useCallback(
-    async (forceFullSync = false) => {
+    async (forceFullSync = false): Promise<void> => {
       // Check if authenticated before syncing
       const authenticated = await isAuthenticated();
       if (!authenticated) {
@@ -116,11 +116,14 @@ export function SyncProvider({ children }: SyncProviderProps): JSX.Element {
 
       console.log(`⏰ Sync interval set to ${intervalName}`);
 
-      syncIntervalRef.current = setInterval(async () => {
-        const authenticated = await isAuthenticated();
-        if (authenticated) {
-          sync();
-        }
+      syncIntervalRef.current = setInterval(() => {
+        isAuthenticated()
+          .then((authenticated) => {
+            if (authenticated) {
+              sync().catch(console.error);
+            }
+          })
+          .catch(console.error);
       }, interval);
     },
     [sync]
@@ -136,7 +139,7 @@ export function SyncProvider({ children }: SyncProviderProps): JSX.Element {
       if (wasBackground && isNowActive) {
         console.log("📱 App returned to foreground");
         // Sync immediately when returning to foreground
-        sync();
+        sync().catch(console.error);
         setupSyncInterval(true);
       }
 
@@ -178,7 +181,7 @@ export function SyncProvider({ children }: SyncProviderProps): JSX.Element {
       setupSyncInterval(true);
     };
 
-    initialSync();
+    initialSync().catch(console.error);
 
     // Cleanup interval on unmount
     return () => {

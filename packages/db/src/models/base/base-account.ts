@@ -8,10 +8,10 @@
 
 import { Model, Query } from "@nozbe/watermelondb";
 import {
-  field,
-  date,
-  readonly,
   children,
+  date,
+  field,
+  readonly,
 } from "@nozbe/watermelondb/decorators";
 import type { Associations } from "@nozbe/watermelondb/Model";
 import type { CurrencyType, AccountType } from "../../types";

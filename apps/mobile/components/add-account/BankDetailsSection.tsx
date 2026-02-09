@@ -1,7 +1,5 @@
 import { palette } from "@/constants/colors";
-import { useTheme } from "@/context/ThemeContext";
 import { Ionicons } from "@expo/vector-icons";
-import React from "react";
 import { Text, TouchableOpacity, View } from "react-native";
 import { TextField } from "../ui/TextField";
 
@@ -27,64 +25,57 @@ export function BankDetailsSection({
   cardLast4Error,
   onBankNameChange,
   onCardLast4Change,
-}: BankDetailsSectionProps) {
-  const { isDark } = useTheme();
-
+}: BankDetailsSectionProps): JSX.Element {
   if (!expanded) {
     return (
       <TouchableOpacity
         onPress={onToggleExpand}
         activeOpacity={0.7}
-        className="flex-row items-center justify-center py-4 mt-2"
+        className="flex-row items-center justify-center py-5 mt-2 bg-slate-100 dark:bg-slate-900 rounded-3xl border border-dashed border-slate-300 dark:border-slate-700"
       >
         <Ionicons
-          name="add-circle-outline"
-          size={18}
-          color={isDark ? palette.nileGreen[400] : palette.nileGreen[600]}
+          name="card-outline"
+          size={20}
+          color={palette.nileGreen[500]}
         />
-        <Text className="ml-2 text-sm font-semibold text-nileGreen-600 dark:text-nileGreen-400">
+        <Text className="ml-2.5 text-sm font-bold text-slate-700 dark:text-slate-300">
           Add bank details (Optional)
         </Text>
         <Ionicons
           name="chevron-down"
           size={16}
-          color={isDark ? palette.nileGreen[400] : palette.nileGreen[600]}
-          style={{ marginLeft: 4 }}
+          color={palette.slate[400]}
+          style={{ marginLeft: 6 }}
         />
       </TouchableOpacity>
     );
   }
 
   return (
-    <View className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-800">
+    <View className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-800">
       <TouchableOpacity
         onPress={onToggleExpand}
         activeOpacity={0.7}
         className="flex-row items-center justify-center mb-6"
       >
-        <Text className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wide">
-          Hide Details
+        <Text className="text-xs font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+          Hide Bank Details
         </Text>
         <Ionicons
           name="chevron-up"
           size={14}
-          color="#94A3B8"
+          color={palette.slate[400]}
           style={{ marginLeft: 4 }}
         />
       </TouchableOpacity>
 
-      <View className="mb-6 ml-1">
-        <Text
-          className={`text-[11px] font-semibold uppercase tracking-wider ${
-            isDark ? "text-slate-400" : "text-slate-600"
-          }`}
-        >
+      <View className="mb-6 px-1">
+        <Text className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-widest mb-1">
           BANK DETAILS
         </Text>
-        <Text className="text-xs font-semibold text-slate-600 dark:text-slate-500">
-          We'll auto-detect transactions from this card
+        <Text className="text-xs font-bold text-slate-400 dark:text-slate-500">
+          We&apos;ll auto-detect transactions from this card
         </Text>
-        <View className="h-[1px] bg-slate-200 dark:bg-slate-800 my-2" />
       </View>
 
       <TextField
@@ -106,11 +97,7 @@ export function BankDetailsSection({
           maxLength={4}
           error={cardLast4Error}
         />
-        <Text
-          className={`mt-1.5 ml-2 text-[11px] ${
-            isDark ? "text-slate-600" : "text-slate-500"
-          }`}
-        >
+        <Text className="mt-2 ml-2 text-[11px] font-bold text-slate-500 dark:text-slate-600">
           Found on your card: ****1234
         </Text>
       </View>

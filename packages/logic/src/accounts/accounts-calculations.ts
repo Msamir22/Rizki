@@ -3,7 +3,7 @@ import { Account, MarketRate } from "@astik/db";
 export function calculateTotalBalance(
   accounts: Account[],
   latestMarketRates: MarketRate | null
-) {
+): number {
   // If market rates are available, calculate total balance using rates
   return latestMarketRates
     ? accounts.reduce((total, account) => {

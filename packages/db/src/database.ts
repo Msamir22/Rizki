@@ -6,6 +6,21 @@
 import { Database } from "@nozbe/watermelondb";
 import SQLiteAdapter from "@nozbe/watermelondb/adapters/sqlite";
 import { setGenerator } from "@nozbe/watermelondb/utils/common/randomId";
+
+// Import all models
+import { Account } from "./models/Account";
+import { Asset } from "./models/Asset";
+import { AssetMetal } from "./models/AssetMetal";
+import { BankDetails } from "./models/BankDetails";
+import { Budget } from "./models/Budget";
+import { Category } from "./models/Category";
+import { Debt } from "./models/Debt";
+import { MarketRate } from "./models/MarketRate";
+import { Profile } from "./models/Profile";
+import { RecurringPayment } from "./models/RecurringPayment";
+import { Transaction } from "./models/Transaction";
+import { Transfer } from "./models/Transfer";
+import { UserCategorySettings } from "./models/UserCategorySettings";
 import { schema } from "./schema";
 
 // =============================================================================
@@ -28,34 +43,22 @@ function generateUUID(): string {
     let r = Math.random() * 16;
 
     if (d > 0) {
+      // eslint-disable-next-line no-bitwise
       r = ((d + r) % 16) | 0;
       d = Math.floor(d / 16);
     } else {
+      // eslint-disable-next-line no-bitwise
       r = ((d2 + r) % 16) | 0;
       d2 = Math.floor(d2 / 16);
     }
 
+    // eslint-disable-next-line no-bitwise
     return (c === "x" ? r : (r & 0x3) | 0x8).toString(16);
   });
 }
 
 // Set the global ID generator BEFORE creating the database
 setGenerator(generateUUID);
-
-// Import all models
-import { Profile } from "./models/Profile";
-import { Account } from "./models/Account";
-import { BankDetails } from "./models/BankDetails";
-import { Asset } from "./models/Asset";
-import { AssetMetal } from "./models/AssetMetal";
-import { Category } from "./models/Category";
-import { UserCategorySettings } from "./models/UserCategorySettings";
-import { Debt } from "./models/Debt";
-import { RecurringPayment } from "./models/RecurringPayment";
-import { Transaction } from "./models/Transaction";
-import { Transfer } from "./models/Transfer";
-import { Budget } from "./models/Budget";
-import { MarketRate } from "./models/MarketRate";
 
 let adapter: SQLiteAdapter;
 try {

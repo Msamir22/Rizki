@@ -7,7 +7,7 @@
 import { database, Transaction } from "@astik/db";
 import { calculateMonthlyTotals, getYearMonthBoundaries } from "@astik/logic";
 import { Q } from "@nozbe/watermelondb";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 
 // =============================================================================
 // Types
@@ -175,9 +175,14 @@ export function usePeriodSummary(
   const [error, setError] = useState<Error | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  const refetch = (): void => {
+  const refetch = useCallback((): void => {
     setRefreshKey((prev) => prev + 1);
-  };
+  }, []);
+
+  const accountIdsString = useMemo(
+    () => accountIds?.join(",") ?? "",
+    [accountIds]
+  );
 
   useEffect(() => {
     setIsLoading(true);
@@ -203,15 +208,15 @@ export function usePeriodSummary(
         setTransactions(result);
         setIsLoading(false);
       },
-      error: (err) => {
+      error: (err: unknown) => {
         console.error("Error observing period summary:", err);
-        setError(err);
+        setError(err instanceof Error ? err : new Error(String(err)));
         setIsLoading(false);
       },
     });
 
     return () => subscription.unsubscribe();
-  }, [period, accountIds?.join(","), refreshKey]);
+  }, [period, accountIdsString, refreshKey, accountIds]);
 
   // Calculate summary
   const data = useMemo((): PeriodSummary => {

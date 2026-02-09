@@ -1,11 +1,11 @@
-import { palette } from "@/constants/colors";
-import { ensureAuthenticated } from "@/services/supabase";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Redirect } from "expo-router";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
+import { palette } from "@/constants/colors";
+import { ensureAuthenticated } from "@/services/supabase";
 
-export default function Index() {
+export default function Index(): React.ReactNode {
   const [isReady, setIsReady] = useState(false);
   const [hasOnboarded, setHasOnboarded] = useState(false);
 
@@ -13,7 +13,7 @@ export default function Index() {
     initializeApp();
   }, []);
 
-  const initializeApp = async () => {
+  const initializeApp = async (): Promise<void> => {
     try {
       // 1. Ensure user is authenticated (anonymous or real)
       await ensureAuthenticated();
@@ -32,14 +32,7 @@ export default function Index() {
 
   if (!isReady) {
     return (
-      <View
-        style={{
-          flex: 1,
-          justifyContent: "center",
-          alignItems: "center",
-          backgroundColor: palette.slate[900],
-        }}
-      >
+      <View className="flex-1 justify-center items-center bg-slate-900">
         <ActivityIndicator size="large" color={palette.nileGreen[500]} />
       </View>
     );

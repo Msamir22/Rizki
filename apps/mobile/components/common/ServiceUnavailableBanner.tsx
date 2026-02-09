@@ -1,8 +1,8 @@
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import React from "react";
-import { View, Text, TouchableOpacity } from "react-native";
+import { Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useServerStatus } from "../../context/ServerStatusContext";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 export const ServiceUnavailableBanner: React.FC = () => {
   const { isServiceUnavailable, checkStatus } = useServerStatus();
@@ -26,7 +26,7 @@ export const ServiceUnavailableBanner: React.FC = () => {
             Service Unavailable
           </Text>
           <Text className="text-xs text-white/90">
-            We're having trouble connecting to the server. Some data may be
+            We&apos;re having trouble connecting to the server. Some data may be
             outdated.
           </Text>
         </View>

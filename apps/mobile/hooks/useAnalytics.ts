@@ -40,6 +40,11 @@ export function useMonthlyChartData(
   const [error, setError] = useState<Error | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
+  const accountIdsString = useMemo(
+    () => accountIds?.join(",") ?? "",
+    [accountIds]
+  );
+
   const refetch = (): void => {
     setRefreshKey((prev) => prev + 1);
   };
@@ -78,18 +83,18 @@ export function useMonthlyChartData(
         setTransactions(result);
         setIsLoading(false);
       },
-      error: (err) => {
+      error: (err: unknown) => {
         console.error("Error observing chart transactions:", err);
-        setError(err);
+        setError(err instanceof Error ? err : new Error(String(err)));
         setIsLoading(false);
       },
     });
 
     return () => subscription.unsubscribe();
-  }, [months, type, accountIds?.join(","), refreshKey]);
+  }, [months, type, accountIdsString, refreshKey, accountIds]);
 
   // Generate chart data
-  const data = useMemo(() => {
+  const data = useMemo((): ChartDataPoint[] => {
     return generateMonthlyChartData(transactions, months, type);
   }, [transactions, months, type]);
 
@@ -109,6 +114,11 @@ export function useCategoryBreakdown(
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+
+  const accountIdsString = useMemo(
+    () => accountIds?.join(",") ?? "",
+    [accountIds]
+  );
 
   const refetch = (): void => {
     setRefreshKey((prev) => prev + 1);
@@ -142,9 +152,9 @@ export function useCategoryBreakdown(
     // Observe both transactions and categories
     const transactionsSub = transactionsQuery.observe().subscribe({
       next: (result) => setTransactions(result),
-      error: (err) => {
+      error: (err: unknown) => {
         console.error("Error observing category transactions:", err);
-        setError(err);
+        setError(err instanceof Error ? err : new Error(String(err)));
       },
     });
 
@@ -153,9 +163,9 @@ export function useCategoryBreakdown(
         setCategories(result);
         setIsLoading(false);
       },
-      error: (err) => {
+      error: (err: unknown) => {
         console.error("Error observing categories:", err);
-        setError(err);
+        setError(err instanceof Error ? err : new Error(String(err)));
         setIsLoading(false);
       },
     });
@@ -164,10 +174,10 @@ export function useCategoryBreakdown(
       transactionsSub.unsubscribe();
       categoriesSub.unsubscribe();
     };
-  }, [year, month, accountIds?.join(","), refreshKey]);
+  }, [year, month, accountIdsString, refreshKey, accountIds]);
 
   // Calculate category breakdown
-  const data = useMemo(() => {
+  const data = useMemo((): CategoryBreakdown[] => {
     return aggregateByCategory(transactions, categories);
   }, [transactions, categories]);
 
@@ -192,6 +202,11 @@ export function useComparison(
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+
+  const accountIdsString = useMemo(
+    () => accountIds?.join(",") ?? "",
+    [accountIds]
+  );
 
   // Default to current month if not specified
   const now = new Date();
@@ -234,9 +249,9 @@ export function useComparison(
 
     const currentSub = currentQuery.observe().subscribe({
       next: (result) => setCurrentTransactions(result),
-      error: (err) => {
+      error: (err: unknown) => {
         console.error("Error observing current period:", err);
-        setError(err);
+        setError(err instanceof Error ? err : new Error(String(err)));
       },
     });
 
@@ -245,9 +260,9 @@ export function useComparison(
         setPreviousTransactions(result);
         setIsLoading(false);
       },
-      error: (err) => {
+      error: (err: unknown) => {
         console.error("Error observing previous period:", err);
-        setError(err);
+        setError(err instanceof Error ? err : new Error(String(err)));
         setIsLoading(false);
       },
     });
@@ -256,10 +271,10 @@ export function useComparison(
       currentSub.unsubscribe();
       previousSub.unsubscribe();
     };
-  }, [type, targetYear, targetMonth, accountIds?.join(","), refreshKey]);
+  }, [type, targetYear, targetMonth, accountIdsString, refreshKey, accountIds]);
 
   // Calculate comparison using shared logic
-  const data = useMemo(() => {
+  const data = useMemo((): ComparisonResult => {
     const currentTotals = calculateMonthlyTotals(currentTransactions);
     const previousTotals = calculateMonthlyTotals(previousTransactions);
 
@@ -285,6 +300,11 @@ export function useMonthlySummaries(
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+
+  const accountIdsString = useMemo(
+    () => accountIds?.join(",") ?? "",
+    [accountIds]
+  );
 
   const refetch = (): void => {
     setRefreshKey((prev) => prev + 1);
@@ -319,18 +339,18 @@ export function useMonthlySummaries(
         setTransactions(result);
         setIsLoading(false);
       },
-      error: (err) => {
+      error: (err: unknown) => {
         console.error("Error observing monthly summaries:", err);
-        setError(err);
+        setError(err instanceof Error ? err : new Error(String(err)));
         setIsLoading(false);
       },
     });
 
     return () => subscription.unsubscribe();
-  }, [months, accountIds?.join(","), refreshKey]);
+  }, [months, accountIdsString, refreshKey, accountIds]);
 
   // Group by month and calculate summaries
-  const data = useMemo(() => {
+  const data = useMemo((): MonthlySummary[] => {
     const now = new Date();
     const summaries: MonthlySummary[] = [];
 

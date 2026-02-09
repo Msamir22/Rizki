@@ -6,9 +6,8 @@
  * Extend this class in ../Profile.ts to add custom methods
  */
 
-import { Model, Query } from "@nozbe/watermelondb";
-import { field, date, readonly } from "@nozbe/watermelondb/decorators";
-import type { Associations } from "@nozbe/watermelondb/Model";
+import { Model } from "@nozbe/watermelondb";
+import { date, field, readonly } from "@nozbe/watermelondb/decorators";
 import type { ThemePreference } from "../../types";
 
 export abstract class BaseProfile extends Model {

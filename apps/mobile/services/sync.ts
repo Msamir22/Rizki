@@ -7,13 +7,13 @@
 
 import { schema, SupabaseDatabase } from "@astik/db";
 import type { Database } from "@nozbe/watermelondb";
-import type {
+import {
   SyncDatabaseChangeSet,
+  synchronize,
   SyncPullResult,
   SyncPushArgs,
   SyncPushResult,
 } from "@nozbe/watermelondb/sync";
-import { synchronize } from "@nozbe/watermelondb/sync";
 import { getCurrentUserId, supabase } from "./supabase";
 
 export const EXCLUDED_TABLES = [
@@ -355,25 +355,25 @@ async function pushChanges(
 /**
  * UUID validation regex
  */
-const UUID_REGEX =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+// const UUID_REGEX =
+//   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-/**
- * Known UUID fields in the schema
- */
-const UUID_FIELDS = [
-  "id",
-  "user_id",
-  "account_id",
-  "category_id",
-  "asset_id",
-  "linked_asset_id",
-  "linked_debt_id",
-  "linked_recurring_id",
-  "from_account_id",
-  "to_account_id",
-  "parent_id",
-];
+// /**
+//  * Known UUID fields in the schema
+//  */
+// const UUID_FIELDS = [
+//   "id",
+//   "user_id",
+//   "account_id",
+//   "category_id",
+//   "asset_id",
+//   "linked_asset_id",
+//   "linked_debt_id",
+//   "linked_recurring_id",
+//   "from_account_id",
+//   "to_account_id",
+//   "parent_id",
+// ];
 
 // TODO: Refactor this function to be more simple
 
@@ -572,7 +572,7 @@ export async function resetSyncState(db: Database): Promise<void> {
 /**
  * Get the last sync timestamp
  */
-export async function getLastSyncTimestamp(): Promise<number | null> {
+export function getLastSyncTimestamp(): number | null {
   // WatermelonDB stores this internally, but we can track it ourselves if needed
   return null;
 }

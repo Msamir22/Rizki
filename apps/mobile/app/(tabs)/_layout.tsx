@@ -1,12 +1,12 @@
-import { CustomBottomTabBar } from "@/components/tab-bar/CustomBottomTabBar";
-import { QuickActionFab } from "@/components/fab";
 import { Tabs } from "expo-router";
 import React from "react";
 import { View } from "react-native";
+import { QuickActionFab } from "@/components/fab";
+import { CustomBottomTabBar } from "@/components/tab-bar/CustomBottomTabBar";
 
 export default function TabLayout(): React.ReactElement {
   return (
-    <View style={{ flex: 1 }}>
+    <View className="flex-1">
       <Tabs
         tabBar={(props) => <CustomBottomTabBar {...props} />}
         screenOptions={{

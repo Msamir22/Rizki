@@ -1,10 +1,13 @@
+import { egpToCurrency } from "@astik/logic";
+import React, { useState } from "react";
+import { ActivityIndicator, ScrollView, View } from "react-native";
 import { AccountsSection } from "@/components/dashboard/AccountsSection";
 import { LiveRates } from "@/components/dashboard/LiveRates";
 import { RecentTransactions } from "@/components/dashboard/RecentTransactions";
 import { ThisMonth } from "@/components/dashboard/ThisMonth";
-import { UpcomingPayments } from "@/components/dashboard/UpcomingPayments";
 import { TopNav } from "@/components/dashboard/TopNav";
 import { TotalNetWorthCard } from "@/components/dashboard/TotalNetWorthCard";
+import { UpcomingPayments } from "@/components/dashboard/UpcomingPayments";
 import { AppDrawer } from "@/components/navigation/AppDrawer";
 import { StarryBackground } from "@/components/ui/StarryBackground";
 import { palette } from "@/constants/colors";
@@ -14,9 +17,6 @@ import { useMarketRates } from "@/hooks/useMarketRates";
 import { useNetWorthWithMonthlyPercentageChange } from "@/hooks/useNetWorth";
 import { useRecentTransactions } from "@/hooks/useTransactions";
 import { useDatabaseReady } from "@/providers/DatabaseProvider";
-import { egpToCurrency } from "@astik/logic";
-import React, { useState } from "react";
-import { ActivityIndicator, ScrollView, View } from "react-native";
 
 export default function DashboardScreen(): React.JSX.Element {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);

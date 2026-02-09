@@ -1,5 +1,6 @@
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
+import { detectLanguage } from "@astik/logic";
 import {
   FontAwesome5,
   Ionicons,
@@ -28,16 +29,11 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, {
   Defs,
-  LinearGradient as SvgGradient,
   Path,
   Stop,
+  LinearGradient as SvgGradient,
 } from "react-native-svg";
-import { detectLanguage } from "@astik/logic";
 import { AITransaction, parseVoiceWithAI } from "../utils/api";
-import {
-  createTransaction,
-  getOrCreateDefaultAccount,
-} from "../utils/transactions";
 
 const { width } = Dimensions.get("window");
 
@@ -50,7 +46,7 @@ const Waveform = ({
 }: {
   isListening: boolean;
   mode: string;
-}) => {
+}): React.ReactNode => {
   const isDark = mode === "dark";
   const phase = useRef(new Animated.Value(0)).current;
 
@@ -108,7 +104,7 @@ const MicButton = ({
 }: {
   isListening: boolean;
   onPress: () => void;
-}) => {
+}): React.ReactNode => {
   const { mode } = useTheme();
   const pulse1 = useRef(new Animated.Value(1)).current;
   const pulse2 = useRef(new Animated.Value(1)).current;
@@ -233,7 +229,7 @@ const MicButton = ({
   );
 };
 
-export default function VoiceInput() {
+export default function VoiceInput(): React.ReactNode {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { mode } = useTheme();
@@ -248,7 +244,7 @@ export default function VoiceInput() {
   const [parsedTransactions, setParsedTransactions] = useState<
     AITransaction[] | null
   >(null);
-  const [isSaving, setIsSaving] = useState(false);
+  // const [isSaving, setIsSaving] = useState(false);
 
   // --- Speech Events ---
   useSpeechRecognitionEvent("start", () => {
@@ -276,19 +272,19 @@ export default function VoiceInput() {
   });
 
   // --- Handlers ---
-  const handleAnalyze = async (text: string, lang: string) => {
+  const handleAnalyze = async (text: string, lang: string): Promise<void> => {
     setIsAnalyzing(true);
     try {
       const result = await parseVoiceWithAI(text, lang);
       setParsedTransactions(result.transactions);
-    } catch (error) {
+    } catch {
       Alert.alert("Analysis Failed", "Please try again.");
     } finally {
       setIsAnalyzing(false);
     }
   };
 
-  const startListening = async () => {
+  const startListening = async (): Promise<void> => {
     if (!hasPermission) {
       const result =
         await ExpoSpeechRecognitionModule.requestPermissionsAsync();
@@ -296,52 +292,62 @@ export default function VoiceInput() {
       setHasPermission(true);
     }
     try {
-      await ExpoSpeechRecognitionModule.start({
+      ExpoSpeechRecognitionModule.start({
         lang: detectedLang === "ar" ? "ar-EG" : "en-US",
         interimResults: true,
         maxAlternatives: 1,
       });
-    } catch (e) {}
-  };
-
-  const stopListening = async () => {
-    try {
-      await ExpoSpeechRecognitionModule.stop();
-    } catch (e) {}
-  };
-
-  const handleMicPress = () =>
-    isListening ? stopListening() : startListening();
-
-  const handleConfirm = async () => {
-    if (!parsedTransactions || isSaving) return;
-    setIsSaving(true);
-    try {
-      const defaultAccount = await getOrCreateDefaultAccount();
-      for (const tx of parsedTransactions) {
-        const isExpense = tx.type === "expense";
-        await createTransaction({
-          amount: tx.amount,
-          currency: (tx.currency as "EGP" | "USD" | "EUR") || "EGP",
-          categoryId: tx.category?.toLowerCase() || "other",
-          note: tx.description,
-          type: isExpense ? "EXPENSE" : "INCOME",
-          accountId: defaultAccount.id,
-          merchant: isExpense ? tx.description : undefined,
-        });
-      }
-      Alert.alert("Saved!", "Transactions added successfully.", [
-        { text: "OK", onPress: () => router.back() },
-      ]);
-    } catch (e) {
-      console.error("Save error:", e);
-      Alert.alert("Error", "Failed to save.");
-    } finally {
-      setIsSaving(false);
+    } catch {
+      Alert.alert(
+        "Permission Denied",
+        "Please grant permission to use the microphone."
+      );
     }
   };
 
-  const deleteTransaction = (index: number) => {
+  const stopListening = (): void => {
+    try {
+      ExpoSpeechRecognitionModule.stop();
+    } catch {
+      Alert.alert(
+        "Permission Denied",
+        "Please grant permission to use the microphone."
+      );
+    }
+  };
+
+  const handleMicPress = async (): Promise<void> =>
+    isListening ? stopListening() : await startListening();
+
+  // const handleConfirm = async (): Promise<void> => {
+  //   if (!parsedTransactions || isSaving) return;
+  //   setIsSaving(true);
+  //   try {
+  //     const defaultAccount = await getOrCreateDefaultAccount();
+  //     for (const tx of parsedTransactions) {
+  //       const isExpense = tx.type === "expense";
+  //       await createTransaction({
+  //         amount: tx.amount,
+  //         currency: tx.currency,
+  //         categoryId: tx.category?.toLowerCase() || "other",
+  //         note: tx.description,
+  //         type: isExpense ? "EXPENSE" : "INCOME",
+  //         accountId: defaultAccount.id,
+  //         merchant: isExpense ? tx.description : undefined,
+  //       });
+  //     }
+  //     Alert.alert("Saved!", "Transactions added successfully.", [
+  //       { text: "OK", onPress: () => router.back() },
+  //     ]);
+  //   } catch (e) {
+  //     console.error("Save error:", e);
+  //     Alert.alert("Error", "Failed to save.");
+  //   } finally {
+  //     setIsSaving(false);
+  //   }
+  // };
+
+  const deleteTransaction = (index: number): void => {
     if (!parsedTransactions) return;
     const updated = parsedTransactions.filter((_, i) => i !== index);
     setParsedTransactions(updated);
@@ -505,7 +511,7 @@ export default function VoiceInput() {
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
+          {/* <TouchableOpacity
             onPress={handleConfirm}
             disabled={isSaving}
             className="flex-1 overflow-hidden rounded-3xl"
@@ -522,7 +528,7 @@ export default function VoiceInput() {
                 </Text>
               )}
             </LinearGradient>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </View>
       )}
 

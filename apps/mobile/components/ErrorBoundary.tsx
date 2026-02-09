@@ -1,5 +1,5 @@
 import React, { Component, ErrorInfo, ReactNode } from "react";
-import { Text, View, ScrollView } from "react-native";
+import { ScrollView, Text, View } from "react-native";
 
 interface Props {
   children: ReactNode;
@@ -22,7 +22,7 @@ export class ErrorBoundary extends Component<Props, State> {
     return { hasError: true, error, errorInfo: null };
   }
 
-  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  public componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     console.error("Uncaught error:", error, errorInfo);
     this.setState({
       error,
@@ -30,7 +30,7 @@ export class ErrorBoundary extends Component<Props, State> {
     });
   }
 
-  public render() {
+  public render(): ReactNode {
     if (this.state.hasError) {
       return (
         <View className="flex-1 bg-red-100 p-5 justify-center items-center">

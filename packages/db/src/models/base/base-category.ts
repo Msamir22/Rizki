@@ -6,16 +6,15 @@
  * Extend this class in ../Category.ts to add custom methods
  */
 
-import { Model, Query } from "@nozbe/watermelondb";
+import { Model, type Relation, Query } from "@nozbe/watermelondb";
 import {
-  field,
+  children,
   date,
+  field,
   readonly,
   relation,
-  children,
 } from "@nozbe/watermelondb/decorators";
 import type { Associations } from "@nozbe/watermelondb/Model";
-import type { Relation } from "@nozbe/watermelondb";
 import type { CategoryNature, TransactionType } from "../../types";
 
 export abstract class BaseCategory extends Model {

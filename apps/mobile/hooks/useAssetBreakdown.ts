@@ -24,7 +24,7 @@ interface UseAssetBreakdownResult {
  */
 export function useAssetBreakdown(): UseAssetBreakdownResult {
   const { accounts, isLoading: accountsLoading } = useAccounts();
-  const { rates, isLoading: ratesLoading } = useMarketRates();
+  const { latestRates, isLoading: ratesLoading } = useMarketRates();
   const [assetMetals, setAssetMetals] = useState<AssetMetal[]>([]);
   const [metalsLoading, setMetalsLoading] = useState(true);
 
@@ -40,7 +40,7 @@ export function useAssetBreakdown(): UseAssetBreakdownResult {
         setAssetMetals(result);
         setMetalsLoading(false);
       },
-      error: (err) => {
+      error: (err: unknown) => {
         console.error("Error observing asset metals:", err);
         setMetalsLoading(false);
       },
@@ -49,10 +49,14 @@ export function useAssetBreakdown(): UseAssetBreakdownResult {
     return () => subscription.unsubscribe();
   }, []);
 
-  const breakdown = useMemo(() => {
-    const rawBreakdown = calculateAssetBreakdown(accounts, assetMetals, rates);
+  const breakdown = useMemo((): AssetBreakdownPercentage[] => {
+    const rawBreakdown = calculateAssetBreakdown(
+      accounts,
+      assetMetals,
+      latestRates
+    );
     return calculateAssetBreakdownPercentages(rawBreakdown);
-  }, [accounts, assetMetals, rates]);
+  }, [accounts, assetMetals, latestRates]);
 
   const isLoading = accountsLoading || ratesLoading || metalsLoading;
 

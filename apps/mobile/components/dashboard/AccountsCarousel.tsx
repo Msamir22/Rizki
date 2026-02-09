@@ -1,7 +1,5 @@
-import { palette } from "@/constants/colors";
-import { useTheme } from "@/context/ThemeContext";
 import { Account, AccountType } from "@astik/db";
-import { AssetBreakdownPercentage, formatCurrency } from "@astik/logic";
+import { AssetBreakdownPercentage } from "@astik/logic";
 import { Feather, FontAwesome5 } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
@@ -16,6 +14,8 @@ import {
 } from "react-native";
 import Carousel from "react-native-reanimated-carousel";
 import Svg, { Circle, G } from "react-native-svg";
+import { palette } from "@/constants/colors";
+import { useTheme } from "@/context/ThemeContext";
 
 const { width } = Dimensions.get("window");
 
@@ -265,7 +265,7 @@ export function AccountsCarousel({
       return {
         id: acc.id,
         name: acc.name,
-        balance: formatCurrency(acc.balance, acc.currency),
+        balance: acc.formattedBalance,
         type: typeInfo.displayType,
         color: typeInfo.color,
         gradient: typeInfo.gradient,

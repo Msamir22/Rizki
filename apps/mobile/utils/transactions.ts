@@ -88,63 +88,6 @@ export async function createTransactionFromVoice(
 }
 
 /**
- * Create a transaction from manual input
- */
-export async function createTransaction(data: {
-  amount: number;
-  currency: CurrencyType;
-  categoryId?: string;
-  merchant?: string;
-  accountId: string;
-  note?: string;
-  type: TransactionType;
-  date?: Date;
-  linkedRecurringId?: string;
-}): Promise<Transaction> {
-  const userId = await getCurrentUserId();
-  if (!userId) {
-    throw new Error("User not authenticated");
-  }
-
-  const transactionsCollection = database.get<Transaction>("transactions");
-  const accountsCollection = database.get<Account>("accounts");
-
-  // Combine transaction creation and balance update in a single atomic write
-  const newTransaction = await database.write(async () => {
-    // Create the transaction
-    const transaction = await transactionsCollection.create((tx) => {
-      tx.userId = userId;
-      tx.accountId = data.accountId;
-      tx.amount = Math.abs(data.amount); // Amount is always positive
-      tx.currency = data.currency;
-      tx.type = data.type;
-      tx.categoryId = data.categoryId || "other";
-      tx.merchant = data.merchant || undefined;
-      tx.note = data.note || undefined;
-      tx.date = data.date || new Date();
-      tx.source = "MANUAL";
-      tx.linkedRecurringId = data.linkedRecurringId || undefined;
-      tx.isDraft = false;
-      tx.deleted = false;
-    });
-
-    // Update account balance in the same write block
-    const account = await accountsCollection.find(data.accountId);
-    await account.update((acc) => {
-      if (data.type === "EXPENSE") {
-        acc.balance -= Math.abs(data.amount);
-      } else {
-        acc.balance += Math.abs(data.amount);
-      }
-    });
-
-    return transaction;
-  });
-
-  return newTransaction;
-}
-
-/**
  * Update an existing transaction
  */
 export async function updateTransaction(
@@ -201,14 +144,18 @@ async function updateAccountBalance(
   const accountsCollection = database.get<Account>("accounts");
 
   await database.write(async () => {
-    const account = await accountsCollection.find(accountId);
-    await account.update((acc) => {
-      if (isExpense) {
-        acc.balance -= amount;
-      } else {
-        acc.balance += amount;
-      }
-    });
+    try {
+      const account = await accountsCollection.find(accountId);
+      await account.update((acc) => {
+        if (isExpense) {
+          acc.balance -= amount;
+        } else {
+          acc.balance += amount;
+        }
+      });
+    } catch (error) {
+      console.error("Error updating account balance:", error);
+    }
   });
 }
 
@@ -253,34 +200,6 @@ export async function getOrCreateDefaultAccount(): Promise<Account> {
 }
 
 /**
- * Mark a transaction as deleted (soft delete)
- */
-export async function deleteTransaction(transactionId: string): Promise<void> {
-  const transactionsCollection = database.get<Transaction>("transactions");
-
-  await database.write(async () => {
-    const transaction = await transactionsCollection.find(transactionId);
-
-    // Reverse the balance change
-    const accountsCollection = database.get<Account>("accounts");
-    const account = await accountsCollection.find(transaction.accountId);
-
-    await account.update((acc) => {
-      if (transaction.type === "EXPENSE") {
-        acc.balance += transaction.amount; // Restore balance
-      } else {
-        acc.balance -= transaction.amount;
-      }
-    });
-
-    // Soft delete
-    await transaction.update((tx) => {
-      tx.deleted = true;
-    });
-  });
-}
-
-/**
  * Create a new transfer between accounts
  */
 export async function createTransfer(data: TransferData): Promise<void> {
@@ -289,12 +208,12 @@ export async function createTransfer(data: TransferData): Promise<void> {
     throw new Error("User not authenticated");
   }
 
-  const transfersCollection = database.get("transfers");
+  const transfersCollection = database.get<Transfer>("transfers");
   const accountsCollection = database.get<Account>("accounts");
 
   await database.write(async () => {
     // 1. Create Transfer Record
-    await transfersCollection.create((transfer: any) => {
+    await transfersCollection.create((transfer: Transfer) => {
       transfer.userId = userId;
       transfer.fromAccountId = data.fromAccountId;
       transfer.toAccountId = data.toAccountId;
@@ -419,7 +338,7 @@ export async function updateTransfer(
       }
     }
 
-    await transfer.update((t: any) => {
+    await transfer.update((t) => {
       if (updates.amount !== undefined) t.amount = Math.abs(updates.amount);
       if (updates.notes !== undefined) t.notes = updates.notes;
       if (updates.date !== undefined) t.date = updates.date;

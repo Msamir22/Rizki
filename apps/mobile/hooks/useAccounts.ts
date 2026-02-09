@@ -37,24 +37,21 @@ export function useAccounts(): UseAccountsResult {
 
     const accountsCollection = database.get<Account>("accounts");
 
-    // Query non-deleted accounts
+    // Query non-deleted accounts sorted by created_at (newest first)
     const query = accountsCollection.query(Q.where("deleted", false));
 
     // Subscribe to changes
-    // Use observeWithColumns to trigger updates when balance changes
-    const subscription = query
-      .observeWithColumns(["balance", "name", "updated_at"])
-      .subscribe({
-        next: (result) => {
-          setAccounts(result);
-          setIsLoading(false);
-        },
-        error: (err) => {
-          console.error("Error observing accounts:", err);
-          setError(err);
-          setIsLoading(false);
-        },
-      });
+    const subscription = query.observe().subscribe({
+      next: (result) => {
+        setAccounts(result);
+        setIsLoading(false);
+      },
+      error: (err: unknown) => {
+        console.error("Error observing accounts:", err);
+        setError(err instanceof Error ? err : new Error(String(err)));
+        setIsLoading(false);
+      },
+    });
 
     return () => subscription.unsubscribe();
   }, [refreshKey]);
@@ -70,14 +67,16 @@ export function useAccounts(): UseAccountsResult {
   };
 }
 
+export interface UseTopAccountsResult {
+  accounts: Account[];
+  isLoading: boolean;
+}
+
 /**
  * Hook to get top N accounts ordered by balance (highest first)
  * Used for dashboard display
  */
-export function useTopAccounts(limit: number = 3): {
-  accounts: Account[];
-  isLoading: boolean;
-} {
+export function useTopAccounts(limit: number = 3): UseTopAccountsResult {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -89,17 +88,17 @@ export function useTopAccounts(limit: number = 3): {
     // Query non-deleted accounts, ordered by balance descending, limited
     const query = accountsCollection.query(
       Q.where("deleted", false),
-      Q.sortBy("balance", Q.desc),
+      Q.sortBy("created_at", Q.desc),
       Q.take(limit)
     );
 
     // Use observeWithColumns to react to balance changes, not just add/remove
-    const subscription = query.observeWithColumns(["balance"]).subscribe({
+    const subscription = query.observe().subscribe({
       next: (result) => {
         setAccounts(result);
         setIsLoading(false);
       },
-      error: (err) => {
+      error: (err: unknown) => {
         console.error("Error observing top accounts:", err);
         setIsLoading(false);
       },
@@ -111,14 +110,16 @@ export function useTopAccounts(limit: number = 3): {
   return { accounts, isLoading };
 }
 
-/**
- * Hook to get a single account by ID
- */
-export function useAccount(accountId: string | null): {
+export interface UseAccountResult {
   account: Account | null;
   isLoading: boolean;
   error: Error | null;
-} {
+}
+
+/**
+ * Hook to get a single account by ID
+ */
+export function useAccount(accountId: string | null): UseAccountResult {
   const [account, setAccount] = useState<Account | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -142,9 +143,9 @@ export function useAccount(accountId: string | null): {
           setAccount(result);
           setIsLoading(false);
         },
-        error: (err) => {
+        error: (err: unknown) => {
           console.error("Error observing account:", err);
-          setError(err);
+          setError(err instanceof Error ? err : new Error(String(err)));
           setIsLoading(false);
         },
       });

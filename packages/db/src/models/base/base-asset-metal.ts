@@ -6,15 +6,14 @@
  * Extend this class in ../AssetMetal.ts to add custom methods
  */
 
-import { Model, Query } from "@nozbe/watermelondb";
+import { Model, type Relation } from "@nozbe/watermelondb";
 import {
-  field,
   date,
+  field,
   readonly,
   relation,
 } from "@nozbe/watermelondb/decorators";
 import type { Associations } from "@nozbe/watermelondb/Model";
-import type { Relation } from "@nozbe/watermelondb";
 import type { MetalType } from "../../types";
 import type { BaseAsset } from "./base-asset";
 

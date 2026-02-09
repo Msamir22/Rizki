@@ -1,14 +1,20 @@
-import { Account, BankDetails, CurrencyType, database } from "@astik/db";
+import { Account, BankDetails, database } from "@astik/db";
 import { useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import { useToast } from "../components/ui/Toast";
 import { getCurrentUserId } from "../services/supabase";
 import { AccountFormData } from "../validation/account-validation";
 
+interface UseCreateAccountResult {
+  createAccount: (data: AccountFormData) => Promise<void>;
+  isSubmitting: boolean;
+  error: Error | null;
+}
+
 /**
  * Custom hook to handle the business logic of creating a new account.
  */
-export function useCreateAccount() {
+export function useCreateAccount(): UseCreateAccountResult {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const { showToast } = useToast();

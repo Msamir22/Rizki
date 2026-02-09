@@ -1,5 +1,3 @@
-import { palette } from "@/constants/colors";
-import { useTheme } from "@/context/ThemeContext";
 import {
   FontAwesome5,
   Ionicons,
@@ -18,6 +16,8 @@ import {
 } from "react-native";
 import Carousel, { ICarouselInstance } from "react-native-reanimated-carousel";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { palette } from "@/constants/colors";
+import { useTheme } from "@/context/ThemeContext";
 
 const { width: PAGE_WIDTH, height: PAGE_HEIGHT } = Dimensions.get("window");
 
@@ -61,14 +61,14 @@ const ONBOARDING_DATA = [
   },
 ];
 
-export default function OnboardingScreen() {
+export default function OnboardingScreen(): React.JSX.Element {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { theme, isDark } = useTheme();
   const carouselRef = useRef<ICarouselInstance>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  const handleFinish = async () => {
+  const handleFinish = async (): Promise<void> => {
     try {
       await AsyncStorage.setItem("hasOnboarded", "true");
       router.replace("/(tabs)");
@@ -77,7 +77,7 @@ export default function OnboardingScreen() {
     }
   };
 
-  const handleNext = () => {
+  const handleNext = (): void => {
     if (currentIndex === ONBOARDING_DATA.length - 1) {
       handleFinish();
     } else {
@@ -85,7 +85,12 @@ export default function OnboardingScreen() {
     }
   };
 
-  const renderItem = ({ item }: { item: any; index: number }) => {
+  const renderItem = ({
+    item,
+  }: {
+    item: (typeof ONBOARDING_DATA)[number];
+    index: number;
+  }): React.JSX.Element => {
     const iconColor = item.isSpecial
       ? palette.nileGreen[500]
       : isDark
@@ -124,7 +129,7 @@ export default function OnboardingScreen() {
       <TouchableOpacity
         className="absolute p-2 right-6 z-10"
         onPress={handleFinish}
-        style={[{ top: insets.top + 16 }]}
+        style={{ top: insets.top + 16 }}
       >
         <Text className="text-text-secondary dark:text-text-secondary-dark text-base">
           Skip
@@ -148,7 +153,7 @@ export default function OnboardingScreen() {
       {/* Bottom Section */}
       <View
         className="flex-1 items-center justify-end gap-8 px-8"
-        style={[{ paddingBottom: insets.bottom + 32 }]}
+        style={{ paddingBottom: insets.bottom + 32 }}
       >
         {/* Pagination Dots */}
         <View className="flex-row gap-2">
@@ -156,17 +161,15 @@ export default function OnboardingScreen() {
             <View
               className="h-2 rounded"
               key={index}
-              style={[
-                {
-                  backgroundColor:
-                    currentIndex === index
-                      ? palette.nileGreen[500]
-                      : isDark
-                        ? "rgba(255,255,255,0.2)"
-                        : "rgba(0,0,0,0.1)",
-                  width: currentIndex === index ? 24 : 8,
-                },
-              ]}
+              style={{
+                backgroundColor:
+                  currentIndex === index
+                    ? palette.nileGreen[500]
+                    : isDark
+                      ? "rgba(255,255,255,0.2)"
+                      : "rgba(0,0,0,0.1)",
+                width: currentIndex === index ? 24 : 8,
+              }}
             />
           ))}
         </View>

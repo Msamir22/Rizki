@@ -51,7 +51,7 @@ export interface ApiSuccessResponse<T> {
 /**
  * Path params constraint type
  */
-type PathParamsConstraint = Record<string, string | number> | never;
+type PathParamsConstraint = Record<string, string | number>;
 
 /**
  * Base properties shared by all endpoint contracts
@@ -67,7 +67,7 @@ interface BaseContract<
 /**
  * Query params constraint type
  */
-type QueryParamsConstraint = Record<string, string | number | boolean> | never;
+type QueryParamsConstraint = Record<string, string | number | boolean>;
 
 /**
  * GET endpoint contract
@@ -84,6 +84,7 @@ interface GetContract<
 /**
  * POST endpoint contract
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 interface PostContract<
   TResponse,
   TBody,
@@ -96,6 +97,7 @@ interface PostContract<
 /**
  * PUT endpoint contract
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 interface PutContract<
   TResponse,
   TBody,
@@ -108,6 +110,7 @@ interface PutContract<
 /**
  * PATCH endpoint contract
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 interface PatchContract<
   TResponse,
   TBody,
@@ -120,6 +123,7 @@ interface PatchContract<
 /**
  * DELETE endpoint contract
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 interface DeleteContract<
   TResponse,
   TPathParams extends PathParamsConstraint = never,
@@ -194,14 +198,14 @@ export type GetEndpoint = {
   [K in ApiEndpointPath]: ApiContract[K]["method"] extends "GET" ? K : never;
 }[ApiEndpointPath];
 
-export type GetOptions<E extends GetEndpoint> = {
+export interface GetOptions<E extends GetEndpoint> {
   pathParams?: ApiPathParamsType<E> extends never
     ? undefined
     : ApiPathParamsType<E>;
   queryParams?: ApiQueryParamsType<E> extends never
     ? undefined
     : ApiQueryParamsType<E>;
-};
+}
 
 /**
  * All POST endpoints
@@ -210,11 +214,11 @@ export type PostEndpoint = {
   [K in ApiEndpointPath]: ApiContract[K]["method"] extends "POST" ? K : never;
 }[ApiEndpointPath];
 
-export type PostOptions<E extends PostEndpoint> = {
+export interface PostOptions<E extends PostEndpoint> {
   pathParams?: ApiPathParamsType<E> extends never
     ? undefined
     : ApiPathParamsType<E>;
-};
+}
 
 /**
  * All PUT endpoints
@@ -223,11 +227,11 @@ export type PutEndpoint = {
   [K in ApiEndpointPath]: ApiContract[K]["method"] extends "PUT" ? K : never;
 }[ApiEndpointPath];
 
-export type PutOptions<E extends PutEndpoint> = {
+export interface PutOptions<E extends PutEndpoint> {
   pathParams?: ApiPathParamsType<E> extends never
     ? undefined
     : ApiPathParamsType<E>;
-};
+}
 
 /**
  * All PATCH endpoints
@@ -236,11 +240,11 @@ export type PatchEndpoint = {
   [K in ApiEndpointPath]: ApiContract[K]["method"] extends "PATCH" ? K : never;
 }[ApiEndpointPath];
 
-export type PatchOptions<E extends PatchEndpoint> = {
+export interface PatchOptions<E extends PatchEndpoint> {
   pathParams?: ApiPathParamsType<E> extends never
     ? undefined
     : ApiPathParamsType<E>;
-};
+}
 
 /**
  * All DELETE endpoints
@@ -249,11 +253,11 @@ export type DeleteEndpoint = {
   [K in ApiEndpointPath]: ApiContract[K]["method"] extends "DELETE" ? K : never;
 }[ApiEndpointPath];
 
-export type DeleteOptions<E extends DeleteEndpoint> = {
+export interface DeleteOptions<E extends DeleteEndpoint> {
   pathParams?: ApiPathParamsType<E> extends never
     ? undefined
     : ApiPathParamsType<E>;
-};
+}
 
 // =============================================================================
 // Conditional type helpers

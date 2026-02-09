@@ -53,7 +53,7 @@ export type ValidationErrors = Partial<Record<keyof AccountFormData, string>>;
  * @param data - The form data to validate
  * @returns Object with isValid boolean and errors object
  */
-export function validateAccountForm(data: any): {
+export function validateAccountForm(data: unknown): {
   isValid: boolean;
   errors: ValidationErrors;
 } {

@@ -1,18 +1,18 @@
 import { database, Transaction, Transfer } from "@astik/db";
 import { Q } from "@nozbe/watermelondb";
 import { useEffect, useMemo, useState } from "react";
+import {
+  formatDate,
+  getEndOfDay,
+  getEndOfMonth,
+  getEndOfWeek,
+  getStartOfDay,
+  getStartOfMonth,
+  getStartOfWeek,
+  isSameDay,
+} from "@/utils/dateHelpers";
 import { useNetWorthWithMonthlyPercentageChange } from "./useNetWorth";
 import { PeriodFilter } from "./usePeriodSummary";
-import {
-  getStartOfDay,
-  getEndOfDay,
-  getStartOfWeek,
-  getEndOfWeek,
-  getStartOfMonth,
-  getEndOfMonth,
-  isSameDay,
-  formatDate,
-} from "@/utils/dateHelpers";
 
 export type TransactionTypeFilter = "All" | "Income" | "Expense" | "Transfer";
 
@@ -103,11 +103,17 @@ function getPeriodDateRange(period: GroupingPeriod): {
   }
 }
 
+export interface UseTransactionsGroupingResult {
+  groupedData: GroupedTransaction[];
+  isLoading: boolean;
+  refetch: () => void;
+}
+
 export function useTransactionsGrouping(
   period: GroupingPeriod,
   selectedTypes: TransactionTypeFilter[],
   searchQuery: string
-) {
+): UseTransactionsGroupingResult {
   const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
   const [displayedItems, setDisplayedItems] = useState<DisplayTransaction[]>(
     []
@@ -188,7 +194,7 @@ export function useTransactionsGrouping(
     };
 
     // Initial fetch to populate data immediately
-    const performFetch = async () => {
+    const performFetch = async (): Promise<void> => {
       const gapTransactions = await futureTransactionsQuery.fetch();
       const { displayTransactions, displayTransfers } =
         await fetchDisplayItems();
@@ -227,7 +233,7 @@ export function useTransactionsGrouping(
               categoryName: category?.displayName ?? "Unknown",
               categoryIconName: iconConfig?.iconName ?? "help-circle",
               categoryIconLibrary: iconConfig?.iconLibrary ?? "Ionicons",
-            });
+            }) as DisplayTransaction;
           } else {
             const fromAccount = await item.fromAccount.fetch().catch(() => {
               return { name: "Unknown" };
@@ -238,7 +244,7 @@ export function useTransactionsGrouping(
             return Object.assign(Object.create(item), {
               fromAccountName: fromAccount.name,
               toAccountName: toAccount.name,
-            });
+            }) as DisplayTransaction;
           }
         })
       );
@@ -272,14 +278,14 @@ export function useTransactionsGrouping(
     };
 
     // Perform initial fetch
-    performFetch();
+    performFetch().catch(console.error);
 
     // Set up observe subscription for subsequent updates
     const subscription = transactionsCollection
       .query()
       .observe()
-      .subscribe(async () => {
-        await performFetch();
+      .subscribe(() => {
+        performFetch().catch(console.error);
       });
 
     return () => subscription.unsubscribe();
@@ -292,7 +298,7 @@ export function useTransactionsGrouping(
     }
 
     // Step A: Calculate Anchor Net Worth
-    const getSignedAmount = (item: DisplayTransaction) => {
+    const getSignedAmount = (item: DisplayTransaction): number => {
       if (item._type === "transaction") {
         if (item.isIncome) return item.amount;
         if (item.isExpense) return -item.amount;
@@ -389,7 +395,7 @@ export function useTransactionsGrouping(
   return {
     groupedData,
     isLoading,
-    refetch: () => {
+    refetch: (): void => {
       // Trigger refetch by forcing state update
       setDisplayedItems([...displayedItems]);
     },

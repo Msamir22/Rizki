@@ -1,3 +1,4 @@
+import { darkTheme, lightTheme } from "@/constants/colors";
 import {
   Inter_400Regular,
   Inter_500Medium,
@@ -8,26 +9,25 @@ import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
+import { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { AuthProvider } from "../context/AuthContext";
+import { ServiceUnavailableBanner } from "../components/common/ServiceUnavailableBanner";
+import { ErrorBoundary } from "../components/ErrorBoundary";
 import { ThemeProvider, useTheme } from "../context/ThemeContext";
 import "../global.css";
-import { DatabaseProvider } from "../providers/DatabaseProvider";
-import { useEffect } from "react";
 
-import { darkTheme, lightTheme } from "@/constants/colors";
-import { ErrorBoundary } from "../components/ErrorBoundary";
 import { ToastProvider } from "../components/ui/Toast";
+import { AuthProvider } from "../context/AuthContext";
+import { ServerStatusProvider } from "../context/ServerStatusContext";
+import { DatabaseProvider } from "../providers/DatabaseProvider";
 import { QueryProvider } from "../providers/QueryProvider";
 import { SyncProvider } from "../providers/SyncProvider";
-import { ServerStatusProvider } from "../context/ServerStatusContext";
-import { ServiceUnavailableBanner } from "../components/common/ServiceUnavailableBanner";
 
 // Prevent splash screen from auto-hiding until fonts are loaded
-SplashScreen.preventAutoHideAsync();
+await SplashScreen.preventAutoHideAsync();
 
-export default function RootLayout() {
+export default function RootLayout(): React.ReactNode {
   const [fontsLoaded, fontError] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
@@ -49,7 +49,7 @@ export default function RootLayout() {
 
   return (
     <ErrorBoundary>
-      <GestureHandlerRootView style={{ flex: 1 }}>
+      <GestureHandlerRootView className="flex-1">
         <QueryProvider>
           <DatabaseProvider>
             <AuthProvider>
@@ -73,7 +73,7 @@ export default function RootLayout() {
   );
 }
 
-function RootLayoutNav() {
+function RootLayoutNav(): React.ReactNode {
   const { colorScheme, isDark } = useTheme();
 
   return (

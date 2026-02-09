@@ -1,5 +1,5 @@
-import { useTheme } from "@/context/ThemeContext";
 import { TAB_BAR_HEIGHT } from "@/constants/ui";
+import { useTheme } from "@/context/ThemeContext";
 import { LinearGradient } from "expo-linear-gradient";
 import React from "react";
 import { ScrollView, Text, View } from "react-native";
@@ -12,7 +12,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
  * Will display financial analytics and spending charts.
  */
 export default function ChartsScreen(): React.ReactElement {
-  const { theme, isDark } = useTheme();
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
 
   return (

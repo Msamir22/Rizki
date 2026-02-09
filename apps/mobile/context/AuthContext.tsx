@@ -3,7 +3,6 @@
  * Provides authentication state and functions throughout the app
  */
 
-import { supabase } from "@/services/supabase";
 import { Session, User } from "@supabase/supabase-js";
 import React, {
   createContext,
@@ -12,6 +11,7 @@ import React, {
   useEffect,
   useState,
 } from "react";
+import { supabase } from "@/services/supabase";
 
 // =============================================================================
 // Types

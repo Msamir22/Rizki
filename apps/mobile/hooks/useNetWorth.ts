@@ -12,8 +12,8 @@ import {
 } from "@astik/logic";
 import { Q } from "@nozbe/watermelondb";
 import { useEffect, useMemo, useState } from "react";
-import { useMarketRates } from "./useMarketRates";
 import { getNetWorthComparison } from "@/services/net-worth";
+import { useMarketRates } from "./useMarketRates";
 
 interface UseNetWorthResult {
   netWorthData: NetWorthData | null;
@@ -44,9 +44,9 @@ export function useNetWorth(): UseNetWorthResult {
     // Use observeWithColumns to react to balance changes
     const subscription = query.observeWithColumns(["balance"]).subscribe({
       next: (result) => setAccounts(result),
-      error: (err) => {
+      error: (err: unknown) => {
         console.error("Error observing accounts:", err);
-        setError(err);
+        setError(err instanceof Error ? err : new Error(String(err)));
       },
     });
 
@@ -62,9 +62,9 @@ export function useNetWorth(): UseNetWorthResult {
         setAssetMetals(result);
         setIsLoading(false);
       },
-      error: (err) => {
+      error: (err: unknown) => {
         console.error("Error observing asset metals:", err);
-        setError(err);
+        setError(err instanceof Error ? err : new Error(String(err)));
         setIsLoading(false);
       },
     });
@@ -123,7 +123,7 @@ export function useNetWorthWithMonthlyPercentageChange(): {
     }
 
     if (!isLoading) {
-      fetchComparison();
+      fetchComparison().catch(console.error);
     }
   }, [isLoading]);
 

@@ -33,7 +33,8 @@ export class Transaction extends BaseTransaction {
     return this.linkedAssetId !== undefined && this.linkedAssetId !== null;
   }
 
-  get currencySymbol(): string {
-    return this.currency === "USD" ? "$" : "EGP";
+  get signedAmount(): number {
+    const sign = this.type === "EXPENSE" ? "-" : "+";
+    return Number(`${sign}${this.amount}`);
   }
 }

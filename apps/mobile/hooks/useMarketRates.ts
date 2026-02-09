@@ -1,10 +1,13 @@
+import { useSync } from "@/providers/SyncProvider";
 import { MarketRate } from "@astik/db";
 import { Q } from "@nozbe/watermelondb";
-import { RealtimeChannel } from "@supabase/supabase-js";
+import {
+  REALTIME_SUBSCRIBE_STATES,
+  RealtimeChannel,
+} from "@supabase/supabase-js";
 import { useEffect, useRef, useState } from "react";
 import { useDatabase } from "../providers/DatabaseProvider";
 import { supabase } from "../services/supabase";
-import { useSync } from "@/providers/SyncProvider";
 
 interface UseMarketRatesResult {
   latestRates: MarketRate | null;
@@ -47,7 +50,7 @@ export function useMarketRates(): UseMarketRatesResult {
 
   // Query previous day rate (before today)
   useEffect(() => {
-    const fetchPreviousDay = async () => {
+    const fetchPreviousDay = async (): Promise<void> => {
       try {
         const todayStart = new Date();
         todayStart.setHours(0, 0, 0, 0);
@@ -67,7 +70,7 @@ export function useMarketRates(): UseMarketRatesResult {
       }
     };
 
-    fetchPreviousDay();
+    fetchPreviousDay().catch(console.error);
   }, [database, latestRates]); // Re-fetch when latest rate changes
 
   // Set up realtime subscription for instant updates
@@ -81,12 +84,12 @@ export function useMarketRates(): UseMarketRatesResult {
           schema: "public",
           table: "market_rates",
         },
-        async () => {
-          await sync();
+        () => {
+          sync().catch(console.error);
         }
       )
       .subscribe((status) => {
-        setIsConnected(status === "SUBSCRIBED");
+        setIsConnected(status === REALTIME_SUBSCRIBE_STATES.SUBSCRIBED);
       });
 
     channelRef.current = channel;

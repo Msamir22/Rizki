@@ -27,12 +27,12 @@ import { supabase } from "./supabase";
 function getApiBaseUrl(): string {
   if (!__DEV__) {
     // Production build - use production URL
-    return process.env.EXPO_PUBLIC_API_URL_PROD ?? "";
+    return process.env.EXPO_PUBLIC_API_URL_PROD as string;
   }
 
   // Development - check if env var is set
   if (process.env.EXPO_PUBLIC_API_URL_DEV) {
-    return process.env.EXPO_PUBLIC_API_URL_DEV;
+    return process.env.EXPO_PUBLIC_API_URL_DEV as string;
   }
 
   // Auto-detect local IP from Expo's debugger host
@@ -87,8 +87,8 @@ function buildUrl(
   baseUrl: string,
   endpoint: string,
   options?: {
-    pathParams?: Record<string, string | number> | never;
-    queryParams?: Record<string, string | number | boolean> | never;
+    pathParams?: Record<string, string | number>;
+    queryParams?: Record<string, string | number | boolean>;
   }
 ): string {
   const pathWithParams = replacePathParams(endpoint, options?.pathParams);
@@ -133,11 +133,18 @@ async function request<T>(
     }
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
+      const errorData = (await response.json().catch(() => ({}))) as Record<
+        string,
+        unknown
+      >;
+      const errorMessage =
+        typeof errorData.error === "string"
+          ? errorData.error
+          : `HTTP ${response.status}: ${response.statusText}`;
+
       return {
         data: null,
-        error:
-          errorData.error || `HTTP ${response.status}: ${response.statusText}`,
+        error: errorMessage,
       };
     }
 

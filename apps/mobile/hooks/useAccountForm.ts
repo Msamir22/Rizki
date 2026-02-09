@@ -5,10 +5,23 @@ import {
   ValidationErrors,
 } from "../validation/account-validation";
 
+interface UseAccountFormResult {
+  formData: AccountFormData;
+  errors: ValidationErrors;
+  updateField: <K extends keyof AccountFormData>(
+    field: K,
+    value: AccountFormData[K]
+  ) => void;
+  validate: () => boolean;
+  resetForm: () => void;
+  isValid: boolean;
+  isTouched: Partial<Record<keyof AccountFormData, boolean>>;
+}
+
 /**
  * Custom hook to manage the account creation form state and validation.
  */
-export function useAccountForm() {
+export function useAccountForm(): UseAccountFormResult {
   const [formData, setFormData] = useState<AccountFormData>({
     name: "",
     accountType: "CASH",
@@ -27,7 +40,10 @@ export function useAccountForm() {
    * Updates a single field in the form and performs partial validation.
    */
   const updateField = useCallback(
-    <K extends keyof AccountFormData>(field: K, value: AccountFormData[K]) => {
+    <K extends keyof AccountFormData>(
+      field: K,
+      value: AccountFormData[K]
+    ): void => {
       setFormData((prev) => {
         const newData = { ...prev, [field]: value };
 
@@ -49,7 +65,7 @@ export function useAccountForm() {
   /**
    * Validates the entire form.
    */
-  const validate = useCallback(() => {
+  const validate = useCallback((): boolean => {
     const { isValid, errors: newErrors } = validateAccountForm(formData);
     setErrors(newErrors);
     return isValid;
@@ -58,7 +74,7 @@ export function useAccountForm() {
   /**
    * Resets the form to initial values.
    */
-  const resetForm = useCallback(() => {
+  const resetForm = useCallback((): void => {
     setFormData({
       name: "",
       accountType: "CASH",
@@ -71,7 +87,7 @@ export function useAccountForm() {
     setIsTouched({});
   }, []);
 
-  const isValid = useMemo(() => {
+  const isValid = useMemo((): boolean => {
     const { isValid } = validateAccountForm(formData);
     return isValid;
   }, [formData]);

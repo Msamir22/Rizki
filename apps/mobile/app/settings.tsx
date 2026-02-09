@@ -4,7 +4,7 @@ import { ScrollView, Switch, Text, TouchableOpacity, View } from "react-native";
 import { GradientBackground } from "../components/ui/GradientBackground";
 import { useTheme } from "../context/ThemeContext";
 
-export default function SettingsScreen() {
+export default function SettingsScreen(): React.JSX.Element {
   const { theme, mode, toggleTheme } = useTheme();
 
   return (
@@ -17,7 +17,7 @@ export default function SettingsScreen() {
         <Text className="text-xl font-bold text-slate-900 dark:text-slate-50">
           Settings
         </Text>
-        <View style={{ width: 24 }} />
+        <View className="w-6" />
       </View>
 
       <ScrollView contentContainerClassName="px-5">
@@ -29,12 +29,7 @@ export default function SettingsScreen() {
 
           <View className="flex-row items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-800">
             <View className="flex-row items-center gap-3">
-              <View
-                className="w-8 h-8 rounded-lg justify-center items-center"
-                style={{
-                  backgroundColor: mode === "dark" ? "#6366f1" : "#fb923c",
-                }}
-              >
+              <View className="w-8 dark:bg-[#6366f1] bg-[#fb923c] h-8 rounded-lg justify-center items-center">
                 <Ionicons
                   name={mode === "dark" ? "moon" : "sunny"}
                   size={20}
@@ -63,10 +58,7 @@ export default function SettingsScreen() {
 
           <TouchableOpacity className="flex-row items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-800">
             <View className="flex-row items-center gap-3">
-              <View
-                className="w-8 h-8 rounded-lg justify-center items-center"
-                style={{ backgroundColor: "#3b82f6" }}
-              >
+              <View className="w-8 dark:bg-[#3b82f6] bg-[#fb923c] h-8 rounded-lg justify-center items-center">
                 <Ionicons name="person" size={20} color="#FFF" />
               </View>
               <Text className="text-base font-medium text-slate-900 dark:text-slate-50">
@@ -82,10 +74,7 @@ export default function SettingsScreen() {
 
           <TouchableOpacity className="flex-row items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-800 mt-0.5">
             <View className="flex-row items-center gap-3">
-              <View
-                className="w-8 h-8 rounded-lg justify-center items-center"
-                style={{ backgroundColor: "#f43f5e" }}
-              >
+              <View className="w-8 dark:bg-[#f43f5e] bg-[#fb923c] h-8 rounded-lg justify-center items-center">
                 <Ionicons name="notifications" size={20} color="#FFF" />
               </View>
               <Text className="text-base font-medium text-slate-900 dark:text-slate-50">

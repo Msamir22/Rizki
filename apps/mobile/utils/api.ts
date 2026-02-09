@@ -2,8 +2,8 @@
  * API Utilities for Astik
  */
 
-const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
-const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL as string;
+const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY as string;
 
 if (!SUPABASE_ANON_KEY && __DEV__) {
   console.warn("⚠️ Missing EXPO_PUBLIC_SUPABASE_ANON_KEY env variable");
@@ -54,14 +54,14 @@ export async function parseVoiceWithAI(
       throw new Error(`AI processing failed: ${response.status}`);
     }
 
-    const data = await response.json();
+    const data = (await response.json()) as AIParseResult;
     console.log("DEBUG: AI Raw Response:", JSON.stringify(data, null, 2));
 
     if (!data.transactions) {
       console.warn("DEBUG: No transactions array in response", data);
     }
 
-    return data as AIParseResult;
+    return data;
   } catch (error) {
     console.error("AI Parser Exception:", error);
     throw error;

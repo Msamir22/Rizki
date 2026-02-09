@@ -2,7 +2,6 @@ import { palette } from "@/constants/colors";
 import { useCategory } from "@/hooks/useCategories";
 import { formatTransactionDate } from "@/utils/transactions";
 import { Transaction } from "@astik/db";
-import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { ActivityIndicator, Text, TouchableOpacity, View } from "react-native";
 import { CategoryIcon } from "../common/CategoryIcon";
@@ -37,18 +36,15 @@ function TransactionItem({
       <TouchableOpacity className="flex-row items-center py-3">
         {/* Icon Circle */}
         <View
-          className="mr-3 h-10 w-10 items-center justify-center rounded-full"
-          style={{
-            backgroundColor: isExpense
-              ? `${palette.red[500]}20`
-              : `${palette.nileGreen[500]}20`,
-          }}
+          className={`mr-3 h-10 w-10 items-center justify-center rounded-full ${
+            isExpense ? "bg-red-500/10" : "bg-nileGreen-500/10"
+          }`}
         >
           <CategoryIcon
             iconName={iconConfig.iconName}
             iconLibrary={iconConfig.iconLibrary}
             size={18}
-            color={isExpense ? palette.red[500] : palette.nileGreen[500]}
+            className={isExpense ? "text-red-500" : "text-nileGreen-500"}
           />
         </View>
 
@@ -68,9 +64,7 @@ function TransactionItem({
             isExpense ? "text-red-500" : "text-nileGreen-500"
           }`}
         >
-          {isExpense ? "- " : "+ "}
-          {transaction.currencySymbol}
-          {Math.abs(transaction.amount).toLocaleString()}
+          {transaction.signedAmount}
         </Text>
       </TouchableOpacity>
 
@@ -115,7 +109,7 @@ export function RecentTransactions({
           description="Tap the + button to add one"
         />
       ) : (
-        <View className="dark:rounded-2xl dark:bg-slate-800 dark:p-4">
+        <View className="rounded-3xl border p-4 mb-5 bg-white/60 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700">
           {transactions.map((transaction, index) => (
             <TransactionItem
               key={transaction.id}
