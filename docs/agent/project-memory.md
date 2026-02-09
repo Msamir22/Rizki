@@ -4,7 +4,7 @@ alwaysApply: true
 
 # 🧠 Astik Project Memory
 
-> **Last Updated:** 2026-01-19 **Purpose:** Persistent context for AI agents
+> **Last Updated:** 2026-02-07 **Purpose:** Persistent context for AI agents
 > across conversations
 
 ---
@@ -165,8 +165,10 @@ for asset transactions)
 - [x] Purity conversion utilities (karat ↔ fineness ↔ fraction)
 - [x] Anonymous sign-in with retry logic
 - [x] Vercel API deployment (dev/prod projects)
-- [x] Market rates table consolidation (dropped daily_snapshot_market_rates)
 - [x] React Query integration for API caching
+- [x] Dashboard refactoring to Tailwind CSS & Dark Mode compliance
+- [x] Vector Icons standardization with Tailwind support (CategoryIcon)
+- [x] ESLint styling rules & Pre-commit hooks (no-restricted-syntax)
 
 ### 🔄 In Progress
 
@@ -227,6 +229,15 @@ for asset transactions)
 ## 7. Recent Sessions
 
 > Last 10 sessions for context continuity
+
+### Session: 2026-02-07 (02:45)
+
+- **Topic:** UI Refactoring & Styling Standardization
+- **Accomplished:** Refactored multiple screens (Create Recurring Payment,
+  Transactions, Dashboard) to use Tailwind variants instead of isDark logic.
+  Standardized vector icons using cssInterop for className support.
+- **Outcome:** Modernized UI architecture with cleaner, more declarative
+  styling.
 
 ### Session: 2026-01-19 (22:26)
 
