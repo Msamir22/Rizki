@@ -182,7 +182,8 @@ export function AccountsSection({
           <Ionicons
             name="arrow-forward"
             size={14}
-            className="text-nileGreen-500 ml-1"
+            color={palette.nileGreen[500]}
+            className="ml-1"
           />
         </TouchableOpacity>
       </View>

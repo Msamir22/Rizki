@@ -1,15 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { Text, TouchableOpacity, View } from "react-native";
-import { cssInterop } from "react-native-css-interop";
 import { palette } from "@/constants/colors";
-
-cssInterop(Ionicons, {
-  className: {
-    target: "style",
-    nativeStyleToProp: { color: true },
-  },
-});
+import { useTheme } from "@/context/ThemeContext";
 
 export interface DropdownItem<T> {
   value: T;
@@ -44,6 +37,7 @@ export function Dropdown<T extends string | number>({
   className = "",
   placeholder = "Select...",
 }: DropdownProps<T>): React.JSX.Element {
+  const { isDark } = useTheme();
   const selectedItem = items.find((item) => item.value === value);
 
   return (
@@ -64,7 +58,9 @@ export function Dropdown<T extends string | number>({
                     <Ionicons
                       name={selectedItem.icon as keyof typeof Ionicons.glyphMap}
                       size={20}
-                      className="text-nileGreen-600 dark:text-nileGreen-400"
+                      color={
+                        isDark ? palette.nileGreen[400] : palette.nileGreen[600]
+                      }
                     />
                   ) : (
                     <Text className="text-xl">{selectedItem.icon}</Text>
@@ -78,7 +74,7 @@ export function Dropdown<T extends string | number>({
             <Ionicons
               name={isOpen ? "chevron-up" : "chevron-down"}
               size={18}
-              className="text-slate-500 dark:text-slate-400"
+              color={isDark ? palette.slate[400] : palette.slate[500]}
             />
           </View>
         </TouchableOpacity>
@@ -109,10 +105,12 @@ export function Dropdown<T extends string | number>({
                       <Ionicons
                         name={item.icon as keyof typeof Ionicons.glyphMap}
                         size={20}
-                        className={
+                        color={
                           item.value === value
-                            ? "text-nileGreen-600"
-                            : "text-slate-500 dark:text-slate-400"
+                            ? palette.nileGreen[600]
+                            : isDark
+                              ? palette.slate[400]
+                              : palette.slate[500]
                         }
                       />
                     ) : (

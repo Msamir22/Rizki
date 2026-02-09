@@ -13,7 +13,6 @@ import {
   MaterialIcons,
 } from "@expo/vector-icons";
 import React from "react";
-import { cssInterop } from "react-native-css-interop";
 
 /** Supported icon libraries from @expo/vector-icons */
 export type IconLibrary =
@@ -27,7 +26,6 @@ interface IconProps {
   name: string;
   size?: number;
   color?: string;
-  className?: string;
 }
 
 /** Generic type for an icon component */
@@ -42,35 +40,7 @@ interface CategoryIconProps {
   size?: number;
   /** Icon color (supports Tailwind via className) */
   color?: string;
-  /** Tailwind classes */
-  className?: string;
 }
-
-// Enable Tailwind support for icon components
-cssInterop(Ionicons, {
-  className: {
-    target: "style",
-    nativeStyleToProp: { color: true },
-  },
-});
-cssInterop(MaterialCommunityIcons, {
-  className: {
-    target: "style",
-    nativeStyleToProp: { color: true },
-  },
-});
-cssInterop(FontAwesome5, {
-  className: {
-    target: "style",
-    nativeStyleToProp: { color: true },
-  },
-});
-cssInterop(MaterialIcons, {
-  className: {
-    target: "style",
-    nativeStyleToProp: { color: true },
-  },
-});
 
 const ICON_LIBRARIES: Record<IconLibrary, IconComponentType> = {
   Ionicons: Ionicons as unknown as IconComponentType,
@@ -91,18 +61,10 @@ export function CategoryIcon({
   iconLibrary,
   color,
   size = 24,
-  className,
 }: CategoryIconProps): React.JSX.Element {
   const IconComponent = ICON_LIBRARIES[iconLibrary] || ICON_LIBRARIES.Ionicons;
 
-  return (
-    <IconComponent
-      name={iconName}
-      size={size}
-      color={color}
-      className={className}
-    />
-  );
+  return <IconComponent name={iconName} size={size} color={color} />;
 }
 
 /**

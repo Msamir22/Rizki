@@ -1,3 +1,5 @@
+import { palette } from "@/constants/colors";
+import { useTheme } from "@/context/ThemeContext";
 import {
   Ionicons,
   MaterialCommunityIcons,
@@ -28,34 +30,6 @@ const ICON_COMPONENTS = {
   "material-community": MaterialCommunityIcons,
 };
 
-/**
- * TabIcon - Helper component for rendering tab bar icons
- *
- * Supports multiple icon libraries (Ionicons, MaterialIcons, MaterialCommunityIcons).
- * Automatically switches between filled and outline variants based on focus state
- * when an outlineName is provided.
- */
-import { cssInterop } from "react-native-css-interop";
-
-cssInterop(Ionicons, {
-  className: {
-    target: "style",
-    nativeStyleToProp: { color: true },
-  },
-});
-cssInterop(MaterialIcons, {
-  className: {
-    target: "style",
-    nativeStyleToProp: { color: true },
-  },
-});
-cssInterop(MaterialCommunityIcons, {
-  className: {
-    target: "style",
-    nativeStyleToProp: { color: true },
-  },
-});
-
 function TabIconComponent({
   config,
   focused,
@@ -67,8 +41,14 @@ function TabIconComponent({
   size: number;
   label: string;
 }): React.ReactElement {
+  const { isDark } = useTheme();
   const { library, name, outlineName } = config;
-  const IconComponent = ICON_COMPONENTS[library] || Ionicons;
+  const IconComponent = (ICON_COMPONENTS[library] ||
+    Ionicons) as React.ComponentType<{
+    name: string;
+    size: number;
+    color: string;
+  }>;
   const iconName = focused ? name : (outlineName ?? name);
 
   return (
@@ -79,8 +59,12 @@ function TabIconComponent({
       <IconComponent
         name={iconName}
         size={size}
-        className={
-          focused ? "text-nileGreen-500" : "text-slate-500 dark:text-slate-400"
+        color={
+          focused
+            ? palette.nileGreen[500]
+            : isDark
+              ? palette.slate[400]
+              : palette.slate[500]
         }
       />
 

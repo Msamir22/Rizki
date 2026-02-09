@@ -1,4 +1,5 @@
 import { palette } from "@/constants/colors";
+import { useTheme } from "@/context/ThemeContext";
 import { Account } from "@astik/db";
 import { Ionicons } from "@expo/vector-icons";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
@@ -18,6 +19,7 @@ export function AccountSelector({
   label,
   mainColor = palette.nileGreen[600],
 }: AccountSelectorProps): React.JSX.Element {
+  const { isDark } = useTheme();
   return (
     <View className="mb-4">
       {label && (
@@ -71,12 +73,13 @@ export function AccountSelector({
                 <Ionicons
                   name={iconName}
                   size={20}
-                  className={
+                  color={
                     isSelected
-                      ? "text-white"
-                      : "text-slate-500 dark:text-slate-400"
+                      ? "white"
+                      : isDark
+                        ? palette.slate[400]
+                        : palette.slate[500]
                   }
-                  color={isSelected ? palette.slate[25] : palette.slate[500]}
                 />
               </View>
               <View>

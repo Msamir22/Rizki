@@ -212,8 +212,8 @@
         "no-restricted-syntax": [
           "warn",
           {
-            "selector": "ConditionalExpression[test.name='isDark']",
-            "message": "Avoid using 'isDark' in ternary expressions for styling in JSX. Prefer Tailwind 'dark:' variants to keep components declarative and clean."
+            "selector": "JSXAttribute[name.name=/^(className|style)$/] ConditionalExpression[test.name='isDark']",
+            "message": "Avoid using 'isDark' in ternary expressions for styling in the 'className' or 'style' props. Prefer Tailwind 'dark:' variants to keep components declarative and clean."
           },
           {
             "selector": "JSXAttribute[name.name='color'] > Literal[value=/^#([A-Fa-f0-9]{3}){1,2}$/], JSXAttribute[name.name='shadowColor'] > Literal[value=/^#([A-Fa-f0-9]{3}){1,2}$/]",

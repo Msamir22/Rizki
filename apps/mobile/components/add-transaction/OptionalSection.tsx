@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { Switch, Text, TouchableOpacity, View } from "react-native";
 // Will use DatePicker modal later, simplified for now
 import { palette } from "@/constants/colors";
+import { useTheme } from "@/context/ThemeContext";
 import { TextField } from "../ui/TextField";
 
 interface OptionalFields {
@@ -29,6 +30,7 @@ export function OptionalSection({
   expanded,
   onToggleExpand,
 }: OptionalSectionProps): React.JSX.Element {
+  const { isDark } = useTheme();
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   if (!expanded) {
@@ -40,8 +42,7 @@ export function OptionalSection({
         <Ionicons
           name="create-outline"
           size={18}
-          className="text-nileGreen-600 dark:text-nileGreen-400"
-          color={palette.nileGreen[500]}
+          color={isDark ? palette.nileGreen[400] : palette.nileGreen[600]}
         />
         <Text className="ml-2 text-sm font-bold text-nileGreen-600 dark:text-nileGreen-400">
           Add more details
@@ -49,8 +50,8 @@ export function OptionalSection({
         <Ionicons
           name="chevron-down"
           size={16}
-          className="text-nileGreen-600 dark:text-nileGreen-400 ml-1"
-          color={palette.nileGreen[500]}
+          color={isDark ? palette.nileGreen[400] : palette.nileGreen[600]}
+          className="ml-1"
         />
       </TouchableOpacity>
     );
@@ -68,8 +69,8 @@ export function OptionalSection({
         <Ionicons
           name="chevron-up"
           size={14}
-          className="text-slate-400 dark:text-slate-500 ml-1"
-          color={palette.slate[400]}
+          color={isDark ? palette.slate[500] : palette.slate[400]}
+          className="ml-1"
         />
       </TouchableOpacity>
 
@@ -105,8 +106,8 @@ export function OptionalSection({
             <Ionicons
               name="calendar-outline"
               size={20}
-              className="text-slate-500 dark:text-slate-400 mr-2"
-              color={palette.slate[500]}
+              color={isDark ? palette.slate[400] : palette.slate[500]}
+              className="mr-2"
             />
             <Text className="text-base font-medium text-slate-900 dark:text-white">
               {fields.date.toLocaleDateString("en-US", {

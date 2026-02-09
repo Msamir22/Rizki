@@ -3,23 +3,17 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import React from "react";
 import { Text, TouchableOpacity, View } from "react-native";
-import { cssInterop } from "react-native-css-interop";
 import {
   configureReanimatedLogger,
   ReanimatedLogLevel,
 } from "react-native-reanimated";
+import { useTheme } from "@/context/ThemeContext";
+import { palette } from "@/constants/colors";
 import { CategoryIcon, IconLibrary } from "../common/CategoryIcon";
 
 configureReanimatedLogger({
   level: ReanimatedLogLevel.warn,
   strict: false,
-});
-
-cssInterop(Ionicons, {
-  className: {
-    target: "style",
-    nativeStyleToProp: { color: true },
-  },
 });
 
 interface BaseCardProps {
@@ -64,6 +58,7 @@ export function BaseCard({
   onCategoryPress,
   onAmountPress,
 }: BaseCardProps): React.JSX.Element {
+  const { isDark } = useTheme();
   return (
     <TouchableOpacity
       activeOpacity={0.7}
@@ -88,10 +83,12 @@ export function BaseCard({
             <Ionicons
               name={isSelected ? "checkbox" : "square-outline"}
               size={24}
-              className={
+              color={
                 isSelected
-                  ? "text-nileGreen-500"
-                  : "text-slate-400 dark:text-slate-500"
+                  ? palette.nileGreen[500]
+                  : isDark
+                    ? palette.slate[500]
+                    : palette.slate[400]
               }
             />
           </View>
@@ -116,7 +113,7 @@ export function BaseCard({
               <Ionicons
                 name="pencil"
                 size={8}
-                className="text-slate-500 dark:text-slate-400"
+                color={isDark ? palette.slate[400] : palette.slate[500]}
               />
             </View>
           )}

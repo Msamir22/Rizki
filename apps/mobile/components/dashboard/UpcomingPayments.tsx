@@ -237,7 +237,8 @@ function PayNowModal({
                   <Ionicons
                     name="wallet-outline"
                     size={18}
-                    className="text-slate-500 mr-2"
+                    color={palette.slate[500]}
+                    className="mr-2"
                   />
                   <Text className="text-base font-medium text-slate-800 dark:text-white">
                     {selectedAccount?.name || "Select account"}
@@ -246,7 +247,7 @@ function PayNowModal({
                 <Ionicons
                   name={showAccountPicker ? "chevron-up" : "chevron-down"}
                   size={18}
-                  className="text-slate-500"
+                  color={palette.slate[500]}
                 />
               </TouchableOpacity>
 
@@ -279,7 +280,7 @@ function PayNowModal({
                           <Ionicons
                             name="checkmark-circle"
                             size={20}
-                            className="text-nileGreen-500"
+                            color={palette.nileGreen[500]}
                           />
                         )}
                       </TouchableOpacity>
@@ -374,7 +375,7 @@ function FeaturedPaymentCard({
     <View className="flex-1 rounded-2xl p-4 items-center border-2 border-nileGreen-600/50 bg-slate-800/90 shadow-lg shadow-nileGreen-500/30">
       {/* Large Icon in Circle */}
       <View className="w-16 h-16 rounded-full items-center justify-center mb-3 bg-nileGreen-800/50 border border-nileGreen-600">
-        <Ionicons name={iconName} size={32} className="text-nileGreen-400" />
+        <Ionicons name={iconName} size={32} color={palette.nileGreen[400]} />
       </View>
 
       {/* Name */}
@@ -423,7 +424,7 @@ function MiniPaymentItem({ payment }: MiniPaymentItemProps): React.JSX.Element {
     <View className="flex-row items-center rounded-xl p-3 bg-slate-800/80 border border-slate-700">
       {/* Icon */}
       <View className="w-10 h-10 rounded-lg items-center justify-center mr-3 bg-slate-700/50">
-        <Ionicons name={iconName} size={20} className="text-nileGreen-400" />
+        <Ionicons name={iconName} size={20} color={palette.nileGreen[400]} />
       </View>
 
       {/* Content */}
@@ -442,7 +443,7 @@ function MiniPaymentItem({ payment }: MiniPaymentItemProps): React.JSX.Element {
         <Ionicons
           name="chevron-forward"
           size={14}
-          className="text-nileGreen-400"
+          color={palette.nileGreen[400]}
         />
       </View>
     </View>
@@ -528,7 +529,8 @@ export function UpcomingPayments(): React.JSX.Element {
           <Ionicons
             name="arrow-forward"
             size={14}
-            className="text-nileGreen-500 ml-1"
+            color={palette.nileGreen[500]}
+            className="ml-1"
           />
         </TouchableOpacity>
       </View>

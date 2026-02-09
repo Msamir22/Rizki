@@ -44,7 +44,7 @@ function TransactionItem({
             iconName={iconConfig.iconName}
             iconLibrary={iconConfig.iconLibrary}
             size={18}
-            className={isExpense ? "text-red-500" : "text-nileGreen-500"}
+            color={isExpense ? palette.red[500] : palette.nileGreen[500]}
           />
         </View>
 

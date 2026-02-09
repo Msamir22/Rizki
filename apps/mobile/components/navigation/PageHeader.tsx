@@ -51,7 +51,6 @@ function ActiveSelection({
         <Ionicons
           name="close-outline"
           size={28}
-          className="text-slate-800 dark:text-white"
           color={isDark ? palette.slate[50] : palette.slate[800]}
         />
       </TouchableOpacity>
@@ -82,7 +81,6 @@ function BackButton({
       <Ionicons
         name={backIcon === "close" ? "close-outline" : "arrow-back-outline"}
         size={28}
-        className="text-slate-800 dark:text-white"
         color={isDark ? palette.slate[50] : palette.slate[800]}
       />
     </TouchableOpacity>

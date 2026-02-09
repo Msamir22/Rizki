@@ -2,28 +2,9 @@ import { MarketRate } from "@astik/db";
 import { FontAwesome5, Ionicons, MaterialIcons } from "@expo/vector-icons";
 import React from "react";
 import { ActivityIndicator, ScrollView, Text, View } from "react-native";
-import { cssInterop } from "react-native-css-interop";
 import { palette } from "@/constants/colors";
+import { useTheme } from "@/context/ThemeContext";
 import { formatTimeAgo } from "@/utils/dateHelpers";
-
-cssInterop(FontAwesome5, {
-  className: {
-    target: "style",
-    nativeStyleToProp: { color: true },
-  },
-});
-cssInterop(MaterialIcons, {
-  className: {
-    target: "style",
-    nativeStyleToProp: { color: true },
-  },
-});
-cssInterop(Ionicons, {
-  className: {
-    target: "style",
-    nativeStyleToProp: { color: true },
-  },
-});
 
 interface Rate {
   id: string;
@@ -116,17 +97,15 @@ function buildRatesDisplay(
  */
 function getPillIcon(
   type: Rate["type"],
-  className?: string
+  color: string
 ): React.ReactElement | null {
   switch (type) {
     case "currency":
       return <Text className="text-sm">🇺🇸</Text>;
     case "gold":
-      return <FontAwesome5 name="coins" size={14} className={className} />;
+      return <FontAwesome5 name="coins" size={14} color={color} />;
     case "silver":
-      return (
-        <FontAwesome5 name="coins" size={12} className={className} solid />
-      );
+      return <FontAwesome5 name="coins" size={12} color={color} solid />;
     default:
       return null;
   }
@@ -139,6 +118,7 @@ export function LiveRates({
   lastUpdated,
   isStale,
 }: LiveRatesProps): React.ReactElement {
+  const { isDark } = useTheme();
   const ratesDisplay = buildRatesDisplay(latestRates, previousDayRate);
 
   return (
@@ -159,7 +139,7 @@ export function LiveRates({
             <Ionicons
               name="alert-circle-outline"
               size={16}
-              className="text-orange-500"
+              color={palette.orange[500]}
             />
           </View>
         )}
@@ -171,12 +151,14 @@ export function LiveRates({
       >
         {ratesDisplay.map((rate) => {
           const config = pillConfig[rate.type];
-          const iconClassName =
+          const iconColor =
             rate.type === "gold"
-              ? "text-gold-600 dark:text-gold-400"
-              : rate.type === "silver"
-                ? "text-slate-500 dark:text-slate-400"
-                : "text-slate-600 dark:text-slate-400";
+              ? isDark
+                ? palette.gold[400]
+                : palette.gold[600]
+              : isDark
+                ? palette.slate[400]
+                : palette.slate[600];
 
           return (
             <View
@@ -184,7 +166,7 @@ export function LiveRates({
               className={`flex-row items-center rounded-full px-3 py-2 ${config.container}`}
             >
               <View className="mr-1.5">
-                {getPillIcon(rate.type, iconClassName)}
+                {getPillIcon(rate.type, iconColor)}
               </View>
 
               <Text className={`mr-1 text-[13px] font-medium ${config.label}`}>
@@ -200,8 +182,10 @@ export function LiveRates({
                     rate.trend === "up" ? "arrow-drop-up" : "arrow-drop-down"
                   }
                   size={22}
-                  className={
-                    rate.trend === "up" ? "text-nileGreen-500" : "text-red-500"
+                  color={
+                    rate.trend === "up"
+                      ? palette.nileGreen[500]
+                      : palette.red[500]
                   }
                   style={{ marginLeft: 2, marginRight: -4 }}
                 />

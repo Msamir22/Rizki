@@ -25,6 +25,7 @@ import { StarryBackground } from "@/components/ui/StarryBackground";
 import { palette } from "@/constants/colors";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useCategories } from "@/hooks/useCategories";
+import { useTheme } from "@/context/ThemeContext";
 
 // =============================================================================
 // Types
@@ -82,6 +83,7 @@ interface TypeToggleProps {
 }
 
 function TypeToggle({ value, onChange }: TypeToggleProps): React.JSX.Element {
+  const { isDark } = useTheme();
   return (
     <View className="flex-row mb-6">
       {/* Expense Button */}
@@ -96,10 +98,12 @@ function TypeToggle({ value, onChange }: TypeToggleProps): React.JSX.Element {
         <Ionicons
           name="receipt-outline"
           size={16}
-          className={
+          color={
             value === "EXPENSE"
-              ? "text-white"
-              : "text-slate-500 dark:text-slate-400"
+              ? "white"
+              : isDark
+                ? palette.slate[400]
+                : palette.slate[500]
           }
         />
         <Text

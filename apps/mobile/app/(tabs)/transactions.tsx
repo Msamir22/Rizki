@@ -23,6 +23,7 @@ import { updateTransaction, updateTransfer } from "@/utils/transactions";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
+import { useTheme } from "@/context/ThemeContext";
 import { useState } from "react";
 import {
   ActivityIndicator,
@@ -34,6 +35,7 @@ import {
 } from "react-native";
 
 export default function TransactionsPlaceholder(): React.JSX.Element {
+  const { isDark } = useTheme();
   const [period, setPeriod] = useState<GroupingPeriod>("this_month");
   const [selectedTypes, setSelectedTypes] = useState<TransactionTypeFilter[]>([
     "Income",
@@ -381,7 +383,7 @@ export default function TransactionsPlaceholder(): React.JSX.Element {
               <Ionicons
                 name="calendar-outline"
                 size={18}
-                className="text-nileGreen-600 dark:text-nileGreen-400"
+                color={isDark ? palette.nileGreen[400] : palette.nileGreen[600]}
               />
               <Text className="text-sm font-semibold text-slate-700 dark:text-slate-200 flex-1">
                 {PERIOD_LABELS[period]}
@@ -389,7 +391,7 @@ export default function TransactionsPlaceholder(): React.JSX.Element {
               <Ionicons
                 name="chevron-down"
                 size={16}
-                className="text-slate-400 dark:text-slate-500"
+                color={isDark ? palette.slate[500] : palette.slate[400]}
               />
             </TouchableOpacity>
 
@@ -401,7 +403,7 @@ export default function TransactionsPlaceholder(): React.JSX.Element {
               <Ionicons
                 name="funnel-outline"
                 size={18}
-                className="text-nileGreen-600 dark:text-nileGreen-400"
+                color={isDark ? palette.nileGreen[400] : palette.nileGreen[600]}
               />
               <Text
                 className="text-sm font-semibold text-slate-700 dark:text-slate-200 flex-1"
@@ -416,7 +418,7 @@ export default function TransactionsPlaceholder(): React.JSX.Element {
               <Ionicons
                 name="chevron-down"
                 size={16}
-                className="text-slate-400 dark:text-slate-500"
+                color={isDark ? palette.slate[500] : palette.slate[400]}
               />
             </TouchableOpacity>
           </View>
@@ -426,7 +428,7 @@ export default function TransactionsPlaceholder(): React.JSX.Element {
             <Ionicons
               name="search-outline"
               size={20}
-              className="text-slate-400 dark:text-slate-500"
+              color={isDark ? palette.slate[500] : palette.slate[400]}
             />
             <TextInput
               className="flex-1 ml-3 text-slate-800 dark:text-slate-100 text-[16px]"
@@ -440,7 +442,7 @@ export default function TransactionsPlaceholder(): React.JSX.Element {
                 <Ionicons
                   name="close-circle"
                   size={20}
-                  className="text-slate-400 dark:text-slate-500"
+                  color={isDark ? palette.slate[500] : palette.slate[400]}
                 />
               </TouchableOpacity>
             )}
@@ -458,7 +460,7 @@ export default function TransactionsPlaceholder(): React.JSX.Element {
               <Ionicons
                 name="receipt-outline"
                 size={48}
-                className="text-slate-400 dark:text-slate-600"
+                color={isDark ? palette.slate[600] : palette.slate[400]}
               />
             </View>
             <Text className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2 text-center">

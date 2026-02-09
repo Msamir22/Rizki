@@ -1,8 +1,9 @@
+import { palette } from "@/constants/colors";
+import { useTheme } from "@/context/ThemeContext";
 import { Ionicons } from "@expo/vector-icons";
 import * as React from "react";
 import { Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { palette } from "@/constants/colors";
 
 export type CalculatorKey =
   | "0"
@@ -75,6 +76,7 @@ export function CalculatorKeypad({
   hide,
 }: CalculatorKeypadProps): React.JSX.Element | null {
   const insets = useSafeAreaInsets();
+  const { isDark } = useTheme();
 
   if (hide) return null;
 
@@ -116,8 +118,7 @@ export function CalculatorKeypad({
             <Ionicons
               name="backspace-outline"
               size={24}
-              className="text-red-500 dark:text-red-400"
-              color={palette.red[500]}
+              color={isDark ? palette.red[100] : palette.red[500]}
             />
           }
           value="DEL"

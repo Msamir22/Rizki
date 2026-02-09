@@ -58,12 +58,7 @@ export function TransferFields({
           className="bg-white dark:bg-slate-800 p-2.5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-md"
           activeOpacity={0.8}
         >
-          <Ionicons
-            name="swap-vertical"
-            size={20}
-            className="text-blue-500"
-            color={palette.blue[500]}
-          />
+          <Ionicons name="swap-vertical" size={20} color={palette.blue[500]} />
         </TouchableOpacity>
       </View>
 
