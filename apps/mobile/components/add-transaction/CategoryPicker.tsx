@@ -12,6 +12,7 @@ interface CategoryPickerProps {
   onOpenPicker: () => void;
   recentCategories?: Category[];
   onSelectRecent: (category: Category) => void;
+  hideMainSelector?: boolean;
 }
 
 export function CategoryPicker({
@@ -19,20 +20,24 @@ export function CategoryPicker({
   onOpenPicker,
   recentCategories = [],
   onSelectRecent,
+  hideMainSelector = false,
 }: CategoryPickerProps): React.JSX.Element {
   const { isDark } = useTheme();
   return (
-    <View className="mb-6">
-      <Text className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-2 px-1">
-        Category
-      </Text>
+    <View className={hideMainSelector ? "mb-4" : "mb-6"}>
+      {!hideMainSelector && (
+        <Text className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-2 px-1">
+          Category
+        </Text>
+      )}
 
       {/* Main Selector */}
-      <TouchableOpacity
-        onPress={onOpenPicker}
-        activeOpacity={0.7}
-        className="flex-row items-center bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 mb-3"
-      >
+      {!hideMainSelector && (
+        <TouchableOpacity
+          onPress={onOpenPicker}
+          activeOpacity={0.7}
+          className="flex-row items-center bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 mb-3"
+        >
         <View
           className="w-10 h-10 rounded-2xl items-center justify-center mr-3 bg-slate-100 dark:bg-slate-700/50"
           style={{
@@ -61,12 +66,13 @@ export function CategoryPicker({
           {selectedCategory?.displayName || "Select Category"}
         </Text>
 
-        <Ionicons
-          name="chevron-down"
-          size={20}
-          color={isDark ? palette.slate[500] : palette.slate[400]}
-        />
-      </TouchableOpacity>
+          <Ionicons
+            name="chevron-down"
+            size={20}
+            color={isDark ? palette.slate[500] : palette.slate[400]}
+          />
+        </TouchableOpacity>
+      )}
 
       {/* Recent Chips */}
       {recentCategories.length > 0 && (

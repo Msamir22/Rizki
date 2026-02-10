@@ -3,13 +3,19 @@ import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { Alert, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Dropdown, DropdownItem } from "@/components/ui/Dropdown";
 import { AmountDisplay } from "@/components/add-transaction/AmountDisplay";
 import {
   CalculatorKey,
   CalculatorKeypad,
 } from "@/components/add-transaction/CalculatorKeypad";
 import { CategoryPicker } from "@/components/add-transaction/CategoryPicker";
+import { AccountSelectorModal } from "@/components/modals/AccountSelectorModal";
+import { CategorySelectorModal } from "@/components/modals/CategorySelectorModal";
+import { CategoryIcon, IconLibrary } from "@/components/common/CategoryIcon";
+import { palette } from "@/constants/colors";
+import { useTheme } from "@/context/ThemeContext";
+import { Ionicons } from "@expo/vector-icons";
+import { Text, TouchableOpacity } from "react-native";
 import { OptionalSection } from "@/components/add-transaction/OptionalSection";
 import { TransferFields } from "@/components/add-transaction/TransferFields";
 import { TypeTabs } from "@/components/add-transaction/TypeTabs";
@@ -46,7 +52,9 @@ export default function AddTransaction(): React.ReactNode {
   // UI State
   const [isOptionalExpanded, setIsOptionalExpanded] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isAccountDropdownOpen, setIsAccountDropdownOpen] = useState(false);
+  const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const { isDark } = useTheme();
 
   // Hooks
   const {
@@ -284,39 +292,97 @@ export default function AddTransaction(): React.ReactNode {
             />
           ) : (
             <>
-              <Dropdown
-                label="ACCOUNT"
-                items={accounts.map(
-                  (acc): DropdownItem<string> => ({
-                    label: acc.name,
-                    value: acc.id,
-                    description: `${acc.currency} • ${acc.type.replace("_", " ")}`,
-                    icon:
-                      acc.type === "BANK"
-                        ? "business-outline"
-                        : acc.type === "DIGITAL_WALLET"
-                          ? "card-outline"
-                          : "wallet-outline",
-                    iconType: "ionicons",
-                  })
-                )}
-                value={selectedAccountId}
-                onChange={setSelectedAccountId}
-                isOpen={isAccountDropdownOpen}
-                onToggle={() => setIsAccountDropdownOpen(!isAccountDropdownOpen)}
-              />
+              <View className="flex-row gap-4 mb-4">
+                {/* Account Field */}
+                <View className="flex-1">
+                  <Text className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-2 px-1">
+                    ACCOUNT
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => setIsAccountModalOpen(true)}
+                    activeOpacity={0.7}
+                    className="flex-row items-center bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700"
+                  >
+                    <View
+                      className="w-8 h-8 rounded-xl items-center justify-center mr-2 bg-slate-100 dark:bg-slate-700/50"
+                      style={{
+                        backgroundColor: selectedCategory?.color
+                          ? `${selectedCategory.color}20`
+                          : undefined,
+                      }}
+                    >
+                      <Ionicons
+                        name={
+                          selectedAccount?.type === "BANK"
+                            ? "business-outline"
+                            : selectedAccount?.type === "DIGITAL_WALLET"
+                              ? "card-outline"
+                              : "wallet-outline"
+                        }
+                        size={18}
+                        color={selectedCategory?.color || (isDark ? palette.slate[400] : palette.slate[500])}
+                      />
+                    </View>
+                    <Text
+                      numberOfLines={1}
+                      className="flex-1 text-sm font-semibold text-slate-900 dark:text-white"
+                    >
+                      {selectedAccount?.name || "Select"}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
 
+                {/* Category Field */}
+                <View className="flex-1">
+                  <Text className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-2 px-1">
+                    CATEGORY
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => setIsCategoryModalOpen(true)}
+                    activeOpacity={0.7}
+                    className="flex-row items-center bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700"
+                  >
+                    <View
+                      className="w-8 h-8 rounded-xl items-center justify-center mr-2 bg-slate-100 dark:bg-slate-700/50"
+                      style={{
+                        backgroundColor: selectedCategory?.color
+                          ? `${selectedCategory.color}20`
+                          : undefined,
+                      }}
+                    >
+                      {selectedCategory ? (
+                        <CategoryIcon
+                          iconName={selectedCategory.icon}
+                          iconLibrary={selectedCategory.iconLibrary as IconLibrary}
+                          size={18}
+                          color={selectedCategory.color}
+                        />
+                      ) : (
+                        <Ionicons
+                          name="grid-outline"
+                          size={18}
+                          color={isDark ? palette.slate[400] : palette.slate[500]}
+                        />
+                      )}
+                    </View>
+                    <Text
+                      numberOfLines={1}
+                      className="flex-1 text-sm font-semibold text-slate-900 dark:text-white"
+                    >
+                      {selectedCategory?.displayName || "Select"}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Recent Categories Chips */}
               <CategoryPicker
                 selectedCategory={selectedCategory}
                 categories={relevantCategories}
-                onOpenPicker={() => {
-                  // TODO: Open modal picker layout
-                  // For now just toggle next available or dummy interaction
-                  // In real implementation this opens a bottom sheet
-                }}
-                // Dummy recent categories for visual completeness till implemented
+                onOpenPicker={() => setIsCategoryModalOpen(true)}
                 recentCategories={relevantCategories.slice(0, 3)}
                 onSelectRecent={(cat) => setSelectedCategoryId(cat.systemName)}
+                hideMainSelector={true}
               />
             </>
           )}
@@ -355,6 +421,23 @@ export default function AddTransaction(): React.ReactNode {
 
       {/* Bottom spacer for safe area if keypad is hidden */}
       {isOptionalExpanded && <View style={{ height: insets.bottom }} />}
+
+      {/* Modals */}
+      <AccountSelectorModal
+        visible={isAccountModalOpen}
+        accounts={accounts}
+        selectedId={selectedAccountId}
+        onSelect={setSelectedAccountId}
+        onClose={() => setIsAccountModalOpen(false)}
+      />
+
+      <CategorySelectorModal
+        visible={isCategoryModalOpen}
+        categories={relevantCategories}
+        selectedId={selectedCategoryId}
+        onSelect={setSelectedCategoryId}
+        onClose={() => setIsCategoryModalOpen(false)}
+      />
     </View>
   );
 }

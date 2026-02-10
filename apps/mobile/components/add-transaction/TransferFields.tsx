@@ -2,8 +2,8 @@ import { palette } from "@/constants/colors";
 import { Account } from "@astik/db";
 import { Ionicons } from "@expo/vector-icons";
 import { Text, TextInput, TouchableOpacity, View } from "react-native";
-import { Dropdown, DropdownItem } from "../ui/Dropdown";
 import { useState } from "react";
+import { AccountSelectorModal } from "../modals/AccountSelectorModal";
 
 interface TransferFieldsProps {
   accounts: Account[];
@@ -27,23 +27,9 @@ export function TransferFields({
   onChangeTargetAmount,
   exchangeRate,
 }: TransferFieldsProps): React.JSX.Element {
-  const [isFromDropdownOpen, setIsFromDropdownOpen] = useState(false);
-  const [isToDropdownOpen, setIsToDropdownOpen] = useState(false);
+  const [isFromModalOpen, setIsFromModalOpen] = useState(false);
+  const [isToModalOpen, setIsToModalOpen] = useState(false);
 
-  const dropdownItems = accounts.map(
-    (acc): DropdownItem<string> => ({
-      label: acc.name,
-      value: acc.id,
-      description: `${acc.currency} • ${acc.type.replace("_", " ")}`,
-      icon:
-        acc.type === "BANK"
-          ? "business-outline"
-          : acc.type === "DIGITAL_WALLET"
-            ? "card-outline"
-            : "wallet-outline",
-      iconType: "ionicons",
-    })
-  );
   const fromAccount = accounts.find((a) => a.id === fromAccountId);
   const toAccount = accounts.find((a) => a.id === toAccountId);
 
@@ -60,35 +46,74 @@ export function TransferFields({
 
   return (
     <View className="mb-4">
-      {/* From Account */}
-      <Dropdown
-        label="FROM ACCOUNT"
-        items={dropdownItems}
-        value={fromAccountId}
-        onChange={onSelectFrom}
-        isOpen={isFromDropdownOpen}
-        onToggle={() => setIsFromDropdownOpen(!isFromDropdownOpen)}
-      />
+      <View className="flex-row items-center gap-2">
+        {/* From Account */}
+        <View className="flex-1">
+          <Text className="text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-2 px-1 uppercase tracking-wider">
+            FROM
+          </Text>
+          <TouchableOpacity
+            onPress={() => setIsFromModalOpen(true)}
+            activeOpacity={0.7}
+            className="flex-row items-center bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700"
+          >
+            <Text
+              numberOfLines={1}
+              className="flex-1 text-sm font-semibold text-slate-900 dark:text-white"
+            >
+              {fromAccount?.name || "Select"}
+            </Text>
+            <Ionicons name="chevron-down" size={14} color={palette.slate[400]} />
+          </TouchableOpacity>
+        </View>
 
-      {/* Swap Button */}
-      <View className="items-center -my-3 z-10">
-        <TouchableOpacity
-          onPress={handleSwap}
-          className="bg-white dark:bg-slate-800 p-2.5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-md"
-          activeOpacity={0.8}
-        >
-          <Ionicons name="swap-vertical" size={20} color={palette.blue[500]} />
-        </TouchableOpacity>
+        {/* Swap Button */}
+        <View className="mt-6">
+          <TouchableOpacity
+            onPress={handleSwap}
+            className="bg-white dark:bg-slate-800 p-2 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm"
+            activeOpacity={0.8}
+          >
+            <Ionicons name="swap-horizontal" size={18} color={palette.blue[500]} />
+          </TouchableOpacity>
+        </View>
+
+        {/* To Account */}
+        <View className="flex-1">
+          <Text className="text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-2 px-1 uppercase tracking-wider">
+            TO
+          </Text>
+          <TouchableOpacity
+            onPress={() => setIsToModalOpen(true)}
+            activeOpacity={0.7}
+            className="flex-row items-center bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700"
+          >
+            <Text
+              numberOfLines={1}
+              className="flex-1 text-sm font-semibold text-slate-900 dark:text-white"
+            >
+              {toAccount?.name || "Select"}
+            </Text>
+            <Ionicons name="chevron-down" size={14} color={palette.slate[400]} />
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {/* To Account */}
-      <Dropdown
-        label="TO ACCOUNT"
-        items={dropdownItems}
-        value={toAccountId}
-        onChange={onSelectTo}
-        isOpen={isToDropdownOpen}
-        onToggle={() => setIsToDropdownOpen(!isToDropdownOpen)}
+      {/* Modals */}
+      <AccountSelectorModal
+        visible={isFromModalOpen}
+        accounts={accounts}
+        selectedId={fromAccountId}
+        onSelect={onSelectFrom}
+        onClose={() => setIsFromModalOpen(false)}
+      />
+
+      <AccountSelectorModal
+        visible={isToModalOpen}
+        accounts={accounts}
+        selectedId={toAccountId}
+        onSelect={onSelectTo}
+        onClose={() => setIsToModalOpen(false)}
       />
 
       {/* Multi-currency Target Amount Section */}
