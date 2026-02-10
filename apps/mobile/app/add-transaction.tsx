@@ -90,7 +90,7 @@ export default function AddTransaction(): React.ReactNode {
 
   useEffect(() => {
     if (relevantCategories.length > 0 && !selectedCategoryId) {
-      setSelectedCategoryId(relevantCategories[0].systemName);
+      setSelectedCategoryId(relevantCategories[0].id);
     }
   }, [relevantCategories, selectedCategoryId, type]);
 
@@ -301,7 +301,7 @@ export default function AddTransaction(): React.ReactNode {
                 }}
                 // Dummy recent categories for visual completeness till implemented
                 recentCategories={relevantCategories.slice(0, 3)}
-                onSelectRecent={(cat) => setSelectedCategoryId(cat.systemName)}
+                onSelectRecent={(cat) => setSelectedCategoryId(cat.id)}
               />
             </>
           )}
