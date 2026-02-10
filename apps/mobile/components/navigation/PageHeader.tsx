@@ -171,7 +171,7 @@ export function PageHeader({
   return (
     <>
       <View
-        className="px-5 pb-4 mt-2 bg-slate-50 dark:bg-slate-900"
+        className="px-5 pb-4 mt-2 bg-background dark:bg-background-dark"
         style={{
           paddingTop: insets.top + 10,
         }}

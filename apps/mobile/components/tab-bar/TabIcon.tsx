@@ -16,14 +16,6 @@ export interface IconConfig {
   outlineName?: string;
 }
 
-// interface TabIconProps {
-//   config: IconConfig;
-//   focused: boolean;
-//   color: string;
-//   size: number;
-//   label: string;
-// }
-
 const ICON_COMPONENTS = {
   ionicons: Ionicons,
   material: MaterialIcons,

@@ -342,11 +342,7 @@ export default function TransactionsPlaceholder(): React.JSX.Element {
 
   return (
     <>
-      <View className="flex-1 bg-slate-50 dark:bg-slate-950">
-        {/* Stars/Dots Layer (Simulated with simple views or image - Skipping for pure code now, 
-          using gradient is cleaner. User mockup had stars, we can add later if requested component exists) */}
-
-        {/* Header Section */}
+      <View className="flex-1 bg-background dark:bg-background-dark">
         {/* Header Section */}
         <PageHeader
           title="Transactions"
@@ -373,7 +369,7 @@ export default function TransactionsPlaceholder(): React.JSX.Element {
 
         {/* Filters & Search Row */}
 
-        <View className="px-5 pb-4 bg-slate-50 dark:bg-slate-900">
+        <View className="px-5 pb-4">
           <View className="flex-row mb-3 flex-wrap gap-2">
             {/* Period Filter Button */}
             <TouchableOpacity

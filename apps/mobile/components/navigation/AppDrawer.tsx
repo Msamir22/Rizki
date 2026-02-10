@@ -156,7 +156,7 @@ export function AppDrawer({
           }}
         >
           <Pressable
-            className="flex-1 bg-white dark:bg-slate-900"
+            className="flex-1 bg-background dark:bg-background-dark"
             style={{ paddingTop: insets.top }}
           >
             {/* Header with gradient */}

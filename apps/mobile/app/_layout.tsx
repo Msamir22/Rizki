@@ -25,7 +25,7 @@ import { QueryProvider } from "../providers/QueryProvider";
 import { SyncProvider } from "../providers/SyncProvider";
 
 // Prevent splash screen from auto-hiding until fonts are loaded
-SplashScreen.preventAutoHideAsync();
+SplashScreen.preventAutoHideAsync().catch(console.error);
 
 export default function RootLayout(): React.ReactNode {
   const [fontsLoaded, fontError] = useFonts({
@@ -38,7 +38,7 @@ export default function RootLayout(): React.ReactNode {
   // Hide splash screen once fonts are loaded
   useEffect(() => {
     if (fontsLoaded || fontError) {
-      SplashScreen.hideAsync();
+      SplashScreen.hideAsync().catch(console.error);
     }
   }, [fontsLoaded, fontError]);
 
