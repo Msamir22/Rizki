@@ -1,30 +1,29 @@
-import { TransactionType } from "@astik/db";
-import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
-import { Alert, ScrollView, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AmountDisplay } from "@/components/add-transaction/AmountDisplay";
 import {
   CalculatorKey,
   CalculatorKeypad,
 } from "@/components/add-transaction/CalculatorKeypad";
 import { CategoryPicker } from "@/components/add-transaction/CategoryPicker";
-import { AccountSelectorModal } from "@/components/modals/AccountSelectorModal";
-import { CategorySelectorModal } from "@/components/modals/CategorySelectorModal";
-import { CategoryIcon, IconLibrary } from "@/components/common/CategoryIcon";
-import { palette } from "@/constants/colors";
-import { useTheme } from "@/context/ThemeContext";
-import { Ionicons } from "@expo/vector-icons";
-import { Text, TouchableOpacity } from "react-native";
 import { OptionalSection } from "@/components/add-transaction/OptionalSection";
 import { TransferFields } from "@/components/add-transaction/TransferFields";
 import { TypeTabs } from "@/components/add-transaction/TypeTabs";
+import { CategoryIcon, IconLibrary } from "@/components/common/CategoryIcon";
+import { AccountSelectorModal } from "@/components/modals/AccountSelectorModal";
+import { CategorySelectorModal } from "@/components/modals/CategorySelectorModal";
 import { PageHeader } from "@/components/navigation/PageHeader";
+import { palette } from "@/constants/colors";
+import { useTheme } from "@/context/ThemeContext";
 import { useAccounts } from "@/hooks/useAccounts";
-import { useCategories } from "@/hooks/useCategories";
+import { useCategories, useCategory } from "@/hooks/useCategories";
 import { useMarketRates } from "@/hooks/useMarketRates";
 import { createTransaction } from "@/hooks/useTransactions";
 import { createRecurringPayment, createTransfer } from "@/utils/transactions";
+import { TransactionType } from "@astik/db";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { useEffect, useState } from "react";
+import { Alert, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function AddTransaction(): React.ReactNode {
   const router = useRouter();
@@ -58,7 +57,6 @@ export default function AddTransaction(): React.ReactNode {
 
   // Hooks
   const {
-    categories,
     expenseCategories,
     incomeCategories,
     isLoading: _categoriesLoading,
@@ -72,8 +70,12 @@ export default function AddTransaction(): React.ReactNode {
 
   const relevantCategories =
     type === "EXPENSE" ? expenseCategories : incomeCategories;
-  const selectedCategory =
-    categories.find((c) => c.systemName === selectedCategoryId) || null;
+
+  // Use useCategory hook for display — supports L2/L3 categories
+  // that are not in the root-level categories list
+  const { category: selectedCategory } = useCategory(
+    selectedCategoryId || null
+  );
 
   // Initialize Defaults
   useEffect(() => {
@@ -98,8 +100,16 @@ export default function AddTransaction(): React.ReactNode {
   }, [accounts, selectedAccountId]);
 
   useEffect(() => {
-    if (relevantCategories.length > 0 && !selectedCategoryId) {
-      setSelectedCategoryId(relevantCategories[0].systemName);
+    if (relevantCategories.length === 0) return;
+
+    // If no category selected, or current selection is not valid for the new type,
+    // auto-select the first category of the current type.
+    const isCurrentValid = relevantCategories.some(
+      (c) => c.id === selectedCategoryId
+    );
+
+    if (!selectedCategoryId || !isCurrentValid) {
+      setSelectedCategoryId(relevantCategories[0].id);
     }
   }, [relevantCategories, selectedCategoryId, type]);
 
@@ -295,9 +305,7 @@ export default function AddTransaction(): React.ReactNode {
               <View className="flex-row gap-4 mb-4">
                 {/* Account Field */}
                 <View className="flex-1">
-                  <Text className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-2 px-1">
-                    ACCOUNT
-                  </Text>
+                  <Text className="input-label">ACCOUNT</Text>
                   <TouchableOpacity
                     onPress={() => setIsAccountModalOpen(true)}
                     activeOpacity={0.7}
@@ -320,7 +328,10 @@ export default function AddTransaction(): React.ReactNode {
                               : "wallet-outline"
                         }
                         size={18}
-                        color={selectedCategory?.color || (isDark ? palette.slate[400] : palette.slate[500])}
+                        color={
+                          selectedCategory?.color ||
+                          (isDark ? palette.slate[400] : palette.slate[500])
+                        }
                       />
                     </View>
                     <Text
@@ -334,9 +345,7 @@ export default function AddTransaction(): React.ReactNode {
 
                 {/* Category Field */}
                 <View className="flex-1">
-                  <Text className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-2 px-1">
-                    CATEGORY
-                  </Text>
+                  <Text className="input-label">CATEGORY</Text>
                   <TouchableOpacity
                     onPress={() => setIsCategoryModalOpen(true)}
                     activeOpacity={0.7}
@@ -353,7 +362,9 @@ export default function AddTransaction(): React.ReactNode {
                       {selectedCategory ? (
                         <CategoryIcon
                           iconName={selectedCategory.icon}
-                          iconLibrary={selectedCategory.iconLibrary as IconLibrary}
+                          iconLibrary={
+                            selectedCategory.iconLibrary as IconLibrary
+                          }
                           size={18}
                           color={selectedCategory.color}
                         />
@@ -361,7 +372,9 @@ export default function AddTransaction(): React.ReactNode {
                         <Ionicons
                           name="grid-outline"
                           size={18}
-                          color={isDark ? palette.slate[400] : palette.slate[500]}
+                          color={
+                            isDark ? palette.slate[400] : palette.slate[500]
+                          }
                         />
                       )}
                     </View>
@@ -381,7 +394,7 @@ export default function AddTransaction(): React.ReactNode {
                 categories={relevantCategories}
                 onOpenPicker={() => setIsCategoryModalOpen(true)}
                 recentCategories={relevantCategories.slice(0, 3)}
-                onSelectRecent={(cat) => setSelectedCategoryId(cat.systemName)}
+                onSelectRecent={(cat) => setSelectedCategoryId(cat.id)}
                 hideMainSelector={true}
               />
             </>
@@ -431,13 +444,16 @@ export default function AddTransaction(): React.ReactNode {
         onClose={() => setIsAccountModalOpen(false)}
       />
 
-      <CategorySelectorModal
-        visible={isCategoryModalOpen}
-        categories={relevantCategories}
-        selectedId={selectedCategoryId}
-        onSelect={setSelectedCategoryId}
-        onClose={() => setIsCategoryModalOpen(false)}
-      />
+      {type !== "TRANSFER" && (
+        <CategorySelectorModal
+          visible={isCategoryModalOpen}
+          rootCategories={relevantCategories}
+          selectedId={selectedCategoryId}
+          type={type}
+          onSelect={setSelectedCategoryId}
+          onClose={() => setIsCategoryModalOpen(false)}
+        />
+      )}
     </View>
   );
 }

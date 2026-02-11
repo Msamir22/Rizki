@@ -1,60 +1,242 @@
+import {
+  Breadcrumb,
+  CategoryListItem,
+  CategorySearchBar,
+} from "@/components/category-selector";
+import { palette } from "@/constants/colors";
+import { useTheme } from "@/context/ThemeContext";
+import { useCategoryChildren } from "@/hooks/useCategoryChildren";
+import { useCategoriesWithChildren } from "@/hooks/useCategoriesWithChildren";
+import {
+  useCategoryNavigation,
+  type NavigationDirection,
+} from "@/hooks/useCategoryNavigation";
+import type { Category, TransactionType } from "@astik/db";
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
-import React from "react";
+import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import {
+  ActivityIndicator,
+  FlatList,
   Modal,
-  ScrollView,
   Text,
   TouchableOpacity,
   TouchableWithoutFeedback,
   View,
+  useWindowDimensions,
 } from "react-native";
-import { palette } from "@/constants/colors";
-import { useTheme } from "@/context/ThemeContext";
-import { Category } from "@astik/db";
-import { CategoryIcon, IconLibrary } from "@/components/common/CategoryIcon";
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+/** Duration of slide animations in ms */
+const SLIDE_ANIMATION_DURATION_MS = 250;
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
 
 interface CategorySelectorModalProps {
-  visible: boolean;
-  categories: Category[];
-  selectedId: string;
-  onSelect: (id: string) => void;
-  onClose: () => void;
+  /** Whether the modal is visible */
+  readonly visible: boolean;
+  /** L1 root categories filtered by type (expense/income) */
+  readonly rootCategories: Category[];
+  /** Currently selected category ID */
+  readonly selectedId: string;
+  /** Transaction type for filtering subcategories */
+  readonly type: TransactionType;
+  /** Callback with the selected category's ID */
+  readonly onSelect: (id: string) => void;
+  /** Close the modal */
+  readonly onClose: () => void;
 }
 
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
+/**
+ * Drill-down category selector modal.
+ *
+ * Supports 3-level hierarchy navigation with breadcrumbs, search, and
+ * slide animations. Each row uses the Split Touch Target pattern:
+ * - Tap row body → select category
+ * - Tap chevron → drill into children
+ */
 export function CategorySelectorModal({
   visible,
-  categories,
+  rootCategories,
   selectedId,
+  type,
   onSelect,
   onClose,
 }: CategorySelectorModalProps): React.JSX.Element {
   const { isDark } = useTheme();
+  const { width, height } = useWindowDimensions();
+
+  // Navigation state machine
+  const navigation = useCategoryNavigation();
+  const {
+    stack,
+    currentLevel,
+    depth,
+    searchQuery,
+    direction,
+    drillInto,
+    goBack,
+    jumpToLevel,
+    reset,
+    setSearchQuery,
+  } = navigation;
+
+  // Approximate height reserved for header (~68px), breadcrumb (~42px), search (~48px), padding
+  const HEADER_AREA_HEIGHT = depth > 0 ? 180 : 140;
+  const listMaxHeight = height * 0.8 - HEADER_AREA_HEIGHT;
+
+  // Fetch children for the current parent (null at root → returns [])
+  const parentId = currentLevel.category?.id ?? null;
+  const { children, isLoading } = useCategoryChildren(parentId, type);
+
+  // The categories to display: root at depth 0, children otherwise
+  const displayCategories = depth === 0 ? rootCategories : children;
+
+  // Filter by search query
+  const filteredCategories = useMemo(() => {
+    if (!searchQuery.trim()) return displayCategories;
+    const query = searchQuery.toLowerCase().trim();
+    return displayCategories.filter((cat) =>
+      cat.displayName.toLowerCase().includes(query)
+    );
+  }, [displayCategories, searchQuery]);
+
+  // Determine which displayed categories actually have children in the DB
+  const childrenParentIds = useCategoriesWithChildren(filteredCategories);
+
+  // Auto-skip L1 when there are fewer than MIN_ROOT_FOR_L1 root categories.
+  // This avoids a single-item list (e.g., income with 1 L1 category).
+  const MIN_ROOT_FOR_L1 = 3;
+  const hasAutoSkippedRef = useRef(false);
+
+  useEffect(() => {
+    if (
+      visible &&
+      !hasAutoSkippedRef.current &&
+      depth === 0 &&
+      rootCategories.length > 0 &&
+      rootCategories.length < MIN_ROOT_FOR_L1
+    ) {
+      hasAutoSkippedRef.current = true;
+      drillInto(rootCategories[0]);
+    }
+  }, [visible, depth, rootCategories, drillInto]);
+
+  // Reset the auto-skip flag when the modal closes
+  useEffect(() => {
+    if (!visible) {
+      hasAutoSkippedRef.current = false;
+    }
+  }, [visible]);
+
+  // ---[ Slide animation ]---
+  const translateX = useSharedValue(0);
+  const prevDirectionRef = useRef<NavigationDirection>("forward");
+
+  useEffect(() => {
+    // Skip animation on initial mount
+    if (depth === 0 && prevDirectionRef.current === "forward") return;
+
+    const slideFrom = direction === "forward" ? width : -width;
+    translateX.value = slideFrom;
+    translateX.value = withTiming(0, {
+      duration: SLIDE_ANIMATION_DURATION_MS,
+      easing: Easing.out(Easing.cubic),
+    });
+    prevDirectionRef.current = direction;
+  }, [depth, direction, width, translateX]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }],
+  }));
+
+  // ---[ Handlers ]---
+
+  const handleSelect = useCallback(
+    (categoryId: string) => {
+      onSelect(categoryId);
+      onClose();
+    },
+    [onSelect, onClose]
+  );
+
+  const handleDrillIn = useCallback(
+    (category: Category) => {
+      drillInto(category);
+    },
+    [drillInto]
+  );
+
+  const handleClose = useCallback(() => {
+    onClose();
+    // Reset navigation after a small delay to avoid visual glitch
+    setTimeout(reset, 300);
+  }, [onClose, reset]);
+
+  const searchPlaceholder =
+    depth === 0 ? "Search categories..." : `Search ${currentLevel.label}...`;
+
+  // ---[ FlatList helpers ]---
+
+  const keyExtractor = useCallback((item: Category) => item.id, []);
+
+  const renderItem = useCallback(
+    ({ item }: { item: Category }) => {
+      const hasChildren = childrenParentIds.has(item.id);
+      const isSelected = item.id === selectedId;
+
+      return (
+        <CategoryListItem
+          category={item}
+          hasChildren={hasChildren}
+          isSelected={isSelected}
+          onSelect={() => handleSelect(item.id)}
+          onDrillIn={() => handleDrillIn(item)}
+        />
+      );
+    },
+    [childrenParentIds, selectedId, handleSelect, handleDrillIn]
+  );
 
   return (
     <Modal
       visible={visible}
       transparent
       animationType="slide"
-      onRequestClose={onClose}
+      onRequestClose={handleClose}
     >
-      <TouchableWithoutFeedback onPress={onClose}>
+      <TouchableWithoutFeedback onPress={handleClose}>
         <View className="flex-1 bg-black/60 justify-end">
-          <View className="rounded-t-3xl overflow-hidden max-h-[80%] bg-white dark:bg-slate-900 z-50">
-            <BlurView
-              intensity={40}
-              tint={isDark ? "dark" : "light"}
-              className="absolute inset-0"
-            />
-            <View className="absolute inset-0 bg-white/95 dark:bg-slate-900/95" />
+          <TouchableWithoutFeedback>
+            <View className="rounded-t-3xl overflow-hidden bg-white dark:bg-slate-900">
+              <BlurView
+                intensity={40}
+                tint={isDark ? "dark" : "light"}
+                className="absolute inset-0"
+              />
+              <View className="absolute inset-0 bg-white/95 dark:bg-slate-900/95" />
 
-            <View>
               {/* Header */}
               <View className="flex-row justify-between items-center px-6 py-5 border-b border-slate-200 dark:border-slate-800">
                 <Text className="text-xl font-bold text-slate-800 dark:text-slate-100">
                   Select Category
                 </Text>
-                <TouchableOpacity onPress={onClose} className="p-1">
+                <TouchableOpacity onPress={handleClose} className="p-1">
                   <Ionicons
                     name="close"
                     size={24}
@@ -63,67 +245,56 @@ export function CategorySelectorModal({
                 </TouchableOpacity>
               </View>
 
-              {/* Category Grid */}
-              <ScrollView className="p-4" showsVerticalScrollIndicator={false}>
-                <View className="flex-row flex-wrap gap-3 pb-10">
-                  {categories.map((category) => {
-                    const isSelected = category.systemName === selectedId;
-                    
-                    return (
-                      <TouchableOpacity
-                        key={category.id}
-                        style={{ width: "30%" }}
-                        className="items-center mb-4"
-                        onPress={() => {
-                          onSelect(category.systemName);
-                          onClose();
-                        }}
-                      >
-                        <View
-                          className={`w-16 h-16 rounded-3xl items-center justify-center mb-2 border-2 ${
-                            isSelected
-                              ? "border-nileGreen-500"
-                              : "border-transparent bg-slate-50 dark:bg-slate-800/50"
-                          }`}
-                          style={{
-                            backgroundColor: isSelected 
-                              ? `${category.color}20` 
-                              : undefined
-                          }}
-                        >
-                          <CategoryIcon
-                            iconName={category.icon}
-                            iconLibrary={category.iconLibrary as IconLibrary}
-                            size={28}
-                            color={category.color}
-                          />
-                          {isSelected && (
-                            <View className="absolute -top-1 -right-1 bg-white dark:bg-slate-900 rounded-full">
-                              <Ionicons
-                                name="checkmark-circle"
-                                size={20}
-                                color={palette.nileGreen[600]}
-                              />
-                            </View>
-                          )}
-                        </View>
-                        <Text
-                          numberOfLines={1}
-                          className={`text-xs text-center font-medium ${
-                            isSelected
-                              ? "text-nileGreen-700 dark:text-nileGreen-300 font-bold"
-                              : "text-slate-600 dark:text-slate-400"
-                          }`}
-                        >
-                          {category.displayName}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </ScrollView>
+              {/* Breadcrumb (only when drilled in) */}
+              {depth > 0 && (
+                <Breadcrumb
+                  stack={stack}
+                  onJumpToLevel={jumpToLevel}
+                  onGoBack={goBack}
+                />
+              )}
+
+              {/* Search bar */}
+              <CategorySearchBar
+                placeholder={searchPlaceholder}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+
+              {/* Category list with slide animation */}
+              <Animated.View
+                style={[animatedStyle, { maxHeight: listMaxHeight }]}
+              >
+                {isLoading && depth > 0 ? (
+                  <View className="items-center justify-center py-12">
+                    <ActivityIndicator
+                      size="small"
+                      color={palette.nileGreen[500]}
+                    />
+                  </View>
+                ) : filteredCategories.length === 0 ? (
+                  <View className="items-center justify-center py-12">
+                    <Text className="text-sm text-slate-400 dark:text-slate-500">
+                      {searchQuery.trim()
+                        ? "No categories match your search"
+                        : "No categories found"}
+                    </Text>
+                  </View>
+                ) : (
+                  <FlatList
+                    data={filteredCategories}
+                    keyExtractor={keyExtractor}
+                    renderItem={renderItem}
+                    contentContainerClassName="px-4 pb-10 pt-1"
+                    showsVerticalScrollIndicator={false}
+                    removeClippedSubviews
+                    maxToRenderPerBatch={15}
+                    windowSize={5}
+                  />
+                )}
+              </Animated.View>
             </View>
-          </View>
+          </TouchableWithoutFeedback>
         </View>
       </TouchableWithoutFeedback>
     </Modal>
