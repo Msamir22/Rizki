@@ -1,10 +1,16 @@
 /**
  * Create Recurring Payment Page
  * Form to add a new recurring payment/bill
- * Design: Option B - Sectioned form with icons
  */
 
-import { Category, database, RecurringPayment } from "@astik/db";
+import { PageHeader } from "@/components/navigation/PageHeader";
+import { CategoryPicker } from "@/components/add-transaction/CategoryPicker";
+import { StarryBackground } from "@/components/ui/StarryBackground";
+import { palette } from "@/constants/colors";
+import { useTheme } from "@/context/ThemeContext";
+import { useAccounts } from "@/hooks/useAccounts";
+import { useCategories } from "@/hooks/useCategories";
+import { database, RecurringPayment, Category, Account } from "@astik/db";
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { router } from "expo-router";
@@ -12,27 +18,24 @@ import React, { useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   ScrollView,
   Text,
   TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { PageHeader } from "@/components/navigation/PageHeader";
-import { StarryBackground } from "@/components/ui/StarryBackground";
-import { palette } from "@/constants/colors";
-import { useAccounts } from "@/hooks/useAccounts";
-import { useCategories } from "@/hooks/useCategories";
-import { useTheme } from "@/context/ThemeContext";
+import { BlurView } from "expo-blur";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 type TransactionType = "EXPENSE" | "INCOME";
-type Frequency = "WEEKLY" | "MONTHLY" | "YEARLY";
+type Frequency = "DAILY" | "WEEKLY" | "MONTHLY" | "QUARTERLY" | "YEARLY";
 
 interface FormData {
   name: string;
@@ -43,35 +46,20 @@ interface FormData {
   accountId: string;
   categoryId: string;
   autoCreate: boolean;
+  notes: string;
 }
 
 // =============================================================================
-// Helper: Get category icon
+// Frequency Options
 // =============================================================================
 
-function getCategoryIcon(name: string): keyof typeof Ionicons.glyphMap {
-  const n = name.toLowerCase();
-  if (n.includes("shopping") || n.includes("shop")) return "cart-outline";
-  if (n.includes("rent") || n.includes("home") || n.includes("house"))
-    return "home-outline";
-  if (
-    n.includes("entertainment") ||
-    n.includes("stream") ||
-    n.includes("netflix")
-  )
-    return "play-circle-outline";
-  if (n.includes("food") || n.includes("restaurant") || n.includes("dining"))
-    return "restaurant-outline";
-  if (n.includes("transport") || n.includes("car") || n.includes("uber"))
-    return "car-outline";
-  if (n.includes("health") || n.includes("medical") || n.includes("gym"))
-    return "fitness-outline";
-  if (n.includes("utility") || n.includes("electric") || n.includes("water"))
-    return "flash-outline";
-  if (n.includes("subscription")) return "card-outline";
-  if (n.includes("salary") || n.includes("income")) return "cash-outline";
-  return "add-outline";
-}
+const FREQUENCY_OPTIONS: { value: Frequency; label: string }[] = [
+  { value: "DAILY", label: "Daily" },
+  { value: "WEEKLY", label: "Weekly" },
+  { value: "MONTHLY", label: "Monthly" },
+  { value: "QUARTERLY", label: "Quarterly" },
+  { value: "YEARLY", label: "Yearly" },
+];
 
 // =============================================================================
 // Components
@@ -84,16 +72,30 @@ interface TypeToggleProps {
 
 function TypeToggle({ value, onChange }: TypeToggleProps): React.JSX.Element {
   const { isDark } = useTheme();
+
   return (
     <View className="flex-row mb-6">
       {/* Expense Button */}
       <TouchableOpacity
         onPress={() => onChange("EXPENSE")}
-        className={`flex-1 py-3 rounded-full mr-2 flex-row items-center justify-center border ${
+        className={`flex-1 py-3 rounded-full mr-2 flex-row items-center justify-center ${
           value === "EXPENSE"
-            ? "bg-nileGreen-700/80 border-nileGreen-500 shadow-md shadow-nileGreen-500/40"
-            : "bg-slate-200 dark:bg-slate-800/50 border-slate-300 dark:border-slate-700"
+            ? "bg-nileGreen-700/80 border border-nileGreen-500"
+            : isDark
+              ? "bg-slate-800/50 border border-slate-700"
+              : "bg-slate-200 border border-slate-300"
         }`}
+        style={
+          value === "EXPENSE"
+            ? {
+                shadowColor: palette.nileGreen[500],
+                shadowOffset: { width: 0, height: 0 },
+                shadowOpacity: 0.4,
+                shadowRadius: 8,
+                elevation: 4,
+              }
+            : {}
+        }
       >
         <Ionicons
           name="receipt-outline"
@@ -110,7 +112,9 @@ function TypeToggle({ value, onChange }: TypeToggleProps): React.JSX.Element {
           className={`ml-2 font-semibold text-sm ${
             value === "EXPENSE"
               ? "text-white"
-              : "text-slate-500 dark:text-slate-400"
+              : isDark
+                ? "text-slate-400"
+                : "text-slate-500"
           }`}
         >
           Expense
@@ -120,26 +124,43 @@ function TypeToggle({ value, onChange }: TypeToggleProps): React.JSX.Element {
       {/* Income Button */}
       <TouchableOpacity
         onPress={() => onChange("INCOME")}
-        className={`flex-1 py-3 rounded-full flex-row items-center justify-center border ${
+        className={`flex-1 py-3 rounded-full flex-row items-center justify-center ${
           value === "INCOME"
-            ? "bg-nileGreen-700/80 border-nileGreen-500 shadow-md shadow-nileGreen-500/40"
-            : "bg-slate-200 dark:bg-slate-800/50 border-slate-300 dark:border-slate-700"
+            ? "bg-nileGreen-700/80 border border-nileGreen-500"
+            : isDark
+              ? "bg-slate-800/50 border border-slate-700"
+              : "bg-slate-200 border border-slate-300"
         }`}
+        style={
+          value === "INCOME"
+            ? {
+                shadowColor: palette.nileGreen[500],
+                shadowOffset: { width: 0, height: 0 },
+                shadowOpacity: 0.4,
+                shadowRadius: 8,
+                elevation: 4,
+              }
+            : {}
+        }
       >
         <Ionicons
           name="cash-outline"
           size={16}
-          className={
+          color={
             value === "INCOME"
-              ? "text-white"
-              : "text-slate-500 dark:text-slate-400"
+              ? "white"
+              : isDark
+                ? palette.slate[400]
+                : palette.slate[500]
           }
         />
         <Text
           className={`ml-2 font-semibold text-sm ${
             value === "INCOME"
               ? "text-white"
-              : "text-slate-500 dark:text-slate-400"
+              : isDark
+                ? "text-slate-400"
+                : "text-slate-500"
           }`}
         >
           Income
@@ -149,114 +170,247 @@ function TypeToggle({ value, onChange }: TypeToggleProps): React.JSX.Element {
   );
 }
 
-interface FrequencyPickerProps {
-  value: Frequency;
-  onChange: (freq: Frequency) => void;
+interface FrequencyPickerModalProps {
+  visible: boolean;
+  selectedFrequency: Frequency;
+  onSelect: (freq: Frequency) => void;
+  onClose: () => void;
 }
 
-function FrequencyPicker({
-  value,
-  onChange,
-}: FrequencyPickerProps): React.JSX.Element {
-  const frequencies: Frequency[] = ["WEEKLY", "MONTHLY", "YEARLY"];
+function FrequencyPickerModal({
+  visible,
+  selectedFrequency,
+  onSelect,
+  onClose,
+}: FrequencyPickerModalProps): React.JSX.Element {
+  const { isDark } = useTheme();
 
   return (
-    <View className="flex-row gap-2 mb-4">
-      {frequencies.map((freq) => (
-        <TouchableOpacity
-          key={freq}
-          onPress={() => onChange(freq)}
-          className={`flex-1 py-2.5 rounded-full items-center border ${
-            value === freq
-              ? "bg-nileGreen-700/80 border-nileGreen-500 shadow-md shadow-nileGreen-500/30"
-              : "bg-slate-200 dark:bg-slate-800/80 border-slate-300 dark:border-slate-700"
-          }`}
-        >
-          <Text
-            className={`text-sm font-medium ${
-              value === freq
-                ? "text-white"
-                : "text-slate-500 dark:text-slate-400"
-            }`}
-          >
-            {freq.charAt(0) + freq.slice(1).toLowerCase()}
-          </Text>
-        </TouchableOpacity>
-      ))}
-    </View>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}
+    >
+      <TouchableWithoutFeedback onPress={onClose}>
+        <View className="flex-1 bg-black/80 justify-end">
+          <View className="rounded-t-3xl overflow-hidden max-h-[70%] bg-white dark:bg-slate-900">
+            <BlurView
+              intensity={40}
+              tint={isDark ? "dark" : "light"}
+              className="absolute inset-0"
+            />
+            <View className="absolute inset-0 bg-white/95 dark:bg-slate-900/95" />
+
+            <View>
+              {/* Header */}
+              <View className="flex-row justify-between items-center px-5 py-5 border-b border-slate-200 dark:border-slate-800">
+                <Text className="text-xl font-bold text-slate-800 dark:text-slate-100">
+                  Select Frequency
+                </Text>
+                <TouchableOpacity onPress={onClose} className="p-1">
+                  <Ionicons
+                    name="close"
+                    size={24}
+                    color={isDark ? palette.slate[300] : palette.slate[500]}
+                  />
+                </TouchableOpacity>
+              </View>
+
+              {/* Options */}
+              <View className="p-4">
+                <View className="flex-row flex-wrap gap-3">
+                  {FREQUENCY_OPTIONS.map((option) => {
+                    const isSelected = selectedFrequency === option.value;
+                    return (
+                      <TouchableOpacity
+                        key={option.value}
+                        className={`flex-row items-center justify-center px-4 py-3 rounded-xl border ${
+                          isSelected
+                            ? "bg-nileGreen-100 dark:bg-nileGreen-900/40 border-nileGreen-500 dark:border-nileGreen-600"
+                            : "bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+                        }`}
+                        style={{ width: "48%" }}
+                        onPress={() => {
+                          onSelect(option.value);
+                          onClose();
+                        }}
+                      >
+                        {isSelected && (
+                          <Ionicons
+                            name="checkmark-circle"
+                            size={16}
+                            color={
+                              isDark
+                                ? palette.nileGreen[400]
+                                : palette.nileGreen[600]
+                            }
+                            style={{ marginRight: 6 }}
+                          />
+                        )}
+                        <Text
+                          className={`text-sm font-medium ${
+                            isSelected
+                              ? "text-nileGreen-700 dark:text-nileGreen-300 font-semibold"
+                              : "text-slate-700 dark:text-slate-300"
+                          }`}
+                        >
+                          {option.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+            </View>
+          </View>
+        </View>
+      </TouchableWithoutFeedback>
+    </Modal>
   );
 }
 
-interface CategoryPickerProps {
-  categories: Category[];
+interface AccountPickerModalProps {
+  visible: boolean;
+  accounts: Account[];
   selectedId: string;
   onSelect: (id: string) => void;
+  onClose: () => void;
 }
 
-function CategoryPicker({
-  categories,
+function AccountPickerModal({
+  visible,
+  accounts,
   selectedId,
   onSelect,
-}: CategoryPickerProps): React.JSX.Element {
-  // Get only L1 categories for selection
-  const l1Categories = categories.filter((c) => c.level === 1).slice(0, 6);
+  onClose,
+}: AccountPickerModalProps): React.JSX.Element {
+  const { isDark } = useTheme();
+
+  const getAccountIcon = (
+    type: string
+  ): keyof typeof Ionicons.glyphMap => {
+    if (type === "BANK") return "business-outline";
+    if (type === "DIGITAL_WALLET") return "card-outline";
+    return "wallet-outline";
+  };
 
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      className="py-2"
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}
     >
-      {l1Categories.map((cat) => {
-        const isSelected = selectedId === cat.id;
-        return (
-          <TouchableOpacity
-            key={cat.id}
-            onPress={() => onSelect(cat.id)}
-            className="items-center mr-4"
-          >
-            <View
-              className={`w-14 h-14 rounded-full items-center justify-center mb-1 border ${
-                isSelected
-                  ? "bg-nileGreen-500/30 border-nileGreen-500 shadow-md shadow-nileGreen-500/50"
-                  : "bg-slate-200 dark:bg-slate-700/80 border-slate-300 dark:border-slate-600"
-              }`}
-            >
-              <Ionicons
-                name={getCategoryIcon(cat.displayName)}
-                size={24}
-                className={
-                  isSelected
-                    ? "text-nileGreen-500"
-                    : "text-slate-500 dark:text-slate-400"
-                }
-              />
+      <TouchableWithoutFeedback onPress={onClose}>
+        <View className="flex-1 bg-black/80 justify-end">
+          <View className="rounded-t-3xl overflow-hidden max-h-[70%] bg-white dark:bg-slate-900">
+            <BlurView
+              intensity={40}
+              tint={isDark ? "dark" : "light"}
+              className="absolute inset-0"
+            />
+            <View className="absolute inset-0 bg-white/95 dark:bg-slate-900/95" />
+
+            <View>
+              {/* Header */}
+              <View className="flex-row justify-between items-center px-5 py-5 border-b border-slate-200 dark:border-slate-800">
+                <Text className="text-xl font-bold text-slate-800 dark:text-slate-100">
+                  Select Account
+                </Text>
+                <TouchableOpacity onPress={onClose} className="p-1">
+                  <Ionicons
+                    name="close"
+                    size={24}
+                    color={isDark ? palette.slate[300] : palette.slate[500]}
+                  />
+                </TouchableOpacity>
+              </View>
+
+              {/* Accounts List */}
+              <ScrollView className="p-4" style={{ maxHeight: 400 }}>
+                {accounts.length === 0 ? (
+                  <View className="items-center py-8">
+                    <Text className="text-slate-500 dark:text-slate-400">
+                      No accounts found
+                    </Text>
+                    <Text className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                      Tap here to add one
+                    </Text>
+                  </View>
+                ) : (
+                  accounts.map((account) => {
+                    const isSelected = account.id === selectedId;
+                    return (
+                      <TouchableOpacity
+                        key={account.id}
+                        onPress={() => {
+                          onSelect(account.id);
+                          onClose();
+                        }}
+                        className={`flex-row items-center p-4 rounded-xl mb-3 border ${
+                          isSelected
+                            ? "bg-nileGreen-50 dark:bg-nileGreen-900/20 border-nileGreen-500 dark:border-nileGreen-600"
+                            : "bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+                        }`}
+                      >
+                        <View
+                          className={`w-10 h-10 rounded-full items-center justify-center mr-3`}
+                          style={{
+                            backgroundColor: isSelected
+                              ? palette.nileGreen[500]
+                              : isDark
+                                ? "rgba(255,255,255,0.05)"
+                                : "#F1F5F9",
+                          }}
+                        >
+                          <Ionicons
+                            name={getAccountIcon(account.type)}
+                            size={20}
+                            color={
+                              isSelected
+                                ? "#FFF"
+                                : isDark
+                                  ? "#A0AEC0"
+                                  : "#64748B"
+                            }
+                          />
+                        </View>
+                        <View className="flex-1">
+                          <Text
+                            className={`text-sm font-semibold ${
+                              isSelected
+                                ? "text-nileGreen-700 dark:text-nileGreen-300"
+                                : "text-slate-700 dark:text-slate-300"
+                            }`}
+                          >
+                            {account.name}
+                          </Text>
+                          <Text className="text-xs text-slate-400 dark:text-slate-500">
+                            {account.balance.toLocaleString()} {account.currency}
+                          </Text>
+                        </View>
+                        {isSelected && (
+                          <Ionicons
+                            name="checkmark-circle"
+                            size={20}
+                            color={
+                              isDark
+                                ? palette.nileGreen[400]
+                                : palette.nileGreen[600]
+                            }
+                          />
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })
+                )}
+              </ScrollView>
             </View>
-            <Text
-              className={`text-xs ${
-                isSelected
-                  ? "text-nileGreen-500 font-medium"
-                  : "text-slate-500 dark:text-slate-400"
-              }`}
-              numberOfLines={1}
-            >
-              {cat.displayName}
-            </Text>
-          </TouchableOpacity>
-        );
-      })}
-      {/* Add new category option */}
-      <TouchableOpacity className="items-center mr-4">
-        <View className="w-14 h-14 rounded-full items-center justify-center mb-1 border bg-slate-200 dark:bg-slate-700/80 border-slate-300 dark:border-slate-600">
-          <Ionicons
-            name="add-outline"
-            size={24}
-            className="text-slate-500 dark:text-slate-400"
-          />
+          </View>
         </View>
-        <Text className="text-xs text-slate-500 dark:text-slate-400">Add</Text>
-      </TouchableOpacity>
-    </ScrollView>
+      </TouchableWithoutFeedback>
+    </Modal>
   );
 }
 
@@ -265,9 +419,10 @@ function CategoryPicker({
 // =============================================================================
 
 export default function CreateRecurringPaymentScreen(): React.JSX.Element {
+  const { isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const { accounts } = useAccounts();
-  const { categories } = useCategories();
+  const { categories, expenseCategories, incomeCategories } = useCategories();
 
   const [formData, setFormData] = useState<FormData>({
     name: "",
@@ -278,11 +433,25 @@ export default function CreateRecurringPaymentScreen(): React.JSX.Element {
     accountId: accounts[0]?.id || "",
     categoryId: "",
     autoCreate: false,
+    notes: "",
   });
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showFrequencyModal, setShowFrequencyModal] = useState(false);
+  const [showAccountModal, setShowAccountModal] = useState(false);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const inputBg = isDark ? "bg-slate-800/80" : "bg-slate-100";
+  const inputBorder = isDark ? "border-slate-700" : "border-slate-200";
+  const textColor = isDark ? "text-white" : "text-slate-800";
+  const labelColor = isDark ? "text-slate-400" : "text-slate-500";
+
   const selectedAccount = accounts.find((a) => a.id === formData.accountId);
+  const relevantCategories =
+    formData.type === "EXPENSE" ? expenseCategories : incomeCategories;
+  const selectedCategory = relevantCategories.find(
+    (c) => c.id === formData.categoryId
+  );
 
   const handleDateChange = (event: unknown, selectedDate?: Date): void => {
     setShowDatePicker(Platform.OS === "ios");
@@ -297,6 +466,10 @@ export default function CreateRecurringPaymentScreen(): React.JSX.Element {
       day: "numeric",
       year: "numeric",
     });
+  };
+
+  const getFrequencyLabel = (freq: Frequency): string => {
+    return FREQUENCY_OPTIONS.find((o) => o.value === freq)?.label || freq;
   };
 
   const handleSubmit = async (): Promise<void> => {
@@ -317,9 +490,10 @@ export default function CreateRecurringPaymentScreen(): React.JSX.Element {
             payment.startDate = formData.startDate;
             payment.nextDueDate = formData.startDate;
             payment.accountId = formData.accountId;
-            payment.categoryId = formData.categoryId;
+            payment.categoryId = formData.categoryId || relevantCategories[0]?.id;
             payment.action = formData.autoCreate ? "AUTO_CREATE" : "NOTIFY";
             payment.status = "ACTIVE";
+            payment.notes = formData.notes || null;
           });
       });
       router.back();
@@ -330,20 +504,26 @@ export default function CreateRecurringPaymentScreen(): React.JSX.Element {
     }
   };
 
+  const handleCategorySelect = (categoryId: string) => {
+    setFormData({ ...formData, categoryId });
+    setShowCategoryModal(false);
+  };
+
   return (
     <StarryBackground>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         className="flex-1"
       >
+        {/* Header */}
+        <PageHeader title="New Recurring Payment" showBack />
+
         <View
           className="flex-1 px-5"
           style={{
             paddingBottom: insets.bottom + 20,
           }}
         >
-          <PageHeader title="New Bill" showBackButton={true} backIcon="close" />
-
           <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
             {/* Type Toggle */}
             <TypeToggle
@@ -352,28 +532,26 @@ export default function CreateRecurringPaymentScreen(): React.JSX.Element {
             />
 
             {/* Payment Details Section */}
-            <Text className="text-base font-semibold mb-3 text-slate-800 dark:text-white">
+            <Text className={`text-base font-semibold mb-3 ${textColor}`}>
               Payment Details
             </Text>
             <View className="flex-row gap-3 mb-6">
               {/* Name Input */}
               <View className="flex-1">
-                <Text className="text-xs mb-1.5 text-slate-500 dark:text-slate-400">
-                  Name
-                </Text>
+                <Text className={`text-xs mb-1.5 ${labelColor}`}>Name</Text>
                 <TextInput
                   value={formData.name}
                   onChangeText={(name) => setFormData({ ...formData, name })}
                   placeholder="Netflix, Spotify..."
-                  placeholderTextColor={palette.slate[400]}
-                  className="px-4 py-3.5 rounded-xl border bg-slate-100 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white"
+                  placeholderTextColor={
+                    isDark ? palette.slate[500] : palette.slate[400]
+                  }
+                  className={`px-4 py-3.5 rounded-xl border ${inputBg} ${inputBorder} ${textColor}`}
                 />
               </View>
               {/* Amount Input */}
               <View style={{ width: 110 }}>
-                <Text className="text-xs mb-1.5 text-slate-500 dark:text-slate-400">
-                  Amount
-                </Text>
+                <Text className={`text-xs mb-1.5 ${labelColor}`}>Amount</Text>
                 <View className="flex-row items-center">
                   <TextInput
                     value={formData.amount}
@@ -382,49 +560,54 @@ export default function CreateRecurringPaymentScreen(): React.JSX.Element {
                     }
                     placeholder="0.00"
                     keyboardType="decimal-pad"
-                    placeholderTextColor={palette.slate[400]}
-                    className="flex-1 px-3 py-3.5 rounded-l-xl border-l border-t border-b bg-slate-100 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white text-base"
+                    placeholderTextColor={
+                      isDark ? palette.slate[500] : palette.slate[400]
+                    }
+                    className={`flex-1 px-3 py-3.5 rounded-l-xl border-l border-t border-b ${inputBg} ${inputBorder} ${textColor} text-base`}
                   />
-                  <View className="px-3 py-3.5 rounded-r-xl border bg-slate-100 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 justify-center">
-                    <Text className="text-slate-500 dark:text-slate-400">
-                      $
-                    </Text>
+                  <View
+                    className={`px-3 py-3.5 rounded-r-xl border ${inputBg} ${inputBorder} justify-center`}
+                  >
+                    <Text className={labelColor}>$</Text>
                   </View>
                 </View>
               </View>
             </View>
 
             {/* Schedule Section */}
-            <Text className="text-base font-semibold mb-3 text-slate-800 dark:text-white">
+            <Text className={`text-base font-semibold mb-3 ${textColor}`}>
               Schedule
             </Text>
-            <Text className="text-xs mb-2 text-slate-500 dark:text-slate-400">
-              Frequency
-            </Text>
-            <FrequencyPicker
-              value={formData.frequency}
-              onChange={(frequency) => setFormData({ ...formData, frequency })}
-            />
+            
+            {/* Frequency Dropdown */}
+            <Text className={`text-xs mb-2 ${labelColor}`}>Frequency</Text>
+            <TouchableOpacity
+              onPress={() => setShowFrequencyModal(true)}
+              className={`flex-row items-center justify-between px-4 py-3.5 rounded-xl border mb-4 ${inputBg} ${inputBorder}`}
+            >
+              <Text className={textColor}>{getFrequencyLabel(formData.frequency)}</Text>
+              <Ionicons
+                name="chevron-down"
+                size={20}
+                color={isDark ? palette.slate[400] : palette.slate[500]}
+              />
+            </TouchableOpacity>
+
             {/* Start Date */}
+            <Text className={`text-xs mb-2 ${labelColor}`}>Start Date</Text>
             <TouchableOpacity
               onPress={() => setShowDatePicker(true)}
-              className="flex-row items-center justify-between px-4 py-3.5 rounded-xl border mb-6 bg-slate-100 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700"
+              className={`flex-row items-center justify-between px-4 py-3.5 rounded-xl border mb-6 ${inputBg} ${inputBorder}`}
             >
-              <Text
-                className={
-                  formData.startDate
-                    ? "text-slate-800 dark:text-white"
-                    : "text-slate-500 dark:text-slate-400"
-                }
-              >
+              <Text className={formData.startDate ? textColor : labelColor}>
                 {formData.startDate
                   ? formatDate(formData.startDate)
-                  : "Start Date"}
+                  : "Select Date"}
               </Text>
               <Ionicons
                 name="calendar-outline"
                 size={20}
-                className="text-slate-500 dark:text-slate-400"
+                color={isDark ? palette.slate[400] : palette.slate[500]}
               />
             </TouchableOpacity>
 
@@ -439,24 +622,31 @@ export default function CreateRecurringPaymentScreen(): React.JSX.Element {
             )}
 
             {/* Linked Account Section */}
-            <Text className="text-base font-semibold mb-3 text-slate-800 dark:text-white">
+            <Text className={`text-base font-semibold mb-3 ${textColor}`}>
               Linked Account
             </Text>
-            <TouchableOpacity className="flex-row items-center justify-between px-4 py-3 rounded-xl border mb-6 bg-slate-100 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700">
+            <TouchableOpacity
+              onPress={() => setShowAccountModal(true)}
+              className={`flex-row items-center justify-between px-4 py-3 rounded-xl border mb-6 ${inputBg} ${inputBorder}`}
+            >
               <View className="flex-row items-center">
-                <View className="w-10 h-10 rounded-lg items-center justify-center mr-3 bg-slate-200 dark:bg-slate-700">
+                <View
+                  className={`w-10 h-10 rounded-lg items-center justify-center mr-3 ${
+                    isDark ? "bg-slate-700" : "bg-slate-200"
+                  }`}
+                >
                   <Ionicons
                     name="card-outline"
                     size={20}
-                    className="text-slate-600 dark:text-slate-300"
+                    color={isDark ? palette.slate[300] : palette.slate[600]}
                   />
                 </View>
                 <View>
-                  <Text className="text-sm font-medium text-slate-800 dark:text-white">
+                  <Text className={`text-sm font-medium ${textColor}`}>
                     {selectedAccount?.name || "Select Account"}
                   </Text>
                   {selectedAccount && (
-                    <Text className="text-xs text-slate-500 dark:text-slate-400">
+                    <Text className={`text-xs ${labelColor}`}>
                       {selectedAccount.balance.toLocaleString()}{" "}
                       {selectedAccount.currency}
                     </Text>
@@ -466,18 +656,36 @@ export default function CreateRecurringPaymentScreen(): React.JSX.Element {
               <Ionicons
                 name="chevron-down"
                 size={20}
-                className="text-slate-500 dark:text-slate-400"
+                color={isDark ? palette.slate[400] : palette.slate[500]}
               />
             </TouchableOpacity>
 
             {/* Category Section */}
-            <Text className="text-base font-semibold mb-3 text-slate-800 dark:text-white">
+            <Text className={`text-base font-semibold mb-3 ${textColor}`}>
               Category
             </Text>
             <CategoryPicker
-              categories={categories}
-              selectedId={formData.categoryId}
-              onSelect={(id) => setFormData({ ...formData, categoryId: id })}
+              selectedCategory={selectedCategory || null}
+              categories={relevantCategories}
+              onOpenPicker={() => setShowCategoryModal(true)}
+              onSelectRecent={handleCategorySelect}
+            />
+
+            {/* Optional Notes */}
+            <Text className={`text-base font-semibold mb-3 ${textColor}`}>
+              Notes (Optional)
+            </Text>
+            <TextInput
+              value={formData.notes}
+              onChangeText={(notes) => setFormData({ ...formData, notes })}
+              placeholder="Add notes..."
+              placeholderTextColor={
+                isDark ? palette.slate[500] : palette.slate[400]
+              }
+              multiline
+              numberOfLines={3}
+              textAlignVertical="top"
+              className={`px-4 py-3 rounded-xl border ${inputBg} ${inputBorder} ${textColor} mb-6`}
             />
           </ScrollView>
 
@@ -505,10 +713,28 @@ export default function CreateRecurringPaymentScreen(): React.JSX.Element {
             {isSubmitting ? (
               <ActivityIndicator color="white" />
             ) : (
-              <Text className="text-white text-base font-bold">Save</Text>
+              <Text className="text-white text-base font-bold">
+                Add Transaction
+              </Text>
             )}
           </TouchableOpacity>
         </View>
+
+        {/* Modals */}
+        <FrequencyPickerModal
+          visible={showFrequencyModal}
+          selectedFrequency={formData.frequency}
+          onSelect={(frequency) => setFormData({ ...formData, frequency })}
+          onClose={() => setShowFrequencyModal(false)}
+        />
+
+        <AccountPickerModal
+          visible={showAccountModal}
+          accounts={accounts}
+          selectedId={formData.accountId}
+          onSelect={(accountId) => setFormData({ ...formData, accountId })}
+          onClose={() => setShowAccountModal(false)}
+        />
       </KeyboardAvoidingView>
     </StarryBackground>
   );
