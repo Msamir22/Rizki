@@ -1,71 +1,43 @@
-import { database, type Category } from "@astik/db";
-import { Q } from "@nozbe/watermelondb";
-import { useEffect, useMemo, useRef, useState } from "react";
+/**
+ * Hook to determine which categories have children.
+ *
+ * Reads from the global CategoriesContext (single subscription) and
+ * derives the parent-IDs set in-memory. No own DB subscription is created.
+ */
+
+import type { Category } from "@astik/db";
+import { useMemo } from "react";
+import { useAllCategories } from "../context/CategoriesContext";
 
 /**
- * Given a list of categories, determines which ones actually have children
- * in the database. Returns a `Set<string>` of category IDs that are parents.
+ * Given a list of categories, determines which ones actually have
+ * children. Returns a `Set<string>` of category IDs that are parents.
  *
- * Uses a single optimized query: finds all categories whose `parent_id`
- * matches one of the provided IDs, then extracts the distinct parent IDs.
+ * Derived entirely from the global categories context — no extra
+ * DB query is issued.
  */
-export function useCategoriesWithChildren(categories: Category[]): Set<string> {
-  const [parentIds, setParentIds] = useState<Set<string>>(new Set());
+export function useCategoriesWithChildren(
+  categories: readonly Category[]
+): Set<string> {
+  const { categories: allCategories } = useAllCategories();
 
-  // Stabilize the dependency: only re-run when the actual IDs change,
-  // not when the array reference changes.
-  const idsKey = useMemo(
-    () =>
-      categories
-        .map((c) => c.id)
-        .sort()
-        .join(","),
-    [categories]
-  );
+  return useMemo(() => {
+    if (categories.length === 0) return new Set<string>();
 
-  // Keep sorted IDs in a ref so the effect can read them without
-  // depending on the categories array reference.
-  const categoryIdsRef = useRef<string[]>([]);
-  categoryIdsRef.current = useMemo(
-    () => categories.map((c) => c.id),
-    [categories]
-  );
+    const targetIds = new Set(categories.map((c) => c.id));
 
-  useEffect(() => {
-    const ids = categoryIdsRef.current;
-
-    if (ids.length === 0) {
-      setParentIds(new Set());
-      return;
+    const parentIds = new Set<string>();
+    for (const cat of allCategories) {
+      if (
+        cat.parentId &&
+        targetIds.has(cat.parentId) &&
+        !cat.isInternal &&
+        !cat.isHidden
+      ) {
+        parentIds.add(cat.parentId);
+      }
     }
 
-    const categoriesCollection = database.get<Category>("categories");
-
-    const query = categoriesCollection.query(
-      Q.where("parent_id", Q.oneOf(ids)),
-      Q.where("deleted", false),
-      Q.where("is_internal", false),
-      Q.where("is_hidden", false)
-    );
-
-    const subscription = query.observe().subscribe({
-      next: (children) => {
-        const result = new Set<string>();
-        for (const child of children) {
-          if (child.parentId) {
-            result.add(child.parentId);
-          }
-        }
-        setParentIds(result);
-      },
-      error: (err: unknown) => {
-        console.error("Error checking category children:", err);
-        setParentIds(new Set());
-      },
-    });
-
-    return () => subscription.unsubscribe();
-  }, [idsKey]);
-
-  return parentIds;
+    return parentIds;
+  }, [categories, allCategories]);
 }

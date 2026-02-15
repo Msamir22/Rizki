@@ -1,72 +1,45 @@
-import { Category, database, TransactionType } from "@astik/db";
-import { Q } from "@nozbe/watermelondb";
-import { useEffect, useState } from "react";
+/**
+ * Hook to get child categories of a given parent.
+ *
+ * Reads from the global CategoriesContext (single subscription) and
+ * filters in-memory. No own DB subscription is created.
+ */
+
+import type { Category, TransactionType } from "@astik/db";
+import { useMemo } from "react";
+import { useAllCategories } from "../context/CategoriesContext";
 
 interface UseCategoryChildrenResult {
   /** Child categories of the given parent */
   readonly children: Category[];
-  /** Whether the query is still loading */
+  /** Whether the context is still loading */
   readonly isLoading: boolean;
-  /** Error if the query failed */
-  readonly error: Error | null;
 }
 
 /**
- * Fetches child categories for a given parentId from WatermelonDB.
+ * Returns child categories for a given parentId from the global context.
  * Returns an empty array when parentId is null.
- * Subscribes reactively — list updates automatically if categories change.
+ * Reactively updates whenever the global categories observation emits.
  */
 export function useCategoryChildren(
   parentId: string | null,
   type?: TransactionType
 ): UseCategoryChildrenResult {
-  const [children, setChildren] = useState<Category[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+  const { categories, isLoading } = useAllCategories();
 
-  useEffect(() => {
-    if (!parentId) {
-      setChildren([]);
-      setIsLoading(false);
-      setError(null);
-      return;
-    }
+  const children = useMemo(() => {
+    if (!parentId) return [];
 
-    setIsLoading(true);
-    setError(null);
-
-    const categoriesCollection = database.get<Category>("categories");
-
-    const conditions = [
-      Q.where("parent_id", parentId),
-      Q.where("deleted", false),
-      Q.where("is_internal", false),
-      Q.where("is_hidden", false),
-    ];
-
-    if (type) {
-      conditions.push(Q.where("type", type));
-    }
-
-    const query = categoriesCollection.query(
-      Q.and(...conditions),
-      Q.sortBy("sort_order", "asc")
+    let result = categories.filter(
+      (c) => c.parentId === parentId && !c.isInternal && !c.isHidden
     );
 
-    const subscription = query.observe().subscribe({
-      next: (result) => {
-        setChildren(result);
-        setIsLoading(false);
-      },
-      error: (err: unknown) => {
-        console.error("Error observing category children:", err);
-        setError(err instanceof Error ? err : new Error(String(err)));
-        setIsLoading(false);
-      },
-    });
+    if (type) {
+      result = result.filter((c) => c.type === type);
+    }
 
-    return () => subscription.unsubscribe();
-  }, [parentId, type]);
+    return result;
+  }, [categories, parentId, type]);
 
-  return { children, isLoading, error };
+  return { children, isLoading };
 }

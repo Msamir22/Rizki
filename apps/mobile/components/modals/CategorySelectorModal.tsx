@@ -47,7 +47,7 @@ interface CategorySelectorModalProps {
   /** Whether the modal is visible */
   readonly visible: boolean;
   /** L1 root categories filtered by type (expense/income) */
-  readonly rootCategories: Category[];
+  readonly rootCategories: readonly Category[];
   /** Currently selected category ID */
   readonly selectedId: string;
   /** Transaction type for filtering subcategories */

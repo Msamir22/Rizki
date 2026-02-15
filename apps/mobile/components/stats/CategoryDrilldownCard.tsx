@@ -4,174 +4,24 @@
  * L1 → L2 → L3 navigation with breadcrumbs
  */
 
-import { database, Transaction } from "@astik/db";
+import {
+  DrilldownBreadcrumbs,
+  DrilldownCategoryItem,
+  CHART_COLORS,
+  DEFAULT_DISPLAY_CURRENCY,
+  type BreadcrumbItem,
+  type CategoryData,
+} from "./drilldown";
+import { palette } from "@/constants/colors";
 import { useAllCategories } from "@/context/CategoriesContext";
-import { formatCurrency } from "@astik/logic";
+import { useTheme } from "@/context/ThemeContext";
+import { database, Transaction } from "@astik/db";
+import { formatCurrency, getYearMonthBoundaries } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
 import { Q } from "@nozbe/watermelondb";
 import React, { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Text, View } from "react-native";
 import { PieChart } from "react-native-gifted-charts";
-import { palette } from "@/constants/colors";
-import { useTheme } from "@/context/ThemeContext";
-
-// =============================================================================
-// Types
-// =============================================================================
-
-interface CategoryData {
-  id: string;
-  name: string;
-  displayName: string;
-  amount: number;
-  percentage: number;
-  color: string;
-  level: number;
-  parentId: string | null;
-  childrenIds: string[];
-}
-
-interface BreadcrumbItem {
-  id: string | null;
-  name: string;
-  level: number;
-}
-
-// =============================================================================
-// Constants
-// =============================================================================
-
-const CHART_COLORS = [
-  palette.nileGreen[500],
-  palette.blue[500],
-  palette.orange[500],
-  palette.violet[500],
-  palette.gold[400],
-  palette.red[400],
-  palette.nileGreen[600],
-  palette.blue[600],
-];
-
-// =============================================================================
-// Helper Functions
-// =============================================================================
-
-function getYearMonthBoundaries(
-  year: number,
-  month: number
-): { startDate: number; endDate: number } {
-  const startDate = new Date(year, month - 1, 1).getTime();
-  const endDate = new Date(year, month, 0, 23, 59, 59, 999).getTime();
-  return { startDate, endDate };
-}
-
-// =============================================================================
-// Components
-// =============================================================================
-
-interface BreadcrumbsProps {
-  items: BreadcrumbItem[];
-  onNavigate: (item: BreadcrumbItem) => void;
-}
-
-function Breadcrumbs({
-  items,
-  onNavigate,
-}: BreadcrumbsProps): React.JSX.Element {
-  const { isDark } = useTheme();
-
-  return (
-    <View className="flex-row items-center flex-wrap mb-3">
-      {items.map((item, index) => {
-        const isLast = index === items.length - 1;
-        return (
-          <View key={item.id ?? "root"} className="flex-row items-center">
-            <TouchableOpacity
-              onPress={() => !isLast && onNavigate(item)}
-              disabled={isLast}
-            >
-              <Text
-                className={`text-sm ${
-                  isLast
-                    ? isDark
-                      ? "text-white font-semibold"
-                      : "text-slate-800 font-semibold"
-                    : "text-nileGreen-500"
-                }`}
-              >
-                {item.name}
-              </Text>
-            </TouchableOpacity>
-            {!isLast && (
-              <Ionicons
-                name="chevron-forward"
-                size={14}
-                color={isDark ? palette.slate[500] : palette.slate[400]}
-                style={{ marginHorizontal: 4 }}
-              />
-            )}
-          </View>
-        );
-      })}
-    </View>
-  );
-}
-
-interface CategoryListItemProps {
-  category: CategoryData;
-  onPress: () => void;
-  hasChildren: boolean;
-}
-
-function CategoryListItem({
-  category,
-  onPress,
-  hasChildren,
-}: CategoryListItemProps): React.JSX.Element {
-  const { isDark } = useTheme();
-
-  return (
-    <TouchableOpacity
-      onPress={onPress}
-      disabled={!hasChildren}
-      className="flex-row items-center py-2"
-    >
-      <View
-        className="w-3 h-3 rounded-full mr-3"
-        style={{ backgroundColor: category.color }}
-      />
-      <View className="flex-1">
-        <Text
-          className={`text-sm font-medium ${isDark ? "text-white" : "text-slate-700"}`}
-          numberOfLines={1}
-        >
-          {category.displayName}
-        </Text>
-      </View>
-      <Text
-        className={`text-sm font-semibold mr-2 ${isDark ? "text-slate-300" : "text-slate-600"}`}
-      >
-        {formatCurrency({
-          amount: category.amount,
-          currency: "EGP",
-        })}
-      </Text>
-      <Text
-        className={`text-xs ${isDark ? "text-slate-500" : "text-slate-400"}`}
-      >
-        {category.percentage.toFixed(1)}%
-      </Text>
-      {hasChildren && (
-        <Ionicons
-          name="chevron-forward"
-          size={16}
-          color={isDark ? palette.slate[500] : palette.slate[400]}
-          style={{ marginLeft: 4 }}
-        />
-      )}
-    </TouchableOpacity>
-  );
-}
 
 // =============================================================================
 // Main Component
@@ -243,6 +93,8 @@ export function CategoryDrilldownCard(): React.JSX.Element {
       if (cat.parentId) {
         const parent = map.get(cat.parentId);
         if (parent) {
+          // childrenIds is mutable (string[]) — readonly on the interface
+          // only prevents property reassignment, not array mutation.
           parent.childrenIds.push(cat.id);
         }
       }
@@ -275,12 +127,12 @@ export function CategoryDrilldownCard(): React.JSX.Element {
       while (cat) {
         if (currentParentId === null && cat.level === 1) {
           // At root, aggregate to L1
-          const current = amountsByCategory.get(cat.id) || 0;
+          const current = amountsByCategory.get(cat.id) ?? 0;
           amountsByCategory.set(cat.id, current + tx.amount);
           break;
         } else if (cat.parentId === currentParentId) {
           // Found category at current level
-          const current = amountsByCategory.get(cat.id) || 0;
+          const current = amountsByCategory.get(cat.id) ?? 0;
           amountsByCategory.set(cat.id, current + tx.amount);
           break;
         }
@@ -302,7 +154,7 @@ export function CategoryDrilldownCard(): React.JSX.Element {
     );
 
     levelCategories.forEach((cat, index) => {
-      const amount = amountsByCategory.get(cat.id) || 0;
+      const amount = amountsByCategory.get(cat.id) ?? 0;
       if (amount > 0) {
         result.push({
           ...cat,
@@ -348,29 +200,24 @@ export function CategoryDrilldownCard(): React.JSX.Element {
     focused: false,
   }));
 
-  const containerClass = isDark
-    ? "bg-slate-800/50 border-slate-700"
-    : "bg-slate-100/50 border-slate-200";
-
   return (
-    <View className={`rounded-2xl border p-4 mb-4 ${containerClass}`}>
+    <View className="rounded-2xl border p-4 mb-4 bg-slate-100/50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700">
       {/* Header */}
       <View className="flex-row items-center justify-between mb-2">
-        <Text
-          className={`text-lg font-bold ${isDark ? "text-white" : "text-slate-800"}`}
-        >
+        <Text className="text-lg font-bold text-slate-800 dark:text-white">
           Category Breakdown
         </Text>
-        <Text
-          className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}
-        >
+        <Text className="text-xs text-slate-500 dark:text-slate-400">
           This Month
         </Text>
       </View>
 
       {/* Breadcrumbs */}
       {breadcrumbs.length > 1 && (
-        <Breadcrumbs items={breadcrumbs} onNavigate={handleBreadcrumbNav} />
+        <DrilldownBreadcrumbs
+          items={breadcrumbs}
+          onNavigate={handleBreadcrumbNav}
+        />
       )}
 
       {/* Content */}
@@ -385,9 +232,7 @@ export function CategoryDrilldownCard(): React.JSX.Element {
             size={40}
             color={isDark ? palette.slate[600] : palette.slate[300]}
           />
-          <Text
-            className={`text-sm mt-3 ${isDark ? "text-slate-500" : "text-slate-400"}`}
-          >
+          <Text className="text-sm mt-3 text-slate-400 dark:text-slate-500">
             No spending data
           </Text>
         </View>
@@ -405,17 +250,13 @@ export function CategoryDrilldownCard(): React.JSX.Element {
               }
               centerLabelComponent={() => (
                 <View className="items-center">
-                  <Text
-                    className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}
-                  >
+                  <Text className="text-xs text-slate-500 dark:text-slate-400">
                     Total
                   </Text>
-                  <Text
-                    className={`text-sm font-bold ${isDark ? "text-white" : "text-slate-800"}`}
-                  >
+                  <Text className="text-sm font-bold text-slate-800 dark:text-white">
                     {formatCurrency({
                       amount: totalAmount,
-                      currency: "EGP",
+                      currency: DEFAULT_DISPLAY_CURRENCY,
                     })}
                   </Text>
                 </View>
@@ -428,11 +269,9 @@ export function CategoryDrilldownCard(): React.JSX.Element {
           </View>
 
           {/* Category List */}
-          <View
-            className={`border-t pt-3 ${isDark ? "border-slate-700" : "border-slate-200"}`}
-          >
+          <View className="border-t pt-3 border-slate-200 dark:border-slate-700">
             {currentLevelData.slice(0, 6).map((cat) => (
-              <CategoryListItem
+              <DrilldownCategoryItem
                 key={cat.id}
                 category={cat}
                 onPress={() => handleDrillDown(cat)}
