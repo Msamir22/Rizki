@@ -1,5 +1,13 @@
 import { getCurrentUserId } from "./supabase";
-import { Account, CurrencyType, database, Transfer } from "@astik/db";
+import {
+  Account,
+  CurrencyType,
+  database,
+  Transaction,
+  Transfer,
+  type TransactionSource,
+  type TransactionType,
+} from "@astik/db";
 
 export interface TransferData {
   amount: number;
@@ -66,14 +74,23 @@ export async function createTransfer(data: TransferData): Promise<void> {
 
 /**
  * Update an existing transfer.
- * Atomically adjusts account balances to reflect the new amount.
+ *
+ * Supports editing: amount, notes, date, fromAccountId, toAccountId.
+ *
+ * Balance adjustment strategies:
+ * - **Amount only**: revert old amounts on both accounts, apply new amounts
+ * - **Account swap**: revert old accounts, apply to new accounts
+ * - **Combined**: both can change simultaneously in a single atomic write
  */
 export async function updateTransfer(
   transferId: string,
   updates: {
-    amount?: number;
-    notes?: string;
-    date?: Date;
+    readonly amount?: number;
+    readonly convertedAmount?: number;
+    readonly notes?: string;
+    readonly date?: Date;
+    readonly fromAccountId?: string;
+    readonly toAccountId?: string;
   }
 ): Promise<void> {
   const transfersCollection = database.get<Transfer>("transfers");
@@ -82,41 +99,188 @@ export async function updateTransfer(
   await database.write(async () => {
     const transfer = await transfersCollection.find(transferId);
 
-    // Handle Amount Update
-    if (updates.amount !== undefined && updates.amount !== transfer.amount) {
-      const fromAccount = await accountsCollection.find(transfer.fromAccountId);
-      const toAccount = await accountsCollection.find(transfer.toAccountId);
+    const oldFromId = transfer.fromAccountId;
+    const oldToId = transfer.toAccountId;
+    const oldAmount = transfer.amount;
+    const oldConvertedAmount = transfer.convertedAmount;
 
-      const oldAmount = transfer.amount;
-      const newAmount = Math.abs(updates.amount);
+    const newFromId = updates.fromAccountId ?? oldFromId;
+    const newToId = updates.toAccountId ?? oldToId;
+    const newAmount =
+      updates.amount !== undefined ? Math.abs(updates.amount) : oldAmount;
 
-      // Update From Account
-      if (newAmount > oldAmount) {
-        const diff = newAmount - oldAmount;
-        if (fromAccount.balance < diff) {
-          throw new Error("Insufficient funds in source account");
-        }
-      }
+    const isFromChanging = newFromId !== oldFromId;
+    const isToChanging = newToId !== oldToId;
+    const isAmountChanging = newAmount !== oldAmount;
 
-      await fromAccount.update((acc) => {
-        // Revert old withdrawal (+) -> Apply new withdrawal (-)
-        acc.balance = acc.balance + oldAmount - newAmount;
+    // Only adjust balances when amount or accounts change
+    if (isFromChanging || isToChanging || isAmountChanging) {
+      // --- Revert old from-account (add back withdrawn amount) ---
+      const oldFromAccount = await accountsCollection.find(oldFromId);
+      await oldFromAccount.update((acc) => {
+        acc.balance += oldAmount;
       });
 
-      // Update To Account (Only if single currency or careful logic)
-      // Assuming single currency updates for now if convertedAmount is not set
-      if (!transfer.convertedAmount) {
-        await toAccount.update((acc) => {
-          // Revert old deposit (-) -> Apply new deposit (+)
-          acc.balance = acc.balance - oldAmount + newAmount;
-        });
-      }
+      // --- Revert old to-account (subtract deposited amount) ---
+      const oldToAccount = await accountsCollection.find(oldToId);
+      const oldDepositAmount = oldConvertedAmount ?? oldAmount;
+      await oldToAccount.update((acc) => {
+        acc.balance -= oldDepositAmount;
+      });
+
+      // --- Apply new from-account (withdraw new amount) ---
+      const newFromAccount = isFromChanging
+        ? await accountsCollection.find(newFromId)
+        : oldFromAccount;
+      await newFromAccount.update((acc) => {
+        acc.balance -= newAmount;
+      });
+
+      // --- Apply new to-account (deposit new amount) ---
+      // For same-currency transfers, deposit = withdrawal amount
+      // For cross-currency, convertedAmount is preserved unless amount changed
+      const newToAccount = isToChanging
+        ? await accountsCollection.find(newToId)
+        : oldToAccount;
+      const newDepositAmount =
+        updates.convertedAmount !== undefined
+          ? Math.abs(updates.convertedAmount)
+          : !isAmountChanging && oldConvertedAmount
+            ? oldConvertedAmount
+            : newAmount;
+      await newToAccount.update((acc) => {
+        acc.balance += newDepositAmount;
+      });
     }
 
     await transfer.update((t) => {
       if (updates.amount !== undefined) t.amount = Math.abs(updates.amount);
+      if (updates.convertedAmount !== undefined)
+        t.convertedAmount = Math.abs(updates.convertedAmount);
       if (updates.notes !== undefined) t.notes = updates.notes;
       if (updates.date !== undefined) t.date = updates.date;
+      if (updates.fromAccountId !== undefined)
+        t.fromAccountId = updates.fromAccountId;
+      if (updates.toAccountId !== undefined)
+        t.toAccountId = updates.toAccountId;
+    });
+  });
+}
+
+// =============================================================================
+// Delete
+// =============================================================================
+
+/**
+ * Mark a transfer as deleted (soft delete).
+ * Atomically reverses both account balance changes and soft-deletes the record.
+ */
+export async function deleteTransfer(transferId: string): Promise<void> {
+  const transfersCollection = database.get<Transfer>("transfers");
+  const accountsCollection = database.get<Account>("accounts");
+
+  await database.write(async () => {
+    const transfer = await transfersCollection.find(transferId);
+
+    // Revert from-account (add back withdrawn amount)
+    const fromAccount = await accountsCollection.find(transfer.fromAccountId);
+    await fromAccount.update((acc) => {
+      acc.balance += transfer.amount;
+    });
+
+    // Revert to-account (subtract deposited amount)
+    const toAccount = await accountsCollection.find(transfer.toAccountId);
+    const depositAmount = transfer.convertedAmount ?? transfer.amount;
+    await toAccount.update((acc) => {
+      acc.balance -= depositAmount;
+    });
+
+    // Soft delete
+    await transfer.update((t) => {
+      t.deleted = true;
+    });
+  });
+}
+
+// =============================================================================
+// Conversion: Transfer → Transaction
+// =============================================================================
+
+interface ConvertToTransactionPayload {
+  readonly transferId: string;
+  readonly accountId: string;
+  readonly type: TransactionType;
+  readonly categoryId: string;
+  readonly counterparty?: string;
+}
+
+/**
+ * Converts a Transfer into a Transaction.
+ *
+ * Atomic operation:
+ * 1. Soft-delete the transfer and revert both account balances
+ * 2. Create a new transaction using the transfer's data
+ * 3. Apply the transaction's balance effect on the chosen account
+ *
+ * The user picks which account (defaults to fromAccountId) and
+ * must provide a type (EXPENSE/INCOME) and categoryId.
+ */
+export async function convertTransferToTransaction(
+  payload: ConvertToTransactionPayload
+): Promise<void> {
+  const userId = await getCurrentUserId();
+  if (!userId) {
+    throw new Error("User not authenticated");
+  }
+
+  const transfersCollection = database.get<Transfer>("transfers");
+  const transactionsCollection = database.get<Transaction>("transactions");
+  const accountsCollection = database.get<Account>("accounts");
+
+  await database.write(async () => {
+    const transfer = await transfersCollection.find(payload.transferId);
+
+    // 1. Revert transfer balance effects
+    const fromAccount = await accountsCollection.find(transfer.fromAccountId);
+    await fromAccount.update((acc) => {
+      acc.balance += transfer.amount; // was -amount, revert
+    });
+
+    const toAccount = await accountsCollection.find(transfer.toAccountId);
+    const depositAmount = transfer.convertedAmount ?? transfer.amount;
+    await toAccount.update((acc) => {
+      acc.balance -= depositAmount; // was +depositAmount, revert
+    });
+
+    // 2. Soft-delete the transfer
+    await transfer.update((t) => {
+      t.deleted = true;
+    });
+
+    // 3. Create the new transaction
+    await transactionsCollection.create((tx: Transaction) => {
+      tx.userId = userId;
+      tx.accountId = payload.accountId;
+      tx.amount = transfer.amount;
+      tx.currency = transfer.currency;
+      tx.type = payload.type;
+      tx.categoryId = payload.categoryId;
+      tx.counterparty = payload.counterparty;
+      tx.date = transfer.date;
+      tx.note = transfer.notes;
+      tx.source = "MANUAL" as TransactionSource;
+      tx.isDraft = false;
+      tx.deleted = false;
+    });
+
+    // 4. Apply transaction balance effect on the chosen account
+    const targetAccount = await accountsCollection.find(payload.accountId);
+    await targetAccount.update((acc) => {
+      if (payload.type === "EXPENSE") {
+        acc.balance -= transfer.amount;
+      } else {
+        acc.balance += transfer.amount;
+      }
     });
   });
 }

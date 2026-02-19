@@ -17,9 +17,10 @@ import { PageHeader } from "@/components/navigation/PageHeader";
 import { EmptyStateCard } from "@/components/ui/EmptyStateCard";
 import { useToast } from "@/components/ui/Toast";
 import { palette } from "@/constants/colors";
+import { useCategoryLookup } from "@/context/CategoriesContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useAccounts } from "@/hooks/useAccounts";
-import { useCategories, useCategory } from "@/hooks/useCategories";
+import { useCategories } from "@/hooks/useCategories";
 import { useCategoryChildren } from "@/hooks/useCategoryChildren";
 import { useMarketRates } from "@/hooks/useMarketRates";
 import { createRecurringPayment } from "@/services/recurring-payment-service";
@@ -94,12 +95,10 @@ export default function AddTransaction(): React.ReactNode {
   const relevantCategories =
     type === "EXPENSE" ? expenseCategories : incomeCategories;
 
-  // Use useCategory hook for display — supports L2/L3 categories
+  // Use global category map — supports L2/L3 categories
   // that are not in the root-level categories list
-  const { category: selectedCategory } = useCategory(
-    selectedCategoryId || null
-  );
-
+  const categoryMap = useCategoryLookup();
+  const selectedCategory = categoryMap.get(selectedCategoryId) ?? null;
   // For income: when only 1 L1 category, fetch its L2 children for chips
   const singleIncomeL1Id =
     type === "INCOME" && incomeCategories.length === 1

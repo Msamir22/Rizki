@@ -107,15 +107,20 @@ function RootLayoutNav(): React.ReactNode {
         <Stack.Screen
           name="voice-input"
           options={{
-            presentation: "modal",
             headerShown: false,
           }}
         />
         <Stack.Screen
           name="add-transaction"
           options={{
-            presentation: "modal",
             title: "Add Transaction",
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="edit-transaction"
+          options={{
+            title: "Edit Transaction",
             headerShown: false,
           }}
         />

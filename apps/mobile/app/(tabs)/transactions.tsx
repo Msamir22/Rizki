@@ -139,8 +139,17 @@ export default function TransactionsPlaceholder(): React.JSX.Element {
     if (isSelectionMode) {
       handleLongPress(id); // Toggle selection
     } else {
-      // TODO: Navigate to details?
-      console.log("View details for", id);
+      // Navigate to edit — called from TransactionCard
+      router.push({ pathname: "/edit-transaction", params: { id } });
+    }
+  };
+
+  const handleTransferPress = (id: string): void => {
+    if (isSelectionMode) {
+      handleLongPress(id); // Toggle selection
+    } else {
+      // Navigate to edit — called from TransferCard
+      router.push({ pathname: "/edit-transfer", params: { id } });
     }
   };
 
@@ -365,6 +374,7 @@ export default function TransactionsPlaceholder(): React.JSX.Element {
           <View className="flex-row mb-3 flex-wrap gap-2">
             {/* Period Filter Button */}
             <TouchableOpacity
+              testID="filter-period"
               className="flex-row items-center bg-white dark:bg-slate-800 py-2.5 px-4 rounded-3xl border border-slate-200 dark:border-slate-700 gap-2 flex-1 shadow-sm"
               onPress={() => setPeriodModalVisible(true)}
             >
@@ -385,6 +395,7 @@ export default function TransactionsPlaceholder(): React.JSX.Element {
 
             {/* Type Filter Button */}
             <TouchableOpacity
+              testID="filter-type"
               className="flex-row items-center bg-white dark:bg-slate-800 py-2.5 px-4 rounded-3xl border border-slate-200 dark:border-slate-700 gap-2 flex-1 shadow-sm"
               onPress={() => setTypeModalVisible(true)}
             >
@@ -419,6 +430,7 @@ export default function TransactionsPlaceholder(): React.JSX.Element {
               color={isDark ? palette.slate[500] : palette.slate[400]}
             />
             <TextInput
+              testID="search-input"
               className="flex-1 ml-3 text-slate-800 dark:text-slate-100 text-[16px]"
               placeholder="Search transactions..."
               placeholderTextColor={palette.slate[400]}
@@ -498,7 +510,7 @@ export default function TransactionsPlaceholder(): React.JSX.Element {
                     displayNetWorth={item.displayNetWorth}
                     isSelectionMode={isSelectionMode}
                     isSelected={selectedIds.has(item.id)}
-                    onPress={handlePress}
+                    onPress={handleTransferPress}
                     onLongPress={handleLongPress}
                     index={index}
                   />

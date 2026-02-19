@@ -8,7 +8,12 @@
  *  - Limit-based slicing for dashboard previews
  */
 
-import { database, RecurringPayment, RecurringStatus } from "@astik/db";
+import {
+  database,
+  RecurringPayment,
+  RecurringStatus,
+  TransactionType,
+} from "@astik/db";
 import { convertToEGP } from "@astik/logic";
 import { Q } from "@nozbe/watermelondb";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -21,6 +26,7 @@ import { useMarketRates } from "./useMarketRates";
 interface UseRecurringPaymentsOptions {
   readonly limit?: number;
   readonly status?: RecurringStatus;
+  readonly type?: TransactionType;
 }
 
 interface UseRecurringPaymentsResult {
@@ -44,7 +50,7 @@ export type { UseRecurringPaymentsOptions, UseRecurringPaymentsResult };
 export function useRecurringPayments(
   options: UseRecurringPaymentsOptions = {}
 ): UseRecurringPaymentsResult {
-  const { limit, status } = options;
+  const { limit, status, type } = options;
 
   const [allPayments, setAllPayments] = useState<RecurringPayment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -90,8 +96,11 @@ export function useRecurringPayments(
     if (limit) {
       result = result.slice(0, limit);
     }
+    if (type) {
+      result = result.filter((p) => p.type === type);
+    }
     return result;
-  }, [allPayments, statusFilter, limit]);
+  }, [allPayments, statusFilter, limit, type]);
 
   const counts = useMemo<Record<RecurringStatus, number>>(
     () => ({

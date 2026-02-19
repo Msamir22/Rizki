@@ -8,7 +8,7 @@ import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 
 interface CategoryPickerProps {
   selectedCategory: Category | null;
-  categories: Category[];
+  categories: readonly Category[];
   onOpenPicker: () => void;
   onSelectCategory: (category: Category) => void;
   hideMainSelector?: boolean;

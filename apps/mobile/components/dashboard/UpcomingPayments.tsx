@@ -39,6 +39,7 @@ export function UpcomingPayments(): React.JSX.Element {
   } = useRecurringPayments({
     limit: PAYMENT_LIMIT,
     status: "ACTIVE",
+    type: "EXPENSE",
   });
   const [selectedPayment, setSelectedPayment] =
     useState<RecurringPayment | null>(null);

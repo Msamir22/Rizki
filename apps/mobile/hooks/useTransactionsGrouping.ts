@@ -282,15 +282,43 @@ export function useTransactionsGrouping(
     // Perform initial fetch
     performFetch().catch(console.error);
 
-    // Set up observe subscription for subsequent updates
-    const subscription = transactionsCollection
+    // Set up observe subscription for subsequent updates.
+    // IMPORTANT: observeWithColumns is required (instead of plain observe)
+    // because observe() only fires when the set of records matching the query
+    // changes (inserts/deletes). observeWithColumns also fires when the
+    // specified columns on existing records are updated (e.g. category_id).
+    const txSubscription = transactionsCollection
       .query()
-      .observe()
+      .observeWithColumns([
+        "category_id",
+        "amount",
+        "type",
+        "note",
+        "counterparty",
+        "account_id",
+        "date",
+      ])
       .subscribe(() => {
         performFetch().catch(console.error);
       });
 
-    return () => subscription.unsubscribe();
+    const transferSubscription = transfersCollection
+      .query()
+      .observeWithColumns([
+        "amount",
+        "from_account_id",
+        "to_account_id",
+        "notes",
+        "date",
+      ])
+      .subscribe(() => {
+        performFetch().catch(console.error);
+      });
+
+    return () => {
+      txSubscription.unsubscribe();
+      transferSubscription.unsubscribe();
+    };
   }, [period, selectedTypes, searchQuery]);
 
   // 2. Calculate Grouped Data

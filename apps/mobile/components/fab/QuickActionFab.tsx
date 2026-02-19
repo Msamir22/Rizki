@@ -124,6 +124,7 @@ export function QuickActionFab(): React.JSX.Element {
             {QUICK_ACTIONS.map((action) => (
               <Pressable
                 key={action.id}
+                testID={`fab-${action.id}`}
                 onPress={() => closeAndNavigate(action.route)}
                 className="flex-row items-center justify-end mb-3"
                 style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
@@ -132,6 +133,7 @@ export function QuickActionFab(): React.JSX.Element {
               >
                 <Text
                   className="mr-2.5 text-sm font-semibold text-slate-800 dark:text-white"
+                  // eslint-disable-next-line react-native/no-inline-styles
                   style={{
                     textShadowColor: "rgba(0,0,0,0.3)",
                     textShadowOffset: { width: 0, height: 1 },
@@ -159,6 +161,7 @@ export function QuickActionFab(): React.JSX.Element {
         {/* Main FAB */}
         {/* Main FAB */}
         <Pressable
+          testID="fab-button"
           onPress={toggleExpanded}
           className="shadow-lg shadow-nileGreen-700/30 elevation-8"
           style={({ pressed }) => ({

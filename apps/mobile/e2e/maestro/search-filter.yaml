@@ -1,0 +1,50 @@
+appId: com.msamir22.astikmobile
+
+---
+
+# T038: Search and filter transactions
+# Precondition: Multiple transactions with different types exist
+
+# Step 1: Launch app and navigate to Transactions
+- runFlow: setup.yaml
+
+# Step 2: Wait for transaction list to load
+- waitForAnimationToEnd
+
+# Step 3: Tap the search input and type a query
+- tapOn:
+    id: "search-input"
+
+- inputText: "test"
+
+# Step 4: Wait for filtered results
+- waitForAnimationToEnd
+
+# Step 5: Clear the search
+- tapOn:
+    id: "search-input"
+
+- clearInput
+
+# Step 6: Test type filter — tap to open type filter modal
+- tapOn:
+    id: "filter-type"
+
+- waitForAnimationToEnd
+
+# Step 7: Deselect "Income" to filter it out
+- tapOn: "Income"
+
+# Step 8: Close filter modal (tap outside or confirm)
+- waitForAnimationToEnd
+
+# Step 9: Verify transactions page still visible
+- assertVisible: "Transactions"
+
+# Step 10: Re-open type filter and re-select "Income"
+- tapOn:
+    id: "filter-type"
+
+- waitForAnimationToEnd
+- tapOn: "Income"
+- waitForAnimationToEnd

@@ -1,0 +1,153 @@
+import { Ionicons } from "@expo/vector-icons";
+import { BlurView } from "expo-blur";
+import React from "react";
+import {
+  Modal,
+  Text,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  useColorScheme,
+  View,
+} from "react-native";
+import { palette } from "@/constants/colors";
+
+type ConfirmationVariant = "danger" | "warning" | "info";
+
+interface ConfirmationModalProps {
+  readonly visible: boolean;
+  readonly onConfirm: () => void;
+  readonly onCancel: () => void;
+  readonly title: string;
+  readonly message: string;
+  readonly confirmLabel?: string;
+  readonly cancelLabel?: string;
+  readonly variant?: ConfirmationVariant;
+  readonly icon?: keyof typeof Ionicons.glyphMap;
+}
+
+const VARIANT_CONFIG: Record<
+  ConfirmationVariant,
+  {
+    readonly iconBg: string;
+    readonly darkIconBg: string;
+    readonly iconColor: string;
+    readonly buttonBg: string;
+    readonly defaultIcon: keyof typeof Ionicons.glyphMap;
+  }
+> = {
+  danger: {
+    iconBg: "bg-red-100",
+    darkIconBg: "dark:bg-red-500/20",
+    iconColor: palette.red[500],
+    buttonBg: "bg-red-500",
+    defaultIcon: "trash-outline",
+  },
+  warning: {
+    iconBg: "bg-amber-100",
+    darkIconBg: "dark:bg-amber-500/20",
+    iconColor: palette.gold[500],
+    buttonBg: "bg-amber-500",
+    defaultIcon: "warning-outline",
+  },
+  info: {
+    iconBg: "bg-blue-100",
+    darkIconBg: "dark:bg-blue-500/20",
+    iconColor: palette.blue[500],
+    buttonBg: "bg-blue-500",
+    defaultIcon: "information-circle-outline",
+  },
+};
+
+/**
+ * Generic confirmation modal with variant support (danger, warning, info).
+ * Reusable across edit, delete, convert, and discard flows.
+ */
+export function ConfirmationModal({
+  visible,
+  onConfirm,
+  onCancel,
+  title,
+  message,
+  confirmLabel = "Confirm",
+  cancelLabel = "Cancel",
+  variant = "danger",
+  icon,
+}: ConfirmationModalProps): React.JSX.Element {
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
+  const config = VARIANT_CONFIG[variant];
+  const iconName = icon ?? config.defaultIcon;
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onCancel}
+    >
+      <TouchableWithoutFeedback onPress={onCancel}>
+        <View className="flex-1 bg-black/70 justify-center items-center">
+          <TouchableWithoutFeedback>
+            <View className="w-[85%] max-w-[340px] rounded-2xl overflow-hidden border border-transparent dark:border-slate-700/40">
+              <BlurView
+                intensity={20}
+                tint={isDark ? "dark" : "light"}
+                className="absolute inset-0"
+              />
+              <View className="absolute inset-0 bg-white/95 dark:bg-slate-900/95" />
+
+              <View className="p-6">
+                {/* Icon */}
+                <View
+                  className={`w-16 h-16 rounded-full ${config.iconBg} ${config.darkIconBg} justify-center items-center self-center mb-4`}
+                >
+                  <Ionicons
+                    name={iconName}
+                    size={32}
+                    color={config.iconColor}
+                  />
+                </View>
+
+                {/* Title */}
+                <Text className="text-[22px] font-bold text-slate-800 dark:text-slate-100 text-center mb-2">
+                  {title}
+                </Text>
+
+                {/* Message */}
+                <Text className="text-[15px] text-slate-500 dark:text-slate-400 text-center leading-[22px] mb-6">
+                  {message}
+                </Text>
+
+                {/* Actions */}
+                <View className="flex-row gap-3">
+                  <TouchableOpacity
+                    testID="modal-cancel"
+                    className="flex-1 py-3.5 rounded-xl items-center justify-center bg-slate-100 dark:bg-slate-800"
+                    onPress={onCancel}
+                  >
+                    <Text className="text-base font-semibold text-slate-600 dark:text-slate-300">
+                      {cancelLabel}
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    testID="modal-confirm"
+                    className={`flex-1 py-3.5 rounded-xl items-center justify-center ${config.buttonBg}`}
+                    onPress={() => {
+                      onConfirm();
+                      onCancel();
+                    }}
+                  >
+                    <Text className="text-base font-semibold text-white">
+                      {confirmLabel}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </TouchableWithoutFeedback>
+        </View>
+      </TouchableWithoutFeedback>
+    </Modal>
+  );
+}
