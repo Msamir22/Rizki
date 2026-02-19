@@ -7,7 +7,7 @@
 import { appSchema, tableSchema } from "@nozbe/watermelondb";
 
 export const schema = appSchema({
-  version: 7,
+  version: 8,
   tables: [
     tableSchema({
       name: "accounts",
@@ -73,7 +73,12 @@ export const schema = appSchema({
       columns: [
         { name: "alert_threshold", type: "number" },
         { name: "amount", type: "number" },
-        { name: "category_id", type: "string", isOptional: true, isIndexed: true },
+        {
+          name: "category_id",
+          type: "string",
+          isOptional: true,
+          isIndexed: true,
+        },
         { name: "created_at", type: "number" },
         { name: "currency", type: "string" },
         { name: "deleted", type: "boolean" },
@@ -102,13 +107,50 @@ export const schema = appSchema({
         { name: "is_system", type: "boolean" },
         { name: "level", type: "number" },
         { name: "nature", type: "string", isOptional: true },
-        { name: "parent_id", type: "string", isOptional: true, isIndexed: true },
+        {
+          name: "parent_id",
+          type: "string",
+          isOptional: true,
+          isIndexed: true,
+        },
         { name: "sort_order", type: "number", isOptional: true },
         { name: "system_name", type: "string" },
         { name: "type", type: "string", isOptional: true },
         { name: "updated_at", type: "number" },
         { name: "usage_count", type: "number" },
         { name: "user_id", type: "string", isOptional: true, isIndexed: true },
+      ],
+    }),
+
+    tableSchema({
+      name: "daily_snapshot_assets",
+      columns: [
+        { name: "created_at", type: "number" },
+        { name: "snapshot_date", type: "number" },
+        { name: "total_assets_egp", type: "number" },
+        { name: "user_id", type: "string", isIndexed: true },
+      ],
+    }),
+
+    tableSchema({
+      name: "daily_snapshot_balance",
+      columns: [
+        { name: "created_at", type: "number" },
+        { name: "snapshot_date", type: "number" },
+        { name: "total_accounts_egp", type: "number" },
+        { name: "user_id", type: "string", isIndexed: true },
+      ],
+    }),
+
+    tableSchema({
+      name: "daily_snapshot_net_worth",
+      columns: [
+        { name: "created_at", type: "number" },
+        { name: "snapshot_date", type: "number" },
+        { name: "total_accounts", type: "number" },
+        { name: "total_assets", type: "number" },
+        { name: "total_net_worth", type: "number" },
+        { name: "user_id", type: "string", isIndexed: true },
       ],
     }),
 
@@ -213,7 +255,12 @@ export const schema = appSchema({
         { name: "end_date", type: "number", isOptional: true },
         { name: "frequency", type: "string" },
         { name: "frequency_value", type: "number", isOptional: true },
-        { name: "linked_debt_id", type: "string", isOptional: true, isIndexed: true },
+        {
+          name: "linked_debt_id",
+          type: "string",
+          isOptional: true,
+          isIndexed: true,
+        },
         { name: "name", type: "string" },
         { name: "next_due_date", type: "number" },
         { name: "notes", type: "string", isOptional: true },
@@ -237,9 +284,24 @@ export const schema = appSchema({
         { name: "date", type: "number" },
         { name: "deleted", type: "boolean" },
         { name: "is_draft", type: "boolean" },
-        { name: "linked_asset_id", type: "string", isOptional: true, isIndexed: true },
-        { name: "linked_debt_id", type: "string", isOptional: true, isIndexed: true },
-        { name: "linked_recurring_id", type: "string", isOptional: true, isIndexed: true },
+        {
+          name: "linked_asset_id",
+          type: "string",
+          isOptional: true,
+          isIndexed: true,
+        },
+        {
+          name: "linked_debt_id",
+          type: "string",
+          isOptional: true,
+          isIndexed: true,
+        },
+        {
+          name: "linked_recurring_id",
+          type: "string",
+          isOptional: true,
+          isIndexed: true,
+        },
         { name: "note", type: "string", isOptional: true },
         { name: "source", type: "string" },
         { name: "type", type: "string" },

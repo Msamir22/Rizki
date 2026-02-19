@@ -3,16 +3,21 @@
  * Local-first net worth calculation using WatermelonDB
  */
 
-import { Account, AssetMetal, database } from "@astik/db";
+import {
+  Account,
+  AssetMetal,
+  DailySnapshotNetWorth,
+  database,
+} from "@astik/db";
 import {
   calculateNetWorth,
   calculateTotalAssets,
   calculateTotalBalance,
+  getSameDayLastMonth,
   NetWorthData,
 } from "@astik/logic";
 import { Q } from "@nozbe/watermelondb";
 import { useEffect, useMemo, useState } from "react";
-import { getNetWorthComparison } from "@/services/net-worth";
 import { useMarketRates } from "./useMarketRates";
 
 interface UseNetWorthResult {
@@ -100,34 +105,102 @@ export function useNetWorth(): UseNetWorthResult {
 }
 
 /**
- * Simplified hook that just returns the net worth value
- * Useful for components that only need the total
- * Also fetches monthly percentage change from API via service layer
+ * Hook that returns month-over-month net worth percentage change.
+ * Queries local daily_snapshot_net_worth (offline-first) instead of the API.
+ *
+ * Strategy:
+ * 1. Get the most recent snapshot as "current" net worth
+ * 2. Find the snapshot closest to the same day last month as "previous"
+ * 3. Calculate percentage change: ((current - previous) / previous) * 100
  */
 export function useMonthlyPercentageChange(): {
   monthlyPercentageChange: number | null;
   isLoading: boolean;
 } {
-  const { isLoading } = useNetWorth();
   const [monthlyPercentageChange, setMonthlyPercentageChange] = useState<
     number | null
   >(null);
-  const [isComparisonLoading, setIsComparisonLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchComparison(): Promise<void> {
-      const data = await getNetWorthComparison();
-      setMonthlyPercentageChange(data?.percentageChange ?? null);
-      setIsComparisonLoading(false);
-    }
+    const collection = database.get<DailySnapshotNetWorth>(
+      "daily_snapshot_net_worth"
+    );
 
-    if (!isLoading) {
-      fetchComparison().catch(console.error);
-    }
-  }, [isLoading]);
+    // Observe the collection to react to sync updates
+    const subscription = collection
+      .query(Q.sortBy("snapshot_date", Q.desc))
+      .observe()
+      .subscribe({
+        next: (snapshots) => {
+          if (snapshots.length === 0) {
+            setMonthlyPercentageChange(null);
+            setIsLoading(false);
+            return;
+          }
+
+          // Most recent snapshot = current net worth
+          const currentSnapshot = snapshots[0];
+          const currentNetWorth = currentSnapshot.totalNetWorth;
+
+          // Find the snapshot closest to same-day-last-month
+          const comparisonDateStr = getSameDayLastMonth();
+          const comparisonDate = new Date(comparisonDateStr).getTime();
+
+          const previousSnapshot = findClosestSnapshot(
+            snapshots,
+            comparisonDate
+          );
+
+          if (!previousSnapshot || previousSnapshot.totalNetWorth === 0) {
+            setMonthlyPercentageChange(null);
+          } else {
+            const change =
+              ((currentNetWorth - previousSnapshot.totalNetWorth) /
+                previousSnapshot.totalNetWorth) *
+              100;
+            setMonthlyPercentageChange(Math.round(change * 100) / 100);
+          }
+
+          setIsLoading(false);
+        },
+        error: (err: unknown) => {
+          console.error("Error observing net worth snapshots:", err);
+          setIsLoading(false);
+        },
+      });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   return {
     monthlyPercentageChange,
-    isLoading: isLoading || isComparisonLoading,
+    isLoading,
   };
+}
+
+/**
+ * Find the snapshot closest to the target date.
+ * Searches through sorted snapshots (desc by snapshot_date) and returns
+ * the one with the smallest absolute date difference.
+ */
+function findClosestSnapshot(
+  snapshots: DailySnapshotNetWorth[],
+  targetDateMs: number
+): DailySnapshotNetWorth | null {
+  let closest: DailySnapshotNetWorth | null = null;
+  let smallestDiff = Infinity;
+
+  for (const snapshot of snapshots) {
+    // snapshotDate is a Date field (decorated with @date)
+    const snapshotMs = snapshot.snapshotDate.getTime();
+    const diff = Math.abs(snapshotMs - targetDateMs);
+
+    if (diff < smallestDiff) {
+      smallestDiff = diff;
+      closest = snapshot;
+    }
+  }
+
+  return closest;
 }

@@ -2,17 +2,7 @@
  * Core types for Astik application
  */
 
-import { CurrencyType, SupabaseDatabase, TransactionType } from "@astik/db";
-
-export type DailySnapshotNetWorth =
-  SupabaseDatabase["public"]["Tables"]["daily_snapshot_net_worth"]["Row"];
-
-export interface NetWorthComparison {
-  currentNetWorth: number;
-  previousNetWorth: number | null;
-  percentageChange: number | null;
-  comparisonDate: string | null;
-}
+import { CurrencyType, TransactionType } from "@astik/db";
 
 export interface ParsedVoiceTransaction {
   amount: number;

@@ -32,15 +32,8 @@ const MIGRATIONS_TS_PATH = path.join(
 
 const SUPABASE_MIGRATIONS_DIR = path.join(__dirname, "../supabase/migrations");
 
-// Tables excluded from WatermelonDB (cloud-only / computed)
-const EXCLUDED_TABLES = [
-  "__InternalSupabase",
-  "daily_snapshot_assets",
-  "daily_snapshot_balance",
-  "daily_snapshot_net_worth",
-  "daily_market_rates_snapshot",
-  "market_rates",
-];
+// Tables excluded from WatermelonDB
+const EXCLUDED_TABLES = ["__InternalSupabase"];
 
 // Timestamp fields — these use WatermelonDB type "number" regardless of SQL type
 const TIMESTAMP_FIELDS = [

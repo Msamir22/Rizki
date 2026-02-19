@@ -28,12 +28,7 @@ const MODELS_DIR = path.join(OUTPUT_DIR, "models");
 const BASE_MODELS_DIR = path.join(MODELS_DIR, "base");
 
 // Tables to exclude (cloud-only, computed data, or internal)
-const EXCLUDED_TABLES = [
-  "__InternalSupabase",
-  "daily_snapshot_assets",
-  "daily_snapshot_balance",
-  "daily_snapshot_net_worth",
-];
+const EXCLUDED_TABLES = ["__InternalSupabase"];
 
 // Mapping from table names to class names (for irregular plurals)
 const TABLE_TO_CLASS = {
@@ -43,6 +38,9 @@ const TABLE_TO_CLASS = {
   bank_details: "BankDetails",
   budgets: "Budget",
   categories: "Category",
+  daily_snapshot_assets: "DailySnapshotAssets",
+  daily_snapshot_balance: "DailySnapshotBalance",
+  daily_snapshot_net_worth: "DailySnapshotNetWorth",
   debts: "Debt",
   profiles: "Profile",
   recurring_payments: "RecurringPayment",
