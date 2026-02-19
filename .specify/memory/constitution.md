@@ -1,8 +1,8 @@
 <!--
 Sync Impact Report
-- Version change: 0.0.0 → 1.0.0 → 1.1.0
+- Version change: 0.0.0 → 1.0.0 → 1.1.0 → 1.2.0
 - Added principles:
-  - I. Offline-First Data Architecture (NEW in 1.0.0)
+  - I. Offline-First Data Architecture (NEW in 1.0.0, AMENDED in 1.2.0)
   - II. Documented Business Logic (NEW in 1.0.0)
   - III. Type Safety (NEW in 1.0.0)
   - IV. Service-Layer Separation (NEW in 1.0.0)
@@ -12,6 +12,9 @@ Sync Impact Report
 - Amendments in 1.1.0:
   - Principle V: Added schema-driven UI rule (from mockup-implementation workflow)
   - Development Workflow: Added no-magic-numbers and TODO-for-debt rules (from architect-first.md)
+- Amendments in 1.2.0:
+  - Principle I: Added exception for server-generated read-only tables (pull-only)
+    that MAY omit updated_at and deleted columns (from 005-sync-snapshot-tables)
 - Added sections:
   - Technology Constraints (NEW)
   - Development Workflow (NEW)
@@ -43,7 +46,12 @@ device. Every read and write operation MUST happen locally first.
 - Sync uses **Last Write Wins** conflict resolution via WatermelonDB's built-in
   sync protocol.
 - All syncable tables MUST include `created_at`, `updated_at`, `deleted`, and
-  `user_id` columns.
+  `user_id` columns. **Exception**: Server-generated read-only tables that are
+  pull-only (never edited or soft-deleted client-side) MAY omit `updated_at` and
+  `deleted`. These tables use a custom pull function with date-based filtering
+  instead of the standard sync protocol. Current examples: `market_rates` (also
+  omits `user_id`), `daily_snapshot_balance`, `daily_snapshot_assets`,
+  `daily_snapshot_net_worth`.
 
 ### II. Documented Business Logic
 
@@ -151,11 +159,26 @@ All database schema changes (DDL) MUST go through local SQL migration files.
   database.
 - Run `npm run db:migrate` to regenerate WatermelonDB schema, types, and local
   watermelon migrations from the latest SQL migration.
+- Run `npm run db:sync-local` when you need to ensure that `schema.ts` and
+  `supabase-types.ts` are up-to-date without pushing to remote. This also picks
+  up the latest local migration into the WatermelonDB schema. Use this instead
+  of `db:migrate` when the remote database is already up-to-date and you only
+  need to refresh local generated files.
 - **NEVER** use the Supabase MCP tool's `apply_migration` or `execute_sql` for
   DDL changes. **NEVER** make schema changes directly in the Supabase dashboard.
 - The Supabase MCP tool MAY be used for **read-only** operations (querying data,
   checking schema, listing tables, inspecting logs).
 - Commit both the migration file and generated schema changes together.
+- **Bringing existing Supabase tables into WatermelonDB:** When adding an
+  existing Supabase table to WatermelonDB sync (removing it from
+  `EXCLUDED_TABLES` in both `transform-schema.js` and
+  `sql-to-watermelon-migration.js`), you MUST manually add a `createTable` step
+  to `packages/db/src/migrations.ts` and bump the schema version. The
+  auto-generation script cannot detect this because no `CREATE TABLE` exists in
+  the latest SQL migration.
+- **DROP COLUMN:** WatermelonDB has no `dropColumn` migration primitive. Dropped
+  columns remain in local SQLite but are ignored. No WatermelonDB migration is
+  needed for column drops.
 
 ## Technology Constraints
 
@@ -241,4 +264,4 @@ All database schema changes (DDL) MUST go through local SQL migration files.
   `/speckit.plan`, `/speckit.tasks`, `/speckit.implement`) MUST reference this
   constitution and verify compliance before producing output.
 
-**Version**: 1.1.0 | **Ratified**: 2026-02-14 | **Last Amended**: 2026-02-14
+**Version**: 1.2.0 | **Ratified**: 2026-02-14 | **Last Amended**: 2026-02-19

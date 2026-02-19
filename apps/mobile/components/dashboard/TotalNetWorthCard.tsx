@@ -1,9 +1,9 @@
+import { palette } from "@/constants/colors";
 import { formatCurrency } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { ActivityIndicator, Dimensions, Text, View } from "react-native";
 import Svg, { Defs, RadialGradient, Rect, Stop } from "react-native-svg";
-import { palette } from "@/constants/colors";
 
 interface Props {
   totalEgp: number | null;
@@ -28,9 +28,10 @@ export function TotalNetWorthCard({
   const arrowRotation = isPositive ? "40deg" : "-40deg";
 
   // Format percentage for display
-  const monthlyPercentageChangeFormatted = monthlyPercentageChange
-    ? `${monthlyPercentageChange >= 0 ? "+" : ""}${monthlyPercentageChange.toFixed(1)}%`
-    : null;
+  const monthlyPercentageChangeFormatted =
+    monthlyPercentageChange !== null
+      ? `${monthlyPercentageChange >= 0 ? "+" : ""}${monthlyPercentageChange.toFixed(1)}%`
+      : null;
 
   // Glow dimensions
   const glowWidth = width;
@@ -40,13 +41,10 @@ export function TotalNetWorthCard({
     <View className="relative my-2 items-center justify-center">
       {/* Bottom Glow */}
       <View
+        className="absolute bottom-[-35px] items-center z-[-1]"
         style={{
-          position: "absolute",
-          bottom: -35,
           width: glowWidth,
           height: glowHeight,
-          alignItems: "center",
-          zIndex: -1,
         }}
       >
         <Svg height="100%" width="100%">

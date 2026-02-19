@@ -53,3 +53,23 @@ supabase/migrations/023_descriptive_name.sql
 3. Run `npm run db:migrate` to regenerate WatermelonDB schema/types and create
    local watermelon migrations
 4. Commit both the migration file and generated schema changes
+
+### Bringing Existing Supabase Tables into WatermelonDB
+
+When adding an existing Supabase table to WatermelonDB sync (e.g., removing it
+from `EXCLUDED_TABLES` in `transform-schema.js` and
+`sql-to-watermelon-migration.js`), you **MUST** manually add a `createTable`
+step to `packages/db/src/migrations.ts` and bump the schema version. The
+auto-generation script (`sql-to-watermelon-migration.js`) cannot detect this
+case because no `CREATE TABLE` statement exists in the latest SQL migration —
+the table already exists in Supabase.
+
+### DROP COLUMN Behavior
+
+WatermelonDB does **not** have a `dropColumn` migration primitive. When a column
+is removed from the Supabase schema:
+
+- Remove it from `transform-schema.js` mapping (or let the script auto-exclude
+  it)
+- The column will remain in local SQLite but WatermelonDB ignores extra columns
+- **No WatermelonDB migration is needed** for column drops

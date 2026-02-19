@@ -39,7 +39,11 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Phase 1: Update agent context by running the agent script
    - Re-evaluate Constitution Check post-design
 
-4. **Stop and report**: Command ends after Phase 2 planning. Report branch,
+4. **Persist to agent tracking**: Copy the generated `plan.md` into the agent's
+   brain artifacts directory as `implementation_plan.md` so the plan is tracked
+   across conversations. Use the artifact metadata type `implementation_plan`.
+
+5. **Stop and report**: Command ends after Phase 2 planning. Report branch,
    IMPL_PLAN path, and generated artifacts.
 
 ## Phases

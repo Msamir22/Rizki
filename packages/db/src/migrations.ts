@@ -9,11 +9,46 @@
 
 import {
   addColumns,
+  createTable,
   schemaMigrations,
 } from "@nozbe/watermelondb/Schema/migrations";
 
 export const migrations = schemaMigrations({
   migrations: [
+    {
+      toVersion: 8,
+      steps: [
+        createTable({
+          name: "daily_snapshot_assets",
+          columns: [
+            { name: "created_at", type: "number" },
+            { name: "snapshot_date", type: "number" },
+            { name: "total_assets_egp", type: "number" },
+            { name: "user_id", type: "string", isIndexed: true },
+          ],
+        }),
+        createTable({
+          name: "daily_snapshot_balance",
+          columns: [
+            { name: "created_at", type: "number" },
+            { name: "snapshot_date", type: "number" },
+            { name: "total_accounts_egp", type: "number" },
+            { name: "user_id", type: "string", isIndexed: true },
+          ],
+        }),
+        createTable({
+          name: "daily_snapshot_net_worth",
+          columns: [
+            { name: "created_at", type: "number" },
+            { name: "snapshot_date", type: "number" },
+            { name: "total_accounts", type: "number" },
+            { name: "total_assets", type: "number" },
+            { name: "total_net_worth", type: "number" },
+            { name: "user_id", type: "string", isIndexed: true },
+          ],
+        }),
+      ],
+    },
     {
       toVersion: 7,
       steps: [

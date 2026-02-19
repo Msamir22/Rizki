@@ -65,7 +65,11 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Parallel execution examples per story
    - Implementation strategy section (MVP first, incremental delivery)
 
-5. **Report**: Output path to generated tasks.md and summary:
+5. **Persist to agent tracking**: Copy the generated `tasks.md` into the agent's
+   brain artifacts directory as `task.md` so the task checklist is tracked
+   across conversations. Use the artifact metadata type `task`.
+
+6. **Report**: Output path to generated tasks.md and summary:
    - Total task count
    - Task count per user story
    - Parallel opportunities identified

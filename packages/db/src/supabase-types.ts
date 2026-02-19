@@ -321,7 +321,6 @@ export type Database = {
       };
       daily_snapshot_assets: {
         Row: {
-          breakdown: Json;
           created_at: string;
           id: string;
           snapshot_date: string;
@@ -329,7 +328,6 @@ export type Database = {
           user_id: string;
         };
         Insert: {
-          breakdown?: Json;
           created_at?: string;
           id?: string;
           snapshot_date?: string;
@@ -337,7 +335,6 @@ export type Database = {
           user_id: string;
         };
         Update: {
-          breakdown?: Json;
           created_at?: string;
           id?: string;
           snapshot_date?: string;
@@ -348,7 +345,6 @@ export type Database = {
       };
       daily_snapshot_balance: {
         Row: {
-          breakdown: Json;
           created_at: string;
           id: string;
           snapshot_date: string;
@@ -356,7 +352,6 @@ export type Database = {
           user_id: string;
         };
         Insert: {
-          breakdown?: Json;
           created_at?: string;
           id?: string;
           snapshot_date?: string;
@@ -364,7 +359,6 @@ export type Database = {
           user_id: string;
         };
         Update: {
-          breakdown?: Json;
           created_at?: string;
           id?: string;
           snapshot_date?: string;

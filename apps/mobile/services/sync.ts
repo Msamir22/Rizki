@@ -16,13 +16,20 @@ import {
 } from "@nozbe/watermelondb/sync";
 import { getCurrentUserId, supabase } from "./supabase";
 
-export const EXCLUDED_TABLES = [
-  "__InternalSupabase",
+export const EXCLUDED_TABLES = ["__InternalSupabase"] as const;
+
+/**
+ * Snapshot tables are read-only (server-generated, pull-only).
+ * They lack `updated_at` and `deleted` columns, so they require
+ * a custom pull function and must never be pushed.
+ */
+const SNAPSHOT_TABLES = [
   "daily_snapshot_assets",
   "daily_snapshot_balance",
   "daily_snapshot_net_worth",
-  "daily_snapshot_market_rates",
 ] as const;
+
+type SnapshotTableName = (typeof SNAPSHOT_TABLES)[number];
 
 // Child tables that don't have user_id - need to sync via parent relationship
 const CHILD_TABLES_MAP: Record<
@@ -42,7 +49,11 @@ type SupabaseTablesNames = Exclude<
   ExcludedTableName
 >;
 
-type WritableSupabaseTablesNames = Exclude<SupabaseTablesNames, "market_rates">;
+type ReadOnlyTableName = "market_rates" | SnapshotTableName;
+type WritableSupabaseTablesNames = Exclude<
+  SupabaseTablesNames,
+  ReadOnlyTableName
+>;
 
 // Tables that should be synced to Supabase
 const SYNCABLE_TABLES = Object.keys(schema.tables).filter(
@@ -87,6 +98,59 @@ async function pullMarketRates(
     };
   } catch (err) {
     console.error("Exception pulling market_rates:", err);
+    return { created: [], updated: [], deleted: [] };
+  }
+}
+
+const SNAPSHOT_RETENTION_DAYS = 90;
+
+/**
+ * Pull a snapshot table (user-scoped, read-only, uses created_at instead of updated_at).
+ * Modeled after pullMarketRates but with user_id filtering.
+ * These tables lack `updated_at` and `deleted` columns.
+ */
+async function pullSnapshotTable(
+  table: SnapshotTableName,
+  userId: string,
+  lastSyncDate: string | null
+): Promise<SyncDatabaseChangeSet[SnapshotTableName]> {
+  try {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - SNAPSHOT_RETENTION_DAYS);
+
+    let query = supabase
+      .from(table)
+      .select("*")
+      .eq("user_id", userId)
+      .gt("created_at", cutoffDate.toISOString())
+      .order("created_at", { ascending: false });
+
+    // Incremental sync: only fetch records created after last sync
+    if (lastSyncDate) {
+      query = query.gt("created_at", lastSyncDate);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error(`Error pulling ${table}:`, error);
+      return { created: [], updated: [], deleted: [] };
+    }
+
+    if (!data || data.length === 0) {
+      return { created: [], updated: [], deleted: [] };
+    }
+
+    // Transform records — snapshot tables have no `deleted` column
+    const activeRecords = data.map((record) => transformFromSupabase(record));
+
+    return {
+      created: [],
+      updated: activeRecords,
+      deleted: [],
+    };
+  } catch (err) {
+    console.error(`Exception pulling ${table}:`, err);
     return { created: [], updated: [], deleted: [] };
   }
 }
@@ -249,21 +313,34 @@ async function pullChanges(
   for (const table of SYNCABLE_TABLES) {
     try {
       const childConfig = CHILD_TABLES_MAP[table];
+      const isSnapshotTable = SNAPSHOT_TABLES.includes(
+        table as SnapshotTableName
+      );
 
       // Route to appropriate specialized pull function
       if (table === "market_rates") {
         changes[table] = await pullMarketRates();
+      } else if (isSnapshotTable) {
+        changes[table] = await pullSnapshotTable(
+          table as SnapshotTableName,
+          userId,
+          lastSyncDate
+        );
       } else if (table === "categories") {
         changes[table] = await pullCategories(userId, lastSyncDate);
       } else if (childConfig) {
         changes[table] = await pullChildTable(
-          table,
+          table as WritableSupabaseTablesNames,
           childConfig,
           userId,
           lastSyncDate
         );
       } else {
-        changes[table] = await pullUserTable(table, userId, lastSyncDate);
+        changes[table] = await pullUserTable(
+          table as WritableSupabaseTablesNames,
+          userId,
+          lastSyncDate
+        );
       }
     } catch (err) {
       console.error(`Exception pulling ${table}:`, err);
@@ -296,8 +373,11 @@ async function pushChanges(
       continue;
     }
 
-    // Skip market_rates - it's read-only global data (pull only)
-    if (table === "market_rates") {
+    // Skip read-only tables (pull only, never push)
+    if (
+      table === "market_rates" ||
+      SNAPSHOT_TABLES.includes(table as SnapshotTableName)
+    ) {
       continue;
     }
 
@@ -392,6 +472,9 @@ function transformFromSupabase(
   }
   if (typeof record.period_end === "string") {
     transformed.period_end = new Date(record.period_end).getTime();
+  }
+  if (typeof record.snapshot_date === "string") {
+    transformed.snapshot_date = new Date(record.snapshot_date).getTime();
   }
 
   return transformed;

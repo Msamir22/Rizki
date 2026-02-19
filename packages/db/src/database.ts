@@ -14,6 +14,9 @@ import { AssetMetal } from "./models/AssetMetal";
 import { BankDetails } from "./models/BankDetails";
 import { Budget } from "./models/Budget";
 import { Category } from "./models/Category";
+import { DailySnapshotAssets } from "./models/DailySnapshotAssets";
+import { DailySnapshotBalance } from "./models/DailySnapshotBalance";
+import { DailySnapshotNetWorth } from "./models/DailySnapshotNetWorth";
 import { Debt } from "./models/Debt";
 import { MarketRate } from "./models/MarketRate";
 import { Profile } from "./models/Profile";
@@ -95,5 +98,8 @@ export const database = new Database({
     Transfer,
     Budget,
     MarketRate,
+    DailySnapshotAssets,
+    DailySnapshotBalance,
+    DailySnapshotNetWorth,
   ],
 });

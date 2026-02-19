@@ -42,7 +42,6 @@ worth with an offline-first approach.
 | Styling        | NativeWind (Tailwind CSS for React Native) |
 | Local Database | WatermelonDB (SQLite-based, offline-first) |
 | Cloud Database | Supabase (PostgreSQL + Auth + Realtime)    |
-| Backend API    | Express.js (deployed on Vercel)            |
 | Monorepo       | npm workspaces + Nx                        |
 | Language       | TypeScript (strict mode)                   |
 | Animation      | React Native Reanimated + Gesture Handler  |
@@ -61,8 +60,6 @@ Astik/
 │   │   ├── hooks/       # Custom React hooks
 │   │   └── assets/      # Images, fonts
 │   │
-│   └── api/             # Express.js backend
-│       └── api/         # Serverless functions for Vercel
 │
 ├── packages/
 │   ├── db/              # WatermelonDB models & schema
@@ -145,7 +142,6 @@ for asset transactions)
 ### ✅ Completed
 
 - [x] Monorepo structure (npm workspaces + Nx)
-- [x] Express.js API with rates endpoints
 - [x] WatermelonDB schema and models
 - [x] All business logic decisions finalized (17 tables)
 - [x] Category seeding on app launch
