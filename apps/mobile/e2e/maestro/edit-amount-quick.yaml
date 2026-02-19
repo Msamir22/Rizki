@@ -1,0 +1,35 @@
+appId: com.msamir22.astikmobile
+
+---
+
+# T034: Quick-edit amount via tapping the amount on a card
+# Precondition: At least one transaction exists
+
+# Step 1: Launch app and navigate to Transactions
+- runFlow: setup.yaml
+
+# Step 2: Wait for transaction list to load
+- waitForAnimationToEnd
+
+# Step 3: Tap the amount on the first transaction card
+- tapOn:
+    id: "card-amount-.*"
+    index: 0
+
+- waitForAnimationToEnd
+
+# Step 4: Verify quick edit modal opens
+# The modal should show an input for the new amount
+- assertVisible: "Edit Amount"
+
+# Step 5: Clear and enter a new amount
+- inputText: "250"
+
+# Step 6: Confirm the change
+- tapOn: "Confirm"
+
+# Step 7: Wait for update
+- waitForAnimationToEnd
+
+# Step 8: Verify we're still on the transactions list
+- assertVisible: "Transactions"
