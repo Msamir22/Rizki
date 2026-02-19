@@ -1,6 +1,7 @@
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
 import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import * as React from "react";
 import { Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -26,8 +27,10 @@ export type CalculatorKey =
   | "DONE";
 
 interface CalculatorKeypadProps {
-  onKeyPress: (key: CalculatorKey) => void;
-  hide?: boolean;
+  readonly onKeyPress: (key: CalculatorKey) => void;
+  readonly hide?: boolean;
+  /** Label for the primary action button. Defaults to "Done". */
+  readonly actionLabel?: string;
 }
 
 const KEY_HEIGHT = 44;
@@ -57,7 +60,12 @@ const Key = ({
   <TouchableOpacity
     className={`items-center justify-center rounded-2xl mx-1 active:opacity-70 flex-1 bg-slate-100 dark:bg-slate-800/50 ${className}`}
     style={{ height: KEY_HEIGHT }}
-    onPress={() => onPress(value)}
+    onPress={() => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(
+        console.error
+      );
+      onPress(value);
+    }}
     onLongPress={onLongPress}
     onPressOut={onPressOut}
     delayLongPress={400}
@@ -81,17 +89,26 @@ const OperationKey = ({
   value: CalculatorKey;
   onPress: (value: CalculatorKey) => void;
 }): React.JSX.Element => (
-  <Key
-    label={label}
-    value={value}
-    onPress={onPress}
-    className="bg-nileGreen-500/10 dark:bg-nileGreen-500/10"
-  />
+  <TouchableOpacity
+    className="items-center justify-center rounded-2xl mx-1 active:opacity-70 flex-1 bg-nileGreen-500/10 dark:bg-nileGreen-500/10"
+    style={{ height: KEY_HEIGHT }}
+    onPress={() => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(
+        console.error
+      );
+      onPress(value);
+    }}
+  >
+    <Text className="text-xl font-bold text-nileGreen-600 dark:text-nileGreen-400">
+      {label}
+    </Text>
+  </TouchableOpacity>
 );
 
 export function CalculatorKeypad({
   onKeyPress,
   hide,
+  actionLabel = "Done",
 }: CalculatorKeypadProps): React.JSX.Element | null {
   const insets = useSafeAreaInsets();
   const { isDark } = useTheme();
@@ -149,7 +166,7 @@ export function CalculatorKeypad({
       className="bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 shadow-2xl"
       style={{ paddingBottom: insets.bottom + 4, paddingTop: 10 }}
     >
-      {/* Row 1 */}
+      {/* Row 1: 1 2 3 ÷ */}
       <View className="flex-row mb-2 px-3">
         <Key label="1" value="1" onPress={onKeyPress} />
         <Key label="2" value="2" onPress={onKeyPress} />
@@ -157,7 +174,7 @@ export function CalculatorKeypad({
         <OperationKey label="÷" value="/" onPress={onKeyPress} />
       </View>
 
-      {/* Row 2 */}
+      {/* Row 2: 4 5 6 × */}
       <View className="flex-row mb-2 px-3">
         <Key label="4" value="4" onPress={onKeyPress} />
         <Key label="5" value="5" onPress={onKeyPress} />
@@ -165,7 +182,7 @@ export function CalculatorKeypad({
         <OperationKey label="×" value="*" onPress={onKeyPress} />
       </View>
 
-      {/* Row 3 */}
+      {/* Row 3: 7 8 9 - */}
       <View className="flex-row mb-2 px-3">
         <Key label="7" value="7" onPress={onKeyPress} />
         <Key label="8" value="8" onPress={onKeyPress} />
@@ -173,7 +190,7 @@ export function CalculatorKeypad({
         <OperationKey label="-" value="-" onPress={onKeyPress} />
       </View>
 
-      {/* Row 4 */}
+      {/* Row 4: . 0 ⌫ + */}
       <View className="flex-row mb-2 px-3">
         <Key label="." value="." onPress={onKeyPress} />
         <Key label="0" value="0" onPress={onKeyPress} />
@@ -193,23 +210,31 @@ export function CalculatorKeypad({
         <OperationKey label="+" value="+" onPress={onKeyPress} />
       </View>
 
-      {/* Bottom Row: = and Done */}
+      {/* Bottom Row: = and Action Button (side by side) */}
       <View className="flex-row mt-1 px-3">
         <TouchableOpacity
+          className="flex-1 items-center justify-center rounded-2xl mx-1 bg-nileGreen-500 active:opacity-80 shadow-md"
+          style={{ height: KEY_HEIGHT + 4 }}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(
+              console.error
+            );
+            onKeyPress("DONE");
+          }}
+        >
+          <Text className="text-white font-extrabold text-base">
+            {actionLabel}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
           className="flex-1 items-center justify-center rounded-2xl mx-1 active:opacity-70 bg-nileGreen-500/15 dark:bg-nileGreen-500/15"
-          style={{ height: KEY_HEIGHT }}
+          style={{ height: KEY_HEIGHT + 4 }}
           onPress={() => onKeyPress("=")}
         >
           <Text className="text-xl font-extrabold text-nileGreen-600 dark:text-nileGreen-400">
             =
           </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          className="flex-[2] items-center justify-center rounded-2xl mx-1 bg-nileGreen-500 active:opacity-80 shadow-md"
-          style={{ height: KEY_HEIGHT }}
-          onPress={() => onKeyPress("DONE")}
-        >
-          <Text className="text-white font-extrabold text-base">Done</Text>
         </TouchableOpacity>
       </View>
     </View>

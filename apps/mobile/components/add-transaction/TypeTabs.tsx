@@ -1,17 +1,20 @@
 import { TransactionType } from "@astik/db";
+import * as Haptics from "expo-haptics";
 import { Text, TouchableOpacity, View } from "react-native";
 import { palette } from "@/constants/colors";
 
 interface TypeTabsProps {
   selectedType: TransactionType | "TRANSFER";
   onSelect: (type: TransactionType | "TRANSFER") => void;
+  hideTransfer?: boolean;
 }
 
 export function TypeTabs({
   selectedType,
   onSelect,
+  hideTransfer = false,
 }: TypeTabsProps): JSX.Element {
-  const tabs: Array<{
+  const allTabs: Array<{
     label: string;
     value: TransactionType | "TRANSFER";
     color: string;
@@ -21,6 +24,10 @@ export function TypeTabs({
     { label: "TRANSFER", value: "TRANSFER", color: palette.blue[500] },
   ];
 
+  const tabs = hideTransfer
+    ? allTabs.filter((t) => t.value !== "TRANSFER")
+    : allTabs;
+
   return (
     <View className="flex-row bg-slate-100 dark:bg-slate-800/80 p-1.5 rounded-2xl mb-4 mx-6 border border-slate-200 dark:border-slate-700">
       {tabs.map((tab) => {
@@ -28,7 +35,13 @@ export function TypeTabs({
         return (
           <TouchableOpacity
             key={tab.value}
-            onPress={() => onSelect(tab.value)}
+            testID={`type-tab-${tab.value}`}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(
+                console.error
+              );
+              onSelect(tab.value);
+            }}
             activeOpacity={0.8}
             className={`flex-1 items-center justify-center py-2.5 rounded-xl ${
               isSelected ? "" : "bg-transparent"

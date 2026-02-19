@@ -1199,7 +1199,50 @@ All tables finalized for implementation:
 
 ---
 
-## 19. Next Steps
+## 19. Transaction Edit Rules
+
+### 19.1 Balance Trigger Removal
+
+Supabase database triggers for balance management (`adjust_balance_on_insert`,
+`adjust_balance_on_update`, `adjust_balance_on_delete`) have been **removed**.
+All balance adjustments are now performed **client-side** within WatermelonDB
+write operations.
+
+**Rationale:** Triggers caused double-counting during sync — WatermelonDB
+already adjusts balances locally, then sync pushes the transaction to Supabase
+where triggers fire again, applying the effect twice.
+
+### 19.2 Cross-Currency Account Swap Policy
+
+When editing a transaction or transfer and changing the account to one with a
+different currency, the **same numeric amount** is used in the new account's
+currency. No automatic currency conversion is performed.
+
+**Example:** A transaction of EGP 500 moved to a USD account becomes USD 500.
+
+### 19.3 Bidirectional Transaction ↔ Transfer Conversion
+
+Transactions can be converted to transfers and vice versa. The conversion is
+**atomic** and follows these steps:
+
+1. **Revert** the original record's balance effects on all affected accounts
+2. **Soft-delete** the original record (`deleted = true`)
+3. **Create** the new record (transaction or transfer)
+4. **Apply** the new record's balance effects
+
+Linked relationships (`linkedRecurringId`, `linkedDebtId`, `linkedAssetId`)
+remain on the soft-deleted record as an **audit trail**. A warning is shown to
+the user before conversion if linked relationships exist.
+
+### 19.4 Discard Confirmation Policy
+
+The discard confirmation dialog is shown **every time** the user navigates back
+with unsaved changes — there is no "don't show again" option. This prevents
+accidental data loss since financial data is sensitive.
+
+---
+
+## 20. Next Steps
 
 1. ✅ Business discovery complete
 2. ⏳ Generate SQL migration file

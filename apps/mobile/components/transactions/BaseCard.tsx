@@ -63,6 +63,7 @@ export function BaseCard({
   const { isDark } = useTheme();
   return (
     <TouchableOpacity
+      testID={`transaction-card-${id}`}
       activeOpacity={0.7}
       onPress={() => onPress(id)}
       onLongPress={() => {
@@ -98,6 +99,7 @@ export function BaseCard({
 
         {/* Icon */}
         <TouchableOpacity
+          testID={`card-category-${id}`}
           activeOpacity={0.7}
           onPress={() => onCategoryPress?.(id)}
           disabled={!onCategoryPress || isSelectionMode}
@@ -132,6 +134,7 @@ export function BaseCard({
               {title}
             </Text>
             <TouchableOpacity
+              testID={`card-amount-${id}`}
               activeOpacity={0.6}
               onPress={() => onAmountPress?.(id)}
               disabled={!onAmountPress || isSelectionMode}
