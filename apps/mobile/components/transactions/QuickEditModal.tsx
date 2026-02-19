@@ -3,24 +3,27 @@ import React, { useEffect, useState } from "react";
 import { Modal, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
-  CalculatorKey,
+  type CalculatorKey,
   CalculatorKeypad,
 } from "@/components/add-transaction/CalculatorKeypad";
 import { formatWithCommas } from "@/components/add-transaction/AmountDisplay";
 import { CategoryPicker } from "@/components/add-transaction/CategoryPicker";
+import { CategorySelectorModal } from "@/components/modals/CategorySelectorModal";
 import { palette } from "@/constants/colors";
+import { useCategoryLookup } from "@/context/CategoriesContext";
 import { useCategories } from "@/hooks/useCategories";
+import type { TransactionType } from "@astik/db";
 
 interface QuickEditModalProps {
-  visible: boolean;
-  type: "CATEGORY" | "AMOUNT";
-  transactionType: "INCOME" | "EXPENSE" | "TRANSFER";
-  initialCategoryId?: string;
-  initialAmount?: number;
-  currency?: string;
-  amountColor?: string;
-  onClose: () => void;
-  onSave: (value: string | number) => void;
+  readonly visible: boolean;
+  readonly type: "CATEGORY" | "AMOUNT";
+  readonly transactionType: "INCOME" | "EXPENSE" | "TRANSFER";
+  readonly initialCategoryId?: string;
+  readonly initialAmount?: number;
+  readonly currency?: string;
+  readonly amountColor?: string;
+  readonly onClose: () => void;
+  readonly onSave: (value: string | number) => void;
 }
 
 export function QuickEditModal({
@@ -41,6 +44,7 @@ export function QuickEditModal({
   const [selectedCategoryId, setSelectedCategoryId] = useState(
     initialCategoryId || ""
   );
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
 
   // Reset state on open
   useEffect(() => {
@@ -53,12 +57,14 @@ export function QuickEditModal({
     }
   }, [visible, type, initialAmount, initialCategoryId]);
 
-  // Categories
-  const { categories, expenseCategories, incomeCategories } = useCategories();
+  // Categories — use global lookup map keyed by ID for correct matching
+  const categoryMap = useCategoryLookup();
+  const { expenseCategories, incomeCategories } = useCategories();
   const relevantCategories =
     transactionType === "INCOME" ? incomeCategories : expenseCategories;
-  const currentCategory =
-    categories.find((c) => c.systemName === selectedCategoryId) || null;
+  const selectedCategory = categoryMap.get(selectedCategoryId) ?? null;
+  const categoryModalType: TransactionType =
+    transactionType === "INCOME" ? "INCOME" : "EXPENSE";
 
   // Handlers
   const handleKeyPress = (key: CalculatorKey): void => {
@@ -101,82 +107,68 @@ export function QuickEditModal({
   if (!visible) return null;
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={onClose}
-    >
-      <View className="flex-1 justify-end bg-black/50">
-        <View
-          className="bg-white dark:bg-slate-900 rounded-t-3xl overflow-hidden"
-          style={{ paddingBottom: insets.bottom }}
-        >
-          {/* Header */}
-          <View className="flex-row items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800">
-            <Text className="text-lg font-bold text-slate-900 dark:text-white">
-              {type === "AMOUNT" ? "Edit Amount" : "Edit Category"}
-            </Text>
-            <TouchableOpacity onPress={onClose}>
-              <Ionicons
-                name="close-circle"
-                size={28}
-                color={palette.slate[400]}
-              />
-            </TouchableOpacity>
-          </View>
+    <>
+      <Modal
+        visible={visible}
+        transparent
+        animationType="slide"
+        onRequestClose={onClose}
+      >
+        <View className="flex-1 justify-end bg-black/50">
+          <View
+            className="bg-white dark:bg-slate-900 rounded-t-3xl overflow-hidden"
+            style={{ paddingBottom: insets.bottom }}
+          >
+            {/* Header */}
+            <View className="flex-row items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800">
+              <Text className="text-lg font-bold text-slate-900 dark:text-white">
+                {type === "AMOUNT" ? "Edit Amount" : "Edit Category"}
+              </Text>
+              <TouchableOpacity onPress={onClose}>
+                <Ionicons
+                  name="close-circle"
+                  size={28}
+                  color={palette.slate[400]}
+                />
+              </TouchableOpacity>
+            </View>
 
-          {/* Content */}
-          {type === "AMOUNT" ? (
-            <View>
-              <View className="items-center justify-center py-8">
-                <Text
-                  className="text-4xl font-bold text-slate-900 dark:text-slate-25"
-                  style={amountColor ? { color: amountColor } : {}}
-                >
-                  {currency} {formatWithCommas(amount) || "0"}
-                </Text>
-              </View>
-              <CalculatorKeypad onKeyPress={handleKeyPress} />
-            </View>
-          ) : (
-            <View className="h-[400px]">
-              <CategoryPicker
-                categories={relevantCategories}
-                selectedCategory={currentCategory}
-                onSelectCategory={(cat) => handleCategorySelect(cat.systemName)}
-                onOpenPicker={() => {}}
-              />
-              <View className="flex-row flex-wrap p-4 justify-between">
-                {relevantCategories.slice(0, 12).map((cat) => (
-                  <TouchableOpacity
-                    key={cat.id}
-                    className={`w-[30%] items-center mb-6 p-2 rounded-xl border ${selectedCategoryId === cat.systemName ? "border-nileGreen-500 bg-nileGreen-50 dark:bg-nileGreen-900/20" : "border-transparent"}`}
-                    onPress={() => handleCategorySelect(cat.systemName)}
+            {/* Content */}
+            {type === "AMOUNT" ? (
+              <View>
+                <View className="items-center justify-center py-8">
+                  <Text
+                    className="text-4xl font-bold text-slate-900 dark:text-slate-25"
+                    style={amountColor ? { color: amountColor } : {}}
                   >
-                    <View
-                      className="w-12 h-12 rounded-full items-center justify-center mb-2"
-                      style={{ backgroundColor: `${cat.color}20` }}
-                    >
-                      <Ionicons
-                        name={cat.icon as keyof typeof Ionicons.glyphMap}
-                        size={20}
-                        color={cat.color || palette.nileGreen[500]}
-                      />
-                    </View>
-                    <Text
-                      className="text-xs text-center font-medium text-slate-700 dark:text-slate-300"
-                      numberOfLines={1}
-                    >
-                      {cat.displayName}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                    {currency} {formatWithCommas(amount) || "0"}
+                  </Text>
+                </View>
+                <CalculatorKeypad onKeyPress={handleKeyPress} />
               </View>
-            </View>
-          )}
+            ) : (
+              <View className="px-4 pt-4 pb-2">
+                <CategoryPicker
+                  categories={relevantCategories}
+                  selectedCategory={selectedCategory}
+                  onSelectCategory={(cat) => handleCategorySelect(cat.id)}
+                  onOpenPicker={() => setIsCategoryModalOpen(true)}
+                />
+              </View>
+            )}
+          </View>
         </View>
-      </View>
-    </Modal>
+      </Modal>
+
+      {/* Full Category Selector (opened from CategoryPicker's "open" action) */}
+      <CategorySelectorModal
+        visible={isCategoryModalOpen}
+        rootCategories={relevantCategories}
+        type={categoryModalType}
+        selectedId={selectedCategoryId}
+        onSelect={(catId) => handleCategorySelect(catId)}
+        onClose={() => setIsCategoryModalOpen(false)}
+      />
+    </>
   );
 }

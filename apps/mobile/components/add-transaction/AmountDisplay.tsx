@@ -5,6 +5,8 @@ interface AmountDisplayProps {
   currency: string;
   type: "EXPENSE" | "INCOME" | "TRANSFER";
   mainColor?: string;
+  /** The original amount before editing — shown as strikethrough when changed */
+  originalAmount?: string;
   /** Called when the user taps the amount area (e.g. to re-open keypad) */
   onPress?: () => void;
 }
@@ -46,6 +48,7 @@ export function AmountDisplay({
   currency,
   type,
   mainColor,
+  originalAmount,
   onPress,
 }: AmountDisplayProps): React.JSX.Element {
   // Determine fallback color if mainColor is not provided
@@ -60,6 +63,10 @@ export function AmountDisplay({
 
   const displayAmount = formatWithCommas(amount);
 
+  // Show original amount when it differs from the current amount
+  const hasAmountChanged =
+    originalAmount !== undefined && originalAmount !== amount;
+
   const content = (
     <>
       <Text
@@ -73,6 +80,11 @@ export function AmountDisplay({
       <Text className="text-lg font-bold mt-1 uppercase tracking-widest text-slate-500 dark:text-slate-400">
         {currency}
       </Text>
+      {hasAmountChanged && (
+        <Text className="text-xs mt-1 text-slate-400 dark:text-slate-500 line-through">
+          was {formatWithCommas(originalAmount)}
+        </Text>
+      )}
     </>
   );
 

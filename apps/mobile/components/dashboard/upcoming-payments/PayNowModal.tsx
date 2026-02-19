@@ -78,13 +78,14 @@ export function PayNowModal({
     try {
       await createTransaction({
         amount: numericAmount,
-        currency: "EGP",
+        currency: payment.currency,
         categoryId: payment.categoryId,
         accountId: selectedAccountId,
         note: `Payment for ${payment.name}`,
-        type: "EXPENSE",
+        type: payment.type,
         source: "MANUAL",
         date: new Date(),
+        linkedRecurringId: payment.id,
       });
 
       await updateRecurringPaymentNextDueDate(

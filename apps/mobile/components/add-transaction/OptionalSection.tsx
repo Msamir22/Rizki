@@ -19,7 +19,7 @@ const FREQUENCY_OPTIONS: ReadonlyArray<{
   { value: "YEARLY", label: "Yearly" },
 ];
 
-interface OptionalFields {
+export interface OptionalFields {
   counterparty?: string;
   note?: string;
   date: Date;
@@ -35,6 +35,7 @@ interface OptionalSectionProps {
   expanded: boolean;
   onToggleExpand: () => void;
   transactionType: "EXPENSE" | "INCOME" | "TRANSFER";
+  hideRecurring?: boolean;
 }
 
 export function OptionalSection({
@@ -43,6 +44,7 @@ export function OptionalSection({
   expanded,
   onToggleExpand,
   transactionType,
+  hideRecurring = false,
 }: OptionalSectionProps): React.JSX.Element {
   const { isDark } = useTheme();
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -157,102 +159,113 @@ export function OptionalSection({
         </View>
 
         {/* Recurring Toggle */}
-        <View className="flex-row items-center justify-between bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700">
-          <View className="flex-row items-center">
-            <View className="w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900/30 items-center justify-center mr-3">
-              <Ionicons name="repeat" size={16} color={palette.orange[500]} />
-            </View>
-            <View>
-              <Text className="text-base font-semibold text-slate-900 dark:text-white">
-                Recurring Payment
-              </Text>
-              <Text className="text-xs text-slate-500 dark:text-slate-400">
-                {fields.isRecurring ? "Enabled" : "Disabled"}
-              </Text>
-            </View>
-          </View>
-          <Switch
-            value={fields.isRecurring}
-            onValueChange={(v) => onChange({ isRecurring: v })}
-            trackColor={{
-              false: palette.slate[200],
-              true: palette.nileGreen[500],
-            }}
-            thumbColor={palette.slate[25]}
-          />
-        </View>
-
-        {/* Recurring Details (Only if enabled) */}
-        {fields.isRecurring && (
-          <View className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 gap-4">
-            {/* Recurring logic will be implemented here later or simply show basic name/frequency for now as placeholders */}
-            <TextField
-              label="NAME"
-              placeholder="Recurring Name"
-              value={fields.recurringName}
-              onChangeText={(t) => onChange({ recurringName: t })}
-            />
-
-            {/* Frequency Picker */}
-            <View>
-              <Text className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 px-1 uppercase tracking-wider">
-                FREQUENCY
-              </Text>
-              <View className="flex-row flex-wrap gap-1">
-                {FREQUENCY_OPTIONS.map((option) => {
-                  const isSelected = fields.recurringFrequency === option.value;
-                  return (
-                    <TouchableOpacity
-                      key={option.value}
-                      onPress={() =>
-                        onChange({ recurringFrequency: option.value })
-                      }
-                      className={`px-4 py-2.5 rounded-xl border ${
-                        isSelected
-                          ? "bg-nileGreen-50 dark:bg-nileGreen-900/20 border-nileGreen-500 dark:border-nileGreen-600"
-                          : "bg-white dark:bg-slate-700/50 border-slate-200 dark:border-slate-600"
-                      }`}
-                    >
-                      <Text
-                        className={`text-sm font-semibold ${
-                          isSelected
-                            ? "text-nileGreen-700 dark:text-nileGreen-300"
-                            : "text-slate-600 dark:text-slate-300"
-                        }`}
-                      >
-                        {option.label}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </View>
-
-            <View>
-              {/* Auto-create Toggle */}
-              <View className="flex-row items-center ml-1 justify-between mt-2">
-                <View className="flex-1 mr-4">
-                  <Text className="text-sm font-semibold text-slate-900 dark:text-white">
-                    Auto-create transaction
+        {!hideRecurring && (
+          <>
+            <View className="flex-row items-center justify-between bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700">
+              <View className="flex-row items-center">
+                <View className="w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900/30 items-center justify-center mr-3">
+                  <Ionicons
+                    name="repeat"
+                    size={16}
+                    color={palette.orange[500]}
+                  />
+                </View>
+                <View>
+                  <Text className="text-base font-semibold text-slate-900 dark:text-white">
+                    Recurring Payment
                   </Text>
-                  <Text className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                    {fields.recurringAutoCreate
-                      ? "Transaction will be created automatically on due date"
-                      : "You will receive a reminder notification only"}
+                  <Text className="text-xs text-slate-500 dark:text-slate-400">
+                    {fields.isRecurring ? "Enabled" : "Disabled"}
                   </Text>
                 </View>
-                <Switch
-                  value={fields.recurringAutoCreate}
-                  onValueChange={(v) => onChange({ recurringAutoCreate: v })}
-                  trackColor={{
-                    false: palette.slate[200],
-                    true: palette.blue[500],
-                  }}
-                  thumbColor={palette.slate[25]}
-                />
               </View>
+              <Switch
+                value={fields.isRecurring}
+                onValueChange={(v) => onChange({ isRecurring: v })}
+                trackColor={{
+                  false: palette.slate[200],
+                  true: palette.nileGreen[500],
+                }}
+                thumbColor={palette.slate[25]}
+              />
             </View>
-          </View>
+
+            {/* Recurring Details (Only if enabled) */}
+            {fields.isRecurring && (
+              <View className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 gap-4">
+                {/* Recurring logic will be implemented here later or simply show basic name/frequency for now as placeholders */}
+                <TextField
+                  label="NAME"
+                  placeholder="Recurring Name"
+                  value={fields.recurringName}
+                  onChangeText={(t) => onChange({ recurringName: t })}
+                />
+
+                {/* Frequency Picker */}
+                <View>
+                  <Text className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 px-1 uppercase tracking-wider">
+                    FREQUENCY
+                  </Text>
+                  <View className="flex-row flex-wrap gap-1">
+                    {FREQUENCY_OPTIONS.map((option) => {
+                      const isSelected =
+                        fields.recurringFrequency === option.value;
+                      return (
+                        <TouchableOpacity
+                          key={option.value}
+                          onPress={() =>
+                            onChange({ recurringFrequency: option.value })
+                          }
+                          className={`px-4 py-2.5 rounded-xl border ${
+                            isSelected
+                              ? "bg-nileGreen-50 dark:bg-nileGreen-900/20 border-nileGreen-500 dark:border-nileGreen-600"
+                              : "bg-white dark:bg-slate-700/50 border-slate-200 dark:border-slate-600"
+                          }`}
+                        >
+                          <Text
+                            className={`text-sm font-semibold ${
+                              isSelected
+                                ? "text-nileGreen-700 dark:text-nileGreen-300"
+                                : "text-slate-600 dark:text-slate-300"
+                            }`}
+                          >
+                            {option.label}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+
+                <View>
+                  {/* Auto-create Toggle */}
+                  <View className="flex-row items-center ml-1 justify-between mt-2">
+                    <View className="flex-1 mr-4">
+                      <Text className="text-sm font-semibold text-slate-900 dark:text-white">
+                        Auto-create transaction
+                      </Text>
+                      <Text className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                        {fields.recurringAutoCreate
+                          ? "Transaction will be created automatically on due date"
+                          : "You will receive a reminder notification only"}
+                      </Text>
+                    </View>
+                    <Switch
+                      value={fields.recurringAutoCreate}
+                      onValueChange={(v) =>
+                        onChange({ recurringAutoCreate: v })
+                      }
+                      trackColor={{
+                        false: palette.slate[200],
+                        true: palette.blue[500],
+                      }}
+                      thumbColor={palette.slate[25]}
+                    />
+                  </View>
+                </View>
+              </View>
+            )}
+          </>
         )}
       </View>
     </View>

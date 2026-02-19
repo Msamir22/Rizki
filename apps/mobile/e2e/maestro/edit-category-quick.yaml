@@ -1,0 +1,33 @@
+appId: com.msamir22.astikmobile
+
+---
+
+# T033: Quick-edit category via tapping the category icon on a card
+# Precondition: At least one transaction exists
+
+# Step 1: Launch app and navigate to Transactions
+- runFlow: setup.yaml
+
+# Step 2: Wait for transaction list to load
+- waitForAnimationToEnd
+
+# Step 3: Tap the category icon on the first transaction card
+- tapOn:
+    id: "card-category-.*"
+    index: 0
+
+- waitForAnimationToEnd
+
+# Step 4: Verify category picker modal opens
+# The modal should show category options
+- assertVisible: "Select Category"
+
+# Step 5: Tap a different category from the list
+# Tap on any visible category name (e.g., first one in the list)
+- tapOn:
+    index: 0
+    text: ".*"
+    optional: true
+
+# Step 6: Wait for modal to close and card to update
+- waitForAnimationToEnd

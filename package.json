@@ -35,6 +35,8 @@
     "db:reset": "npx supabase db reset",
     "db:migrations": "npx supabase migration list",
     "fn:deploy:rates": "npx supabase functions deploy fetch-metal-rates --project-ref yulbcndyssdjicbpmlrk",
+    "e2e": "maestro test apps/mobile/e2e/maestro/",
+    "e2e:flow": "maestro test apps/mobile/e2e/maestro/",
     "prepare": "node -e \"if (process.env.CI !== 'true') { process.exit(1) }\" || husky"
   },
   "dependencies": {

@@ -1,0 +1,37 @@
+appId: com.msamir22.astikmobile
+
+---
+
+# T036: Edit transaction — change type from Expense to Income
+# Precondition: At least one expense transaction exists
+
+# Step 1: Launch app and navigate to Transactions
+- runFlow: setup.yaml
+
+# Step 2: Wait for transaction list to load
+- waitForAnimationToEnd
+
+# Step 3: Tap on the first transaction card to open edit screen
+- tapOn:
+    id: "transaction-card-.*"
+    index: 0
+
+- waitForAnimationToEnd
+
+# Step 4: Verify edit screen opens
+- assertVisible: "Edit Transaction"
+
+# Step 5: Tap INCOME type tab to change transaction type
+- tapOn:
+    id: "type-tab-INCOME"
+
+- waitForAnimationToEnd
+
+# Step 6: Tap Save
+- tapOn:
+    id: "header-save"
+
+- waitForAnimationToEnd
+
+# Step 7: Verify navigation back to transactions list
+- assertVisible: "Transactions"

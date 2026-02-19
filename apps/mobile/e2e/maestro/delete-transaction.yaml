@@ -1,0 +1,40 @@
+appId: com.msamir22.astikmobile
+
+---
+
+# T037: Delete a transaction via the edit screen
+# Precondition: At least one transaction exists
+
+# Step 1: Launch app and navigate to Transactions
+- runFlow: setup.yaml
+
+# Step 2: Wait for transaction list to load
+- waitForAnimationToEnd
+
+# Step 3: Tap on the first transaction card to open edit screen
+- tapOn:
+    id: "transaction-card-.*"
+    index: 0
+
+- waitForAnimationToEnd
+
+# Step 4: Verify edit screen opens
+- assertVisible: "Edit Transaction"
+
+# Step 5: Tap the delete (trash) icon in the header secondary action
+- tapOn:
+    id: "header-secondary"
+
+- waitForAnimationToEnd
+
+# Step 6: Verify confirmation modal appears
+- assertVisible: "Delete Transaction?"
+
+# Step 7: Tap Confirm to delete
+- tapOn:
+    id: "modal-confirm"
+
+- waitForAnimationToEnd
+
+# Step 8: Verify navigation back to transactions list
+- assertVisible: "Transactions"

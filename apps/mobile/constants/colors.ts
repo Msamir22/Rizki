@@ -15,7 +15,8 @@ export const palette = {
   // Wealth/Gold
   gold: {
     800: "#92400E",
-    600: "#D97706", // main
+    600: "#D97706", // main / warnings
+    500: "#F59E0B",
     400: "#FBBF24",
     100: "#FEF3C7",
     50: "#F5E6C8", // warm tan bg

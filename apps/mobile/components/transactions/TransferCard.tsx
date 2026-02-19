@@ -58,6 +58,8 @@ export function TransferCard({
       title="Transfer"
       amount={formattedAmount}
       subtitle={subtitle}
+      isExpense={false}
+      isIncome={false}
       details={notes}
       displayNetWorth={displayNetWorth}
       date={date}

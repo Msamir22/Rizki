@@ -26,6 +26,12 @@ interface PageHeaderProps {
     disabled?: boolean;
     loading?: boolean;
   };
+  /** Optional secondary icon action rendered before the primary rightAction. */
+  secondaryAction?: {
+    icon: keyof typeof Ionicons.glyphMap;
+    onPress: () => void;
+    color?: string;
+  };
   children?: React.ReactNode;
 }
 
@@ -77,7 +83,11 @@ function BackButton({
 }): React.ReactElement {
   const router = useRouter();
   return (
-    <TouchableOpacity onPress={() => router.back()} className="mr-2 p-1">
+    <TouchableOpacity
+      onPress={() => router.back()}
+      testID="header-back"
+      className="mr-2 p-1"
+    >
       <Ionicons
         name={backIcon === "close" ? "close-outline" : "arrow-back-outline"}
         size={28}
@@ -124,15 +134,15 @@ function RightAction({
 }): React.ReactElement {
   return (
     <TouchableOpacity
+      testID={rightAction.label ? "header-save" : "header-right-action"}
       onPress={rightAction.onPress}
       activeOpacity={0.7}
       disabled={rightAction.disabled || rightAction.loading}
       className={`rounded-full items-center justify-center ${
         rightAction.icon
-          ? "w-14 h-10 bg-white dark:bg-slate-800 shadow-sm"
+          ? "w-14 h-10 bg-white elevation-[2] dark:bg-slate-800 shadow-sm"
           : "px-4 py-2"
       } ${rightAction.disabled ? "opacity-50" : ""}`}
-      style={rightAction.icon ? { elevation: 2 } : {}}
     >
       {rightAction.loading ? (
         <ActivityIndicator size="small" color={palette.nileGreen[500]} />
@@ -158,6 +168,7 @@ export function PageHeader({
   selectionMode,
   backIcon = "arrow",
   rightAction,
+  secondaryAction,
   children,
 }: PageHeaderProps): React.ReactElement {
   const insets = useSafeAreaInsets();
@@ -202,12 +213,33 @@ export function PageHeader({
             )}
           </View>
 
-          {shouldShowRightAction && (
-            <RightAction rightAction={rightAction} isDark={isDark} />
-          )}
+          <View className="flex-row items-center gap-2">
+            {secondaryAction && !shouldShowSelectionMode && (
+              <TouchableOpacity
+                testID="header-secondary"
+                onPress={secondaryAction.onPress}
+                activeOpacity={0.7}
+                className="p-1.5"
+              >
+                <Ionicons
+                  name={secondaryAction.icon}
+                  size={22}
+                  color={
+                    secondaryAction.color ??
+                    (isDark ? palette.slate[400] : palette.slate[500])
+                  }
+                />
+              </TouchableOpacity>
+            )}
+
+            {shouldShowRightAction && (
+              <RightAction rightAction={rightAction} isDark={isDark} />
+            )}
+          </View>
 
           {shouldShowSelectionMode && selectionMode.onDelete && (
             <TouchableOpacity
+              testID="header-delete"
               onPress={selectionMode.onDelete}
               className="w-10 h-10 rounded-full items-center justify-center bg-red-50 dark:bg-red-900/20"
             >
