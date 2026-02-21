@@ -599,12 +599,24 @@ function main() {
   // Generate schema.ts
   console.log("📝 Generating schema.ts...");
   const schemaContent = generateSchema(tables);
-  fs.writeFileSync(path.join(OUTPUT_DIR, "schema.ts"), schemaContent);
+  const schemaPath = path.join(OUTPUT_DIR, "schema.ts");
+  fs.writeFileSync(schemaPath, schemaContent);
 
   // Generate types.ts
   console.log("📝 Generating types.ts...");
   const typesContent = generateTypes(enums);
-  fs.writeFileSync(path.join(OUTPUT_DIR, "types.ts"), typesContent);
+  const typesPath = path.join(OUTPUT_DIR, "types.ts");
+  fs.writeFileSync(typesPath, typesContent);
+
+  // Format schema.ts and types.ts with Prettier so the output matches
+  // the editor / pre-commit formatter and avoids phantom git diffs.
+  try {
+    execSync(`npx prettier --write "${schemaPath}" "${typesPath}"`, {
+      stdio: "inherit",
+    });
+  } catch {
+    console.warn("   ⚠️  Prettier formatting of schema/types skipped");
+  }
 
   // Generate base model files (always overwritten)
   console.log("📝 Generating base model files...");
