@@ -5,6 +5,7 @@
  * Falls back to device locale currency detection, then USD.
  */
 
+import { useToast } from "@/components/ui/Toast";
 import { database, Profile, type CurrencyType } from "@astik/db";
 import { SUPPORTED_CURRENCIES } from "@astik/logic";
 import { getLocales } from "expo-localization";
@@ -47,6 +48,7 @@ function detectCurrencyFromDevice(): CurrencyType {
 export function usePreferredCurrency(): UsePreferredCurrencyResult {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { showToast } = useToast();
 
   // Observe the first profile record
   useEffect(() => {
@@ -85,11 +87,20 @@ export function usePreferredCurrency(): UsePreferredCurrencyResult {
     currency: CurrencyType
   ): Promise<void> => {
     if (!profile) return;
-    await database.write(async () => {
-      await profile.update((p) => {
-        p.preferredCurrency = currency;
+    try {
+      await database.write(async () => {
+        await profile.update((p) => {
+          p.preferredCurrency = currency;
+        });
       });
-    });
+    } catch (error) {
+      console.error("Failed to save currency preference:", error);
+      showToast({
+        type: "error",
+        title: "Error",
+        message: "Failed to save currency preference",
+      });
+    }
   };
 
   return {

@@ -965,43 +965,42 @@ export type Database = {
       budget_type: "CATEGORY" | "GLOBAL";
       category_nature: "WANT" | "NEED" | "MUST";
       currency_type:
-        | "AED"
-        | "AUD"
-        | "BHD"
-        | "BTC"
-        | "CAD"
-        | "CHF"
-        | "CNH"
-        | "CNY"
-        | "DKK"
-        | "DZD"
         | "EGP"
+        | "SAR"
+        | "AED"
+        | "KWD"
+        | "QAR"
+        | "BHD"
+        | "OMR"
+        | "JOD"
+        | "IQD"
+        | "LYD"
+        | "TND"
+        | "MAD"
+        | "DZD"
+        | "USD"
         | "EUR"
         | "GBP"
-        | "HKD"
-        | "INR"
-        | "IQD"
-        | "ISK"
-        | "JOD"
         | "JPY"
-        | "KPW"
+        | "CHF"
+        | "CNY"
+        | "INR"
         | "KRW"
-        | "KWD"
-        | "LYD"
-        | "MAD"
-        | "MYR"
-        | "NOK"
-        | "NZD"
-        | "OMR"
-        | "QAR"
-        | "RUB"
-        | "SAR"
-        | "SEK"
+        | "KPW"
         | "SGD"
-        | "TND"
+        | "HKD"
+        | "MYR"
+        | "AUD"
+        | "NZD"
+        | "CAD"
+        | "SEK"
+        | "NOK"
+        | "DKK"
+        | "ISK"
         | "TRY"
-        | "USD"
-        | "ZAR";
+        | "RUB"
+        | "ZAR"
+        | "BTC";
       debt_status: "ACTIVE" | "PARTIALLY_PAID" | "SETTLED" | "WRITTEN_OFF";
       debt_type: "LENT" | "BORROWED";
       metal_type: "GOLD" | "SILVER" | "PLATINUM" | "PALLADIUM";
@@ -1154,43 +1153,42 @@ export const Constants = {
       budget_type: ["CATEGORY", "GLOBAL"],
       category_nature: ["WANT", "NEED", "MUST"],
       currency_type: [
-        "AED",
-        "AUD",
-        "BHD",
-        "BTC",
-        "CAD",
-        "CHF",
-        "CNH",
-        "CNY",
-        "DKK",
-        "DZD",
         "EGP",
+        "SAR",
+        "AED",
+        "KWD",
+        "QAR",
+        "BHD",
+        "OMR",
+        "JOD",
+        "IQD",
+        "LYD",
+        "TND",
+        "MAD",
+        "DZD",
+        "USD",
         "EUR",
         "GBP",
-        "HKD",
-        "INR",
-        "IQD",
-        "ISK",
-        "JOD",
         "JPY",
-        "KPW",
+        "CHF",
+        "CNY",
+        "INR",
         "KRW",
-        "KWD",
-        "LYD",
-        "MAD",
-        "MYR",
-        "NOK",
-        "NZD",
-        "OMR",
-        "QAR",
-        "RUB",
-        "SAR",
-        "SEK",
+        "KPW",
         "SGD",
-        "TND",
+        "HKD",
+        "MYR",
+        "AUD",
+        "NZD",
+        "CAD",
+        "SEK",
+        "NOK",
+        "DKK",
+        "ISK",
         "TRY",
-        "USD",
+        "RUB",
         "ZAR",
+        "BTC",
       ],
       debt_status: ["ACTIVE", "PARTIALLY_PAID", "SETTLED", "WRITTEN_OFF"],
       debt_type: ["LENT", "BORROWED"],

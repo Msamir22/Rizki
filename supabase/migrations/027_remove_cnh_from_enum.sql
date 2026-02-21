@@ -5,6 +5,12 @@
 -- Postgres does not support ALTER TYPE ... DROP VALUE directly.
 -- We must rename the old type, create a new one without CNH,
 -- and migrate all columns that reference it.
+--
+-- Columns with DEFAULT values cast to the old enum must have their
+-- defaults dropped before the type change and restored afterwards,
+-- otherwise Postgres raises "cannot be cast automatically" (SQLSTATE 42804).
+
+BEGIN;
 
 -- 1. Rename the existing enum
 ALTER TYPE currency_type RENAME TO currency_type_old;
@@ -21,21 +27,39 @@ CREATE TYPE currency_type AS ENUM (
   'BTC'
 );
 
--- 3. Migrate columns: accounts.currency
+-- 3. Drop defaults on columns that reference the old enum
+--    (Postgres cannot auto-cast defaults during ALTER TYPE)
+ALTER TABLE accounts ALTER COLUMN currency DROP DEFAULT;
+ALTER TABLE assets ALTER COLUMN currency DROP DEFAULT;
+ALTER TABLE budgets ALTER COLUMN currency DROP DEFAULT;
+ALTER TABLE recurring_payments ALTER COLUMN currency DROP DEFAULT;
+
+-- 4. Migrate all columns from old enum → text → new enum
 ALTER TABLE accounts
   ALTER COLUMN currency TYPE currency_type USING currency::text::currency_type;
 
--- 4. Migrate columns: transactions.currency
+ALTER TABLE assets
+  ALTER COLUMN currency TYPE currency_type USING currency::text::currency_type;
+
+ALTER TABLE budgets
+  ALTER COLUMN currency TYPE currency_type USING currency::text::currency_type;
+
 ALTER TABLE transactions
   ALTER COLUMN currency TYPE currency_type USING currency::text::currency_type;
 
--- 5. Migrate columns: recurring_payments.currency
 ALTER TABLE recurring_payments
   ALTER COLUMN currency TYPE currency_type USING currency::text::currency_type;
 
--- 6. Migrate columns: profiles.preferred_currency
-ALTER TABLE profiles
-  ALTER COLUMN preferred_currency TYPE currency_type USING preferred_currency::text::currency_type;
+ALTER TABLE transfers
+  ALTER COLUMN currency TYPE currency_type USING currency::text::currency_type;
 
--- 7. Drop the old type
+-- 5. Restore defaults
+ALTER TABLE accounts ALTER COLUMN currency SET DEFAULT 'EGP'::currency_type;
+ALTER TABLE assets ALTER COLUMN currency SET DEFAULT 'EGP'::currency_type;
+ALTER TABLE budgets ALTER COLUMN currency SET DEFAULT 'EGP'::currency_type;
+ALTER TABLE recurring_payments ALTER COLUMN currency SET DEFAULT 'EGP'::currency_type;
+
+-- 6. Drop the old type
 DROP TYPE currency_type_old;
+
+COMMIT;
