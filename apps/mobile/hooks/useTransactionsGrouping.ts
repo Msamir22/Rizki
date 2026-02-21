@@ -8,13 +8,14 @@ import {
   getStartOfWeek,
   isSameDay,
 } from "@/utils/dateHelpers";
-import { database, Transaction, Transfer } from "@astik/db";
-import { convertToEGP } from "@astik/logic";
+import { database, Transaction, Transfer, type CurrencyType } from "@astik/db";
+import { convertCurrency } from "@astik/logic";
 import { Q } from "@nozbe/watermelondb";
 import { useEffect, useMemo, useState } from "react";
 import { useMarketRates } from "./useMarketRates";
 import { useNetWorth } from "./useNetWorth";
 import { PeriodFilter } from "./usePeriodSummary";
+import { usePreferredCurrency } from "./usePreferredCurrency";
 
 export type TransactionTypeFilter = "All" | "Income" | "Expense" | "Transfer";
 
@@ -111,6 +112,21 @@ export interface UseTransactionsGroupingResult {
   refetch: () => void;
 }
 
+/**
+ * Fetches, filters, enriches, and groups transactions and transfers for display over a selectable period.
+ *
+ * Fetching respects the selected transaction types and search query, enriches items with account/category
+ * display fields, computes per-item and per-group net worth values using current market rates and the preferred currency,
+ * and returns grouped data suitable for rendering along with loading state and a refetch trigger.
+ *
+ * @param period - Time range used to select and group transactions (e.g., today, this_week, this_month).
+ * @param selectedTypes - Array of transaction type filters (e.g., "All", "Income", "Expense", "Transfer") that control which items are included.
+ * @param searchQuery - Optional text used to filter displayed items by note, counterparty, category, or amount.
+ * @returns An object with:
+ *  - groupedData: an array of groups where each group has a title, a list of display-ready transactions/transfers, the group's starting net worth, and aggregated income/expense totals,
+ *  - isLoading: `true` while data or net-worth information is being loaded,
+ *  - refetch: a function that triggers a fresh fetch and reprocessing of displayed items.
+ */
 export function useTransactionsGrouping(
   period: GroupingPeriod,
   selectedTypes: TransactionTypeFilter[],
@@ -123,6 +139,7 @@ export function useTransactionsGrouping(
   const { totalNetWorth, isLoading: isNetWorthLoading } = useNetWorth();
   const { latestRates } = useMarketRates();
   const [isDataLoading, setIsDataLoading] = useState(true);
+  const { preferredCurrency } = usePreferredCurrency();
 
   // 1. Fetch Transactions and Transfers
   useEffect(() => {
@@ -327,18 +344,17 @@ export function useTransactionsGrouping(
       return [];
     }
 
-    // Helper: convert a transaction amount to EGP using market rates
-    const toEGP = (amount: number, currency: string): number => {
-      if (!latestRates) return amount;
-      return convertToEGP(amount, currency, latestRates);
+    // Helper: convert a transaction amount to preferred currency using market rates
+    const toPreferred = (amount: number, currency: CurrencyType): number => {
+      return convertCurrency(amount, currency, preferredCurrency, latestRates);
     };
 
     // Step A: Calculate Anchor Net Worth
     const getSignedAmount = (item: DisplayTransaction): number => {
       if (item._type === "transaction") {
-        const egpAmount = toEGP(item.amount, item.currency);
-        if (item.isIncome) return egpAmount;
-        if (item.isExpense) return -egpAmount;
+        const preferredAmount = toPreferred(item.amount, item.currency);
+        if (item.isIncome) return preferredAmount;
+        if (item.isExpense) return -preferredAmount;
         return 0;
       }
       // Transfers don't affect net worth (money moves between accounts)
@@ -348,9 +364,9 @@ export function useTransactionsGrouping(
     let anchorNW = totalNetWorth;
 
     allTransactions.forEach((t) => {
-      const egpAmount = toEGP(t.amount, t.currency);
-      if (t.isIncome) anchorNW -= egpAmount;
-      if (t.isExpense) anchorNW += egpAmount;
+      const preferredAmount = toPreferred(t.amount, t.currency);
+      if (t.isIncome) anchorNW -= preferredAmount;
+      if (t.isExpense) anchorNW += preferredAmount;
     });
 
     // Step B: Unwind Displayed Items with Net Worth
@@ -414,11 +430,11 @@ export function useTransactionsGrouping(
       if (currentGroup) {
         currentGroup.transactions.push(item);
         if (item._type === "transaction") {
-          const egpAmount = toEGP(item.amount, item.currency);
+          const preferredAmount = toPreferred(item.amount, item.currency);
           if (item.isIncome) {
-            currentGroup.groupTotalIncome += egpAmount;
+            currentGroup.groupTotalIncome += preferredAmount;
           } else if (item.isExpense) {
-            currentGroup.groupTotalExpense += egpAmount;
+            currentGroup.groupTotalExpense += preferredAmount;
           }
         }
       }
@@ -432,6 +448,7 @@ export function useTransactionsGrouping(
     displayedItems,
     totalNetWorth,
     latestRates,
+    preferredCurrency,
     period,
     searchQuery,
   ]);

@@ -1,6 +1,6 @@
 import { palette } from "@/constants/colors";
 import { Account, MarketRate } from "@astik/db";
-import { convertToEGP, formatCurrency } from "@astik/logic";
+import { convertCurrency, formatCurrency } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
 import { useMemo } from "react";
 import { Text, TouchableOpacity, View } from "react-native";
@@ -11,6 +11,16 @@ interface AccountCardProps {
   onPress?: () => void;
 }
 
+/**
+ * Render a tappable account summary card showing an icon, account name, contextual subtitle, and formatted balance.
+ *
+ * The subtitle shows an approximate USD value when the account currency is not USD and `latestRates` is provided; otherwise it shows a type-based label (e.g., "Bank Account", "Digital Wallet", "Physical money").
+ *
+ * @param account - The account to display (provides name, type, currency, balance, and formattedBalance).
+ * @param latestRates - Market rates used to convert the account balance to USD for the approximate subtitle; may be null to disable conversion.
+ * @param onPress - Optional press handler invoked when the card is tapped.
+ * @returns A JSX element representing the account card.
+ */
 export function AccountCard({
   account,
   latestRates,
@@ -31,15 +41,16 @@ export function AccountCard({
     }, [account.type]);
 
   const subtitle = useMemo(() => {
-    if (account.currency !== "EGP" && latestRates) {
-      const egpValue = convertToEGP(
+    if (account.currency !== "USD" && latestRates) {
+      const usdValue = convertCurrency(
         account.balance,
         account.currency,
+        "USD",
         latestRates
       );
       return `≈ ${formatCurrency({
-        amount: egpValue,
-        currency: "EGP",
+        amount: usdValue,
+        currency: "USD",
       })}`;
     }
 

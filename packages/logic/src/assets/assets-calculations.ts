@@ -1,13 +1,18 @@
 import type { AssetMetal, MarketRate } from "@astik/db";
+import { getMetalPriceUsd } from "../utils/metal";
 
 /**
- * Calculate total assets value in EGP
+ * Calculates the total USD value of the provided metal assets.
  *
- * Formula: weight_grams × purity_fraction × price_per_gram
+ * Formula: weight_grams × purity_fraction × price_per_gram_usd.
  *
- * purity_fraction is already normalized (0.0-1.0):
- * - Gold: stored as karat/24 (e.g., 21K = 0.875)
- * - Silver/Platinum/Palladium: stored as fineness/1000 (e.g., 925 = 0.925)
+ * purity_fraction is expected normalized to the range 0.0–1.0:
+ * - Gold: stored as karat/24 (e.g., 21K → 0.875)
+ * - Silver/Platinum/Palladium: stored as fineness/1000 (e.g., 925 → 0.925)
+ *
+ * @param assetMetals - Array of asset metal holdings to value
+ * @param marketRates - Market rates providing current USD price per gram for supported metals
+ * @returns The sum of all asset metal values in USD
  */
 export function calculateTotalAssets(
   assetMetals: AssetMetal[],
@@ -18,29 +23,8 @@ export function calculateTotalAssets(
   }
 
   return assetMetals.reduce((total, metal) => {
-    const pricePerGram = getMetalPrice(metal.metalType, marketRates);
+    const pricePerGram = getMetalPriceUsd(metal.metalType, marketRates);
     const value = metal.calculateValue(pricePerGram);
     return total + value;
   }, 0);
-}
-
-/**
- * Get the current price per gram for a metal type
- */
-function getMetalPrice(
-  metalType: AssetMetal["metalType"],
-  marketRates: NonNullable<MarketRate>
-): number {
-  switch (metalType) {
-    case "GOLD":
-      return marketRates.goldEgpPerGram;
-    case "SILVER":
-      return marketRates.silverEgpPerGram;
-    case "PLATINUM":
-      return marketRates.platinumEgpPerGram;
-    case "PALLADIUM":
-      return marketRates.palladiumEgpPerGram;
-    default:
-      return 0;
-  }
 }

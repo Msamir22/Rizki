@@ -1,3 +1,4 @@
+import type { CurrencyType } from "@astik/db";
 import { formatCurrency } from "@astik/logic";
 import { BlurView } from "expo-blur";
 import React from "react";
@@ -8,13 +9,21 @@ interface GroupHeaderProps {
   netWorth: number;
   income: number;
   expense: number;
+  currencyCode: CurrencyType;
 }
 
+/**
+ * Render a header for a transaction group showing the title, optional income/expense totals, and the formatted running balance.
+ *
+ * @param currencyCode - Currency to use when formatting income, expense, and net worth amounts
+ * @returns A React element containing the group header UI with title, conditional income/expense badges, and the formatted balance
+ */
 export function GroupHeader({
   title,
   netWorth,
   income,
   expense,
+  currencyCode,
 }: GroupHeaderProps): React.JSX.Element {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
@@ -45,7 +54,7 @@ export function GroupHeader({
                   +
                   {formatCurrency({
                     amount: income,
-                    currency: "EGP",
+                    currency: currencyCode,
                   })}
                 </Text>
               )}
@@ -54,7 +63,7 @@ export function GroupHeader({
                   -
                   {formatCurrency({
                     amount: expense,
-                    currency: "EGP",
+                    currency: currencyCode,
                   })}
                 </Text>
               )}
@@ -67,7 +76,7 @@ export function GroupHeader({
             <Text className="text-slate-600 dark:text-slate-300 font-medium">
               {formatCurrency({
                 amount: netWorth,
-                currency: "EGP",
+                currency: currencyCode,
               })}
             </Text>
           </Text>

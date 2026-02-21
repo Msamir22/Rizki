@@ -6,21 +6,22 @@
  * The section does not render when there are no upcoming payments.
  */
 
+import { useToast } from "@/components/ui/Toast";
+import { palette } from "@/constants/colors";
+import { useRecurringPayments } from "@/hooks/useRecurringPayments";
 import { formatCurrency } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import { ActivityIndicator, Text, TouchableOpacity, View } from "react-native";
-import { useToast } from "@/components/ui/Toast";
-import { palette } from "@/constants/colors";
-import { useRecurringPayments } from "@/hooks/useRecurringPayments";
 
+import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
+import type { RecurringPayment } from "@astik/db";
 import {
   FeaturedPaymentCard,
   MiniPaymentItem,
   PayNowModal,
 } from "./upcoming-payments";
-import type { RecurringPayment } from "@astik/db";
 
 // Constants
 
@@ -28,10 +29,17 @@ const PAYMENT_LIMIT = 5;
 const SIDE_PAYMENTS_COUNT = 3;
 const TOAST_DURATION_MS = 3500;
 
-// Main Component
+/**
+ * Render the "Upcoming Bills" section with a featured payment, side mini items, a total due row, and a Pay Now modal.
+ *
+ * Displays a loading indicator while payments are loading and renders nothing when there are no upcoming payments. When a payment is completed via the modal, a success toast is shown containing the payment name and formatted amount using the user's preferred currency.
+ *
+ * @returns The JSX element for the Upcoming Bills UI, or an empty fragment when there are no upcoming payments.
+ */
 
 export function UpcomingPayments(): React.JSX.Element {
   const { showToast } = useToast();
+  const { preferredCurrency } = usePreferredCurrency();
   const {
     filteredPayments: payments,
     totalDueThisMonth,
@@ -56,7 +64,7 @@ export function UpcomingPayments(): React.JSX.Element {
       title: "Payment Recorded",
       message: `${selectedPayment?.name} - ${formatCurrency({
         amount,
-        currency: "EGP",
+        currency: selectedPayment?.currency ?? preferredCurrency,
       })}`,
       duration: TOAST_DURATION_MS,
     });
@@ -134,7 +142,7 @@ export function UpcomingPayments(): React.JSX.Element {
             <Text className="text-base font-bold text-nileGreen-500">
               {formatCurrency({
                 amount: totalDueThisMonth,
-                currency: "EGP",
+                currency: preferredCurrency,
               })}
             </Text>
           </View>

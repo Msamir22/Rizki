@@ -531,7 +531,36 @@ function parseExistingMigrations() {
 // =============================================================================
 
 /**
+ * Extract the numeric prefix from a migration filename.
+ *
+ * @param {string} filename
+ * @returns {number} The numeric prefix, or -1 if unparseable.
+ */
+function extractNumericPrefix(filename) {
+  const match = filename.match(/^(\d+)/);
+  return match ? parseInt(match[1], 10) : -1;
+}
+
+/**
+ * Check whether a filename uses the project's sequential naming convention
+ * (e.g. "027_description.sql" — up to 4 leading digits).
+ *
+ * Timestamps from `supabase db pull` use 14-digit prefixes and
+ * should not be treated as the "latest" sequential migration.
+ *
+ * @param {string} filename
+ * @returns {boolean}
+ */
+function isSequentialMigration(filename) {
+  return /^\d{1,4}_/.test(filename);
+}
+
+/**
  * Find the latest SQL migration file in supabase/migrations/.
+ *
+ * Prefers files that follow the project's sequential `NNN_*` naming
+ * convention. Falls back to timestamp-prefixed files only when no
+ * sequential migrations exist.
  *
  * @returns {string} Absolute path to the latest .sql file
  */
@@ -543,17 +572,25 @@ function findLatestMigration() {
     process.exit(1);
   }
 
-  const files = fs
+  const allFiles = fs
     .readdirSync(SUPABASE_MIGRATIONS_DIR)
-    .filter((f) => f.endsWith(".sql"))
-    .sort();
+    .filter((f) => f.endsWith(".sql"));
 
-  if (files.length === 0) {
+  if (allFiles.length === 0) {
     console.error("❌ No .sql files found in supabase/migrations/");
     process.exit(1);
   }
 
-  const latest = files[files.length - 1];
+  // Prefer sequential migrations (NNN_*) — the project's canonical convention
+  const sequential = allFiles
+    .filter(isSequentialMigration)
+    .sort((a, b) => extractNumericPrefix(a) - extractNumericPrefix(b));
+
+  const latest =
+    sequential.length > 0
+      ? sequential[sequential.length - 1]
+      : allFiles.sort()[allFiles.length - 1];
+
   return path.join(SUPABASE_MIGRATIONS_DIR, latest);
 }
 

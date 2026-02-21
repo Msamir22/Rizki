@@ -7,19 +7,29 @@ import { TotalNetWorthCard } from "@/components/dashboard/TotalNetWorthCard";
 import { UpcomingPayments } from "@/components/dashboard/UpcomingPayments";
 import { AppDrawer } from "@/components/navigation/AppDrawer";
 import { StarryBackground } from "@/components/ui/StarryBackground";
+import { CurrencyPicker } from "@/components/currency/CurrencyPicker";
 import { palette } from "@/constants/colors";
 import { TAB_BAR_HEIGHT } from "@/constants/ui";
 import { useTopAccounts } from "@/hooks/useAccounts";
 import { useMarketRates } from "@/hooks/useMarketRates";
 import { useMonthlyPercentageChange, useNetWorth } from "@/hooks/useNetWorth";
+import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
 import { useRecentTransactions } from "@/hooks/useTransactions";
 import { useDatabaseReady } from "@/providers/DatabaseProvider";
-import { egpToCurrency } from "@astik/logic";
-import React, { useState } from "react";
+import type { CurrencyType } from "@astik/db";
+import { CURRENCY_INFO_MAP } from "@astik/logic";
+import React, { useCallback, useState } from "react";
 import { ActivityIndicator, ScrollView, View } from "react-native";
 
+/**
+ * Renders the main dashboard screen including total net worth, live market rates, top accounts,
+ * recent transactions, upcoming payments, and UI for selecting the preferred currency.
+ *
+ * @returns The dashboard screen React element.
+ */
 export default function DashboardScreen(): React.JSX.Element {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isCurrencyPickerOpen, setIsCurrencyPickerOpen] = useState(false);
   const isDbReady = useDatabaseReady();
   const { accounts, isLoading: accountsLoading } = useTopAccounts(3);
   const {
@@ -32,9 +42,27 @@ export default function DashboardScreen(): React.JSX.Element {
   const { transactions, isLoading: transactionsLoading } =
     useRecentTransactions(3);
 
-  const { totalNetWorth, isLoading: netWorthLoading } = useNetWorth();
-
+  const {
+    totalNetWorth,
+    totalNetWorthUsd,
+    isLoading: netWorthLoading,
+  } = useNetWorth();
   const { monthlyPercentageChange } = useMonthlyPercentageChange();
+  const {
+    preferredCurrency,
+    setPreferredCurrency,
+    isLoading: isCurrencyLoading,
+  } = usePreferredCurrency();
+
+  const currencyInfo = CURRENCY_INFO_MAP[preferredCurrency];
+
+  const handleCurrencySelect = useCallback(
+    (currency: CurrencyType) => {
+      if (isCurrencyLoading) return;
+      setPreferredCurrency(currency).catch(console.error);
+    },
+    [setPreferredCurrency, isCurrencyLoading]
+  );
 
   // Overall loading state
   const isLoading = accountsLoading || ratesLoading || netWorthLoading;
@@ -57,14 +85,19 @@ export default function DashboardScreen(): React.JSX.Element {
         showsVerticalScrollIndicator={false}
       >
         <View className="px-5 pt-[10px]">
-          <TopNav onMenuPress={() => setIsDrawerOpen(true)} />
-          <TotalNetWorthCard
-            totalEgp={totalNetWorth}
-            totalUsd={
-              totalNetWorth && latestRates
-                ? egpToCurrency(totalNetWorth, latestRates.usdEgp)
-                : null
+          <TopNav
+            onMenuPress={() => setIsDrawerOpen(true)}
+            currencyCode={preferredCurrency}
+            currencyFlag={currencyInfo?.flag}
+            onCurrencyPress={() =>
+              !isCurrencyLoading && setIsCurrencyPickerOpen(true)
             }
+            isCurrencyLoading={isCurrencyLoading}
+          />
+          <TotalNetWorthCard
+            totalNetWorth={totalNetWorth}
+            totalNetWorthUsd={totalNetWorthUsd}
+            preferredCurrency={preferredCurrency}
             monthlyPercentageChange={monthlyPercentageChange}
             isLoading={isLoading}
           />
@@ -74,6 +107,7 @@ export default function DashboardScreen(): React.JSX.Element {
             isLoading={ratesLoading}
             lastUpdated={lastUpdated}
             isStale={isStale}
+            preferredCurrency={preferredCurrency}
           />
           <AccountsSection accounts={accounts} isLoading={accountsLoading} />
           <ThisMonth />
@@ -87,6 +121,12 @@ export default function DashboardScreen(): React.JSX.Element {
       <AppDrawer
         visible={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
+      />
+      <CurrencyPicker
+        visible={!isCurrencyLoading && isCurrencyPickerOpen}
+        selectedCurrency={preferredCurrency}
+        onSelect={handleCurrencySelect}
+        onClose={() => setIsCurrencyPickerOpen(false)}
       />
     </StarryBackground>
   );

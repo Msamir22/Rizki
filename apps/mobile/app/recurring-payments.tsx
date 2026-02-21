@@ -10,10 +10,15 @@ import { EmptyStateCard } from "@/components/ui/EmptyStateCard";
 import { palette } from "@/constants/colors";
 import { useCategoryLookup } from "@/context/CategoriesContext";
 import { useTheme } from "@/context/ThemeContext";
+import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
 import { useRecurringPayments } from "@/hooks/useRecurringPayments";
 import { getDueText } from "@/utils/dateHelpers";
 import { getPaymentIcon } from "@/utils/recurring-helpers";
-import type { RecurringPayment, RecurringStatus } from "@astik/db";
+import type {
+  CurrencyType,
+  RecurringPayment,
+  RecurringStatus,
+} from "@astik/db";
 import { formatCurrency } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -83,11 +88,23 @@ function StatusTabs({
 interface HeroSummaryProps {
   readonly next7Days: number;
   readonly thisMonth: number;
+  readonly currencyCode: CurrencyType;
 }
 
+/**
+ * Displays a compact summary of upcoming recurring payment amounts.
+ *
+ * Shows two labeled values — the total due in the next 7 days and the total due this month — formatted using the provided currency.
+ *
+ * @param next7Days - Total amount due within the next 7 days
+ * @param thisMonth - Total amount due for the current month
+ * @param currencyCode - Currency code used to format the displayed amounts
+ * @returns A React element containing the summary card with two formatted monetary values
+ */
 function HeroSummary({
   next7Days,
   thisMonth,
+  currencyCode,
 }: HeroSummaryProps): React.JSX.Element {
   return (
     <View className="rounded-3xl border p-6 mb-6 bg-white/60 dark:bg-slate-800 border-slate-200 dark:border-slate-700">
@@ -102,7 +119,7 @@ function HeroSummary({
             Next 7 days
           </Text>
           <Text className="text-xl font-bold mt-1 text-red-500">
-            {formatCurrency({ amount: next7Days, currency: "EGP" })}
+            {formatCurrency({ amount: next7Days, currency: currencyCode })}
           </Text>
         </View>
         <View className="flex-1 items-center pl-4">
@@ -110,7 +127,7 @@ function HeroSummary({
             This Month
           </Text>
           <Text className="text-xl font-bold mt-1 text-red-500">
-            {formatCurrency({ amount: thisMonth, currency: "EGP" })}
+            {formatCurrency({ amount: thisMonth, currency: currencyCode })}
           </Text>
         </View>
       </View>
@@ -214,7 +231,11 @@ function PaymentCard({
 
 // =============================================================================
 // Main Screen
-// =============================================================================
+/**
+ * Displays the Recurring Payments screen with a hero summary, status tabs, payment list or empty state, and a floating add button.
+ *
+ * @returns A JSX element rendering the Recurring Payments screen.
+ */
 
 export default function RecurringPaymentsScreen(): React.JSX.Element {
   const insets = useSafeAreaInsets();
@@ -228,6 +249,8 @@ export default function RecurringPaymentsScreen(): React.JSX.Element {
     setStatusFilter,
   } = useRecurringPayments();
 
+  const { preferredCurrency } = usePreferredCurrency();
+
   const handlePaymentPress = (_payment: RecurringPayment): void => {
     // TODO: Navigate to edit payment screen
   };
@@ -238,7 +261,11 @@ export default function RecurringPaymentsScreen(): React.JSX.Element {
 
       <View className="flex-1 px-5 pt-4">
         {/* Hero Summary */}
-        <HeroSummary next7Days={next7DaysTotal} thisMonth={totalDueThisMonth} />
+        <HeroSummary
+          next7Days={next7DaysTotal}
+          thisMonth={totalDueThisMonth}
+          currencyCode={preferredCurrency}
+        />
 
         {/* Status Tabs */}
         <StatusTabs

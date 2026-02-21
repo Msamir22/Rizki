@@ -1,11 +1,12 @@
 /**
  * Asset Breakdown Calculation
  * Calculate the distribution of assets across Bank, Cash, and Metals
+ * All values are computed in USD (universal base currency)
  */
 
 import type { Account, AssetMetal, MarketRate } from "@astik/db";
-import { convertToEGP } from "../utils/currency";
-import { getMetalPrice } from "../utils/metal";
+import { convertCurrency } from "../utils/currency";
+import { getMetalPriceUsd } from "../utils/metal";
 
 export interface AssetBreakdown {
   bank: number;
@@ -22,7 +23,16 @@ export interface AssetBreakdownPercentage {
 }
 
 /**
- * Calculate raw asset breakdown values in EGP
+ * Compute the portfolio breakdown (bank, cash, wallet, metals) with all values in USD.
+ *
+ * Converts each account balance from its native currency to USD using provided market rates,
+ * aggregates balances by account type, converts metal holdings to USD using per-gram USD prices,
+ * and computes the total as the sum of all categories.
+ *
+ * @param accounts - List of accounts whose balances will be converted and aggregated by type
+ * @param assetMetals - List of metal holdings; each will be valued in USD per gram
+ * @param marketRates - Market rate data used for currency conversion and metal pricing; if `null`, returns zeros for all categories
+ * @returns The computed AssetBreakdown containing `bank`, `cash`, `wallet`, `metals`, and `total`, all expressed in USD
  */
 export function calculateAssetBreakdown(
   accounts: Account[],
@@ -41,31 +51,32 @@ export function calculateAssetBreakdown(
     return breakdown;
   }
 
-  // Calculate account balances by type
+  // Calculate account balances by type, converting to USD
   accounts.forEach((account) => {
-    const balanceEgp = convertToEGP(
+    const balanceUsd = convertCurrency(
       account.balance,
       account.currency,
+      "USD",
       marketRates
     );
 
     switch (account.type) {
       case "BANK":
-        breakdown.bank += balanceEgp;
+        breakdown.bank += balanceUsd;
         break;
       case "DIGITAL_WALLET":
-        breakdown.wallet += balanceEgp;
+        breakdown.wallet += balanceUsd;
         break;
       case "CASH":
       default:
-        breakdown.cash += balanceEgp;
+        breakdown.cash += balanceUsd;
         break;
     }
   });
 
-  // Calculate metals value
+  // Calculate metals value (already in USD per gram)
   assetMetals.forEach((metal) => {
-    const pricePerGram = getMetalPrice(metal.metalType, marketRates);
+    const pricePerGram = getMetalPriceUsd(metal.metalType, marketRates);
     breakdown.metals += metal.calculateValue(pricePerGram);
   });
 

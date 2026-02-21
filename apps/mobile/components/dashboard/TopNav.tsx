@@ -11,9 +11,30 @@ const USER_NAME = "Mohamed";
 
 interface TopNavProps {
   onMenuPress?: () => void;
+  /** Optional: shows a currency chip button when provided */
+  currencyCode?: string;
+  currencyFlag?: string;
+  onCurrencyPress?: () => void;
+  /** When true, the currency chip is disabled (e.g., while the preference loads) */
+  isCurrencyLoading?: boolean;
 }
 
-export function TopNav({ onMenuPress }: TopNavProps): React.ReactElement {
+/**
+ * Renders the top navigation bar with branding, a time-based greeting, and action controls.
+ *
+ * @param onMenuPress - Optional handler invoked when the hamburger menu is pressed.
+ * @param currencyCode - Optional currency code shown in a currency chip (e.g., "USD"); the chip is rendered only when this and `onCurrencyPress` are provided.
+ * @param currencyFlag - Optional emoji or short text shown before the currency code; defaults to "💱" when omitted.
+ * @param onCurrencyPress - Optional handler invoked when the currency chip is pressed.
+ * @returns The top navigation React element for use within a safe-area layout.
+ */
+export function TopNav({
+  onMenuPress,
+  currencyCode,
+  currencyFlag,
+  onCurrencyPress,
+  isCurrencyLoading = false,
+}: TopNavProps): React.ReactElement {
   const { theme } = useTheme();
 
   const getGreeting = (): string => {
@@ -70,7 +91,32 @@ export function TopNav({ onMenuPress }: TopNavProps): React.ReactElement {
         </View>
 
         {/* Right Side: Actions */}
-        <View className="flex-row items-center gap-3">
+        <View className="flex-row items-center gap-2">
+          {/* Currency Chip */}
+          {currencyCode && onCurrencyPress && (
+            <TouchableOpacity
+              onPress={onCurrencyPress}
+              disabled={isCurrencyLoading}
+              accessibilityLabel="Change currency"
+              accessibilityRole="button"
+              style={{ backgroundColor: theme.surfaceHighlight }}
+              className={`flex-row items-center gap-1 px-2.5 py-1.5 rounded-full ${isCurrencyLoading ? "opacity-50" : ""}`}
+            >
+              <Text className="text-sm">{currencyFlag ?? "💱"}</Text>
+              <Text
+                style={{ color: theme.text.primary }}
+                className="text-xs font-bold"
+              >
+                {currencyCode}
+              </Text>
+              <Ionicons
+                name="chevron-down"
+                size={12}
+                color={theme.text.secondary}
+              />
+            </TouchableOpacity>
+          )}
+
           {/* Settings Button */}
           <TouchableOpacity
             style={{

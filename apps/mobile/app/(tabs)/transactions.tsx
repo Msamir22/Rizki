@@ -19,6 +19,7 @@ import {
   TransactionTypeFilter,
   useTransactionsGrouping,
 } from "@/hooks/useTransactionsGrouping";
+import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
 import { useSync } from "@/providers/SyncProvider";
 import { updateTransaction, updateTransfer } from "@/services";
 import { Ionicons } from "@expo/vector-icons";
@@ -34,6 +35,15 @@ import {
   View,
 } from "react-native";
 
+/**
+ * Render the Transactions screen with filters, search, grouped list, selection, and quick-edit flows.
+ *
+ * The component displays period and type filters, a search bar, and a sectioned list of transactions
+ * and transfers. It supports pull-to-refresh, multi-select with batch delete, quick in-place edits
+ * for category and amount (including handling for recurring items), and navigation to add/edit screens.
+ *
+ * @returns The Transactions screen as a JSX element
+ */
 export default function TransactionsPlaceholder(): React.JSX.Element {
   const { isDark } = useTheme();
   const [period, setPeriod] = useState<GroupingPeriod>("this_month");
@@ -62,6 +72,7 @@ export default function TransactionsPlaceholder(): React.JSX.Element {
 
   // Sync Hook
   const { sync } = useSync();
+  const { preferredCurrency } = usePreferredCurrency();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handleRefresh = async (): Promise<void> => {
@@ -492,6 +503,7 @@ export default function TransactionsPlaceholder(): React.JSX.Element {
                 netWorth={netWorth || 0}
                 income={income}
                 expense={expense}
+                currencyCode={preferredCurrency}
               />
             )}
             onRefresh={handleRefresh}
@@ -508,6 +520,7 @@ export default function TransactionsPlaceholder(): React.JSX.Element {
                     toAccountName={item.toAccountName}
                     notes={item.notes}
                     displayNetWorth={item.displayNetWorth}
+                    currencyCode={preferredCurrency}
                     isSelectionMode={isSelectionMode}
                     isSelected={selectedIds.has(item.id)}
                     onPress={handleTransferPress}
@@ -531,6 +544,7 @@ export default function TransactionsPlaceholder(): React.JSX.Element {
                   categoryIconName={item.categoryIconName}
                   categoryIconLibrary={item.categoryIconLibrary as IconLibrary}
                   displayNetWorth={item.displayNetWorth}
+                  currencyCode={preferredCurrency}
                   isSelectionMode={isSelectionMode}
                   isSelected={selectedIds.has(item.id)}
                   onPress={handlePress}

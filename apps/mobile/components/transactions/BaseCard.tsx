@@ -1,5 +1,6 @@
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
+import type { CurrencyType } from "@astik/db";
 import { formatCurrency } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
@@ -33,6 +34,7 @@ interface BaseCardProps {
   counterparty?: string;
   details?: string;
   displayNetWorth: number;
+  currencyCode: CurrencyType;
   date: Date;
   index?: number;
   onSwipeDelete?: (id: string) => void;
@@ -40,6 +42,30 @@ interface BaseCardProps {
   onAmountPress?: (id: string) => void;
 }
 
+/**
+ * Render a transaction card showing category, title, amount, details, net worth, and date with optional selection and inline edit affordances.
+ *
+ * @param id - Unique identifier for the transaction; passed to callback handlers.
+ * @param isSelectionMode - When true, shows selection controls and disables editable affordances.
+ * @param isSelected - When true, renders the card in a visually selected state.
+ * @param onPress - Called with `id` when the card is tapped.
+ * @param onLongPress - Called with `id` when the card is long-pressed (triggers haptic feedback first).
+ * @param mainColor - Accent color used for the left border, icons, and amount text.
+ * @param iconName - Name of the category icon to render.
+ * @param iconLibrary - Icon library to use for the category icon.
+ * @param title - Primary title text for the card (e.g., transaction description).
+ * @param amount - Display string for the transaction amount.
+ * @param subtitle - Secondary text (typically account name).
+ * @param counterparty - Optional merchant or payer name; labeled "Merchant" when `isExpense` is true, otherwise "Payer".
+ * @param isExpense - When true, treats `counterparty` as a merchant; otherwise as a payer.
+ * @param details - Optional additional note or details to display below the subtitle.
+ * @param displayNetWorth - Numeric value shown as the card's "NW" (net worth) display.
+ * @param currencyCode - Currency to use when formatting the `displayNetWorth`.
+ * @param date - Date to display on the card; formatted as day and abbreviated month in en-US.
+ * @param onCategoryPress - Optional callback invoked with `id` when the category area is pressed (shows edit affordance when provided and not in selection mode).
+ * @param onAmountPress - Optional callback invoked with `id` when the amount area is pressed (shows edit affordance when provided and not in selection mode).
+ * @returns The rendered transaction card element.
+ */
 export function BaseCard({
   id,
   isSelectionMode,
@@ -56,6 +82,7 @@ export function BaseCard({
   isExpense,
   details,
   displayNetWorth,
+  currencyCode,
   date,
   onCategoryPress,
   onAmountPress,
@@ -199,7 +226,7 @@ export function BaseCard({
                 <Text className="text-[11px] text-slate-400 dark:text-slate-500 font-medium">
                   {formatCurrency({
                     amount: displayNetWorth,
-                    currency: "EGP",
+                    currency: currencyCode,
                   })}
                 </Text>
               </View>

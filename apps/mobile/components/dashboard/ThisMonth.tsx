@@ -25,6 +25,7 @@ import {
   PeriodFilter,
   usePeriodSummary,
 } from "@/hooks/usePeriodSummary";
+import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
 
 // =============================================================================
 // Constants
@@ -135,12 +136,19 @@ function FilterChip({
 
 // =============================================================================
 // Main Component
-// =============================================================================
+/**
+ * Renders the "This Month" dashboard card showing a period summary with a ring gauge, income/expense/saved stats, and selectable period filter chips.
+ *
+ * Displays a loading indicator while the period summary is being fetched, updates contents when the selected period changes, and navigates to the transactions screen when the "Details" action is pressed.
+ *
+ * @returns A React element containing the period summary card with ring gauge, stats, divider, and horizontal filter chips.
+ */
 
 export function ThisMonth(): React.JSX.Element {
   const [selectedPeriod, setSelectedPeriod] =
     useState<PeriodFilter>("this_month");
   const { data, isLoading } = usePeriodSummary(selectedPeriod);
+  const { preferredCurrency } = usePreferredCurrency();
 
   const handleDetails = (): void => {
     router.push("/transactions");
@@ -192,7 +200,7 @@ export function ThisMonth(): React.JSX.Element {
               <Text className="text-sm font-semibold text-nileGreen-500">
                 {formatCurrency({
                   amount: data.totalIncome,
-                  currency: "EGP",
+                  currency: preferredCurrency,
                 })}{" "}
                 ↑
               </Text>
@@ -206,7 +214,7 @@ export function ThisMonth(): React.JSX.Element {
               <Text className="text-sm font-semibold text-red-500">
                 {formatCurrency({
                   amount: data.totalExpenses,
-                  currency: "EGP",
+                  currency: preferredCurrency,
                 })}{" "}
                 ↓
               </Text>
@@ -220,7 +228,7 @@ export function ThisMonth(): React.JSX.Element {
               <Text className="text-sm font-semibold text-gold-600">
                 {formatCurrency({
                   amount: data.savings,
-                  currency: "EGP",
+                  currency: preferredCurrency,
                 })}{" "}
                 ({data.savingsPercentage}%) ✓
               </Text>

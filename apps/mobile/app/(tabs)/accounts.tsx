@@ -1,7 +1,3 @@
-import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import { ReactElement, useCallback, useMemo, useState } from "react";
-import { FlatList, Text, View } from "react-native";
 import {
   AccountCard,
   AccountTypeTabs,
@@ -12,7 +8,21 @@ import { Button, ButtonVariant } from "@/components/ui/Button";
 import { palette } from "@/constants/colors";
 import { useAccounts } from "@/hooks";
 import { useMarketRates } from "@/hooks/useMarketRates";
+import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
+import type { CurrencyType } from "@astik/db";
+import { formatCurrency } from "@astik/logic";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { ReactElement, useCallback, useMemo, useState } from "react";
+import { FlatList, Text, View } from "react-native";
 
+/**
+ * Renders a button for creating a new account.
+ *
+ * @param onPress - Callback invoked when the button is pressed
+ * @param variant - Visual variant of the button (defaults to `"dashed"`)
+ * @returns A view containing an "Add New Account" button that invokes `onPress` when tapped
+ */
 function AddAccountButton({
   onPress,
   variant = "dashed",
@@ -33,34 +43,47 @@ function AddAccountButton({
   );
 }
 
-function TotalBalanceCard({ balance }: { balance: number }): ReactElement {
+/**
+ * Render a styled card displaying the total account balance alongside its currency code.
+ *
+ * @param balance - The numeric amount to display as the total balance.
+ * @param currencyCode - The currency code used to label and format the displayed amount.
+ * @returns A React element containing a card with the "Total Balance" label, the currency code, and the formatted balance.
+ */
+function TotalBalanceCard({
+  balance,
+  currencyCode,
+}: {
+  balance: number;
+  currencyCode: CurrencyType;
+}): ReactElement {
   return (
     <View className="p-6 rounded-3xl border-b-4 bg-white dark:bg-slate-800 border-nileGreen-600 dark:border-nileGreen-500 shadow-xl dark:shadow-none">
       <Text className="text-sm font-bold mb-1 text-slate-500 dark:text-slate-400 uppercase tracking-widest">
         Total Balance
       </Text>
-      <View className="flex-row items-baseline">
-        <Text className="text-sm font-extrabold text-nileGreen-500 mr-1.5">
-          EGP
-        </Text>
-        <Text className="text-3xl font-black text-slate-900 dark:text-white">
-          {balance.toLocaleString("en-US", {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })}
-        </Text>
-      </View>
+      <Text className="text-3xl font-black text-slate-900 dark:text-white">
+        {formatCurrency({ amount: balance, currency: currencyCode })}
+      </Text>
     </View>
   );
 }
 
+/**
+ * Render the Accounts screen with total balance, filter tabs, and a list of accounts.
+ *
+ * Shows a currency-aware total balance and account type tabs only when accounts exist,
+ * provides actions to add a new account, and displays a contextual empty state when no accounts match the selected filter.
+ *
+ * @returns The React element representing the Accounts screen UI
+ */
 export default function Accounts(): ReactElement {
   const router = useRouter();
   const { latestRates } = useMarketRates();
 
   const [selectedFilter, setSelectedFilter] = useState<FilterType>("ALL");
-  const { totalBalanceEgp, accounts } = useAccounts();
-
+  const { totalAccountsBalance, accounts } = useAccounts();
+  const { preferredCurrency } = usePreferredCurrency();
   const isEmpty = accounts.length === 0;
 
   const filteredAccounts = useMemo(() => {
@@ -115,7 +138,10 @@ export default function Accounts(): ReactElement {
       {/* Total Balance Card */}
       {!isEmpty && (
         <View className="px-5 pb-6">
-          <TotalBalanceCard balance={totalBalanceEgp} />
+          <TotalBalanceCard
+            balance={totalAccountsBalance}
+            currencyCode={preferredCurrency}
+          />
         </View>
       )}
 

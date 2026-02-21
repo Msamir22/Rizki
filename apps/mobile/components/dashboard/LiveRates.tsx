@@ -1,4 +1,5 @@
-import { MarketRate } from "@astik/db";
+import type { CurrencyType, MarketRate } from "@astik/db";
+import { CURRENCY_INFO_MAP, getMetalPrice } from "@astik/logic";
 import { FontAwesome5, Ionicons, MaterialIcons } from "@expo/vector-icons";
 import React from "react";
 import { ActivityIndicator, ScrollView, Text, View } from "react-native";
@@ -15,11 +16,12 @@ interface Rate {
 }
 
 interface LiveRatesProps {
-  latestRates: MarketRate | null;
-  previousDayRate: MarketRate | null;
-  isLoading: boolean;
-  lastUpdated: Date | null;
-  isStale: boolean;
+  readonly latestRates: MarketRate | null;
+  readonly previousDayRate: MarketRate | null;
+  readonly isLoading: boolean;
+  readonly lastUpdated: Date | null;
+  readonly isStale: boolean;
+  readonly preferredCurrency: CurrencyType;
 }
 
 // Pill style configurations using Tailwind classes
@@ -53,55 +55,102 @@ function calculateTrend(
   return "flat";
 }
 
+/**
+ * Build the list of live rate items (currency pair, gold, silver) formatted for display.
+ *
+ * If `latestRates` is null, returns an empty array.
+ *
+ * @param latestRates - Most recent market rates used to compute current display values
+ * @param previousDayRate - Prior-day market rates used to determine trends; may be null
+ * @param preferredCurrency - User's preferred currency; when `"USD"` this function uses `"EUR"` as the displayed currency pair base
+ * @returns An array of three Rate entries:
+ *  - a currency pair entry labeled `<displayCurrency>/USD` with adaptive decimal precision,
+ *  - a "Gold 24K" entry showing the preferred-currency price per gram rounded and localized,
+ *  - a "Silver" entry showing the preferred-currency price per gram with two decimals.
+ */
 function buildRatesDisplay(
   latestRates: MarketRate | null,
-  previousDayRate: MarketRate | null
+  previousDayRate: MarketRate | null,
+  preferredCurrency: CurrencyType
 ): Rate[] {
   if (!latestRates) {
     return [];
   }
 
+  // Show how many units of the preferred currency per 1 USD
+  // e.g. EGP/USD = 47.50 means 1 USD buys 47.50 EGP
+  // When preferred IS USD, show EUR/USD as a meaningful reference pair
+  const displayCurrency: CurrencyType =
+    preferredCurrency === "USD" ? "EUR" : preferredCurrency;
+  const currencyRate = latestRates.getRate("USD", displayCurrency);
+  const previousRate = previousDayRate
+    ? previousDayRate.getRate("USD", displayCurrency)
+    : null;
+
+  const symbol =
+    CURRENCY_INFO_MAP[preferredCurrency]?.symbol ?? preferredCurrency;
+
+  const goldInPreferred = getMetalPrice("GOLD", latestRates, preferredCurrency);
+  const silverInPreferred = getMetalPrice(
+    "SILVER",
+    latestRates,
+    preferredCurrency
+  );
+
+  const prevGoldInPreferred = previousDayRate
+    ? getMetalPrice("GOLD", previousDayRate, preferredCurrency)
+    : null;
+  const prevSilverInPreferred = previousDayRate
+    ? getMetalPrice("SILVER", previousDayRate, preferredCurrency)
+    : null;
+
   return [
     {
       id: "1",
-      label: "USD/EGP",
-      value: latestRates.usdEgp.toFixed(2),
-      trend: calculateTrend(latestRates.usdEgp, previousDayRate?.usdEgp),
+      label: `${displayCurrency}/USD`,
+      value: currencyRate.toFixed(currencyRate >= 100 ? 2 : 4),
+      trend: calculateTrend(currencyRate, previousRate),
       type: "currency",
     },
     {
       id: "2",
       label: "Gold 24K",
-      value: `EGP ${Math.round(latestRates.goldEgpPerGram).toLocaleString()}/g`,
-      trend: calculateTrend(
-        latestRates.goldEgpPerGram,
-        previousDayRate?.goldEgpPerGram
-      ),
+      value: `${symbol} ${Math.round(goldInPreferred).toLocaleString()}/g`,
+      trend: calculateTrend(goldInPreferred, prevGoldInPreferred),
       type: "gold",
     },
     {
       id: "3",
       label: "Silver",
-      value: `EGP ${Math.round(latestRates.silverEgpPerGram).toLocaleString()}/g`,
-      trend: calculateTrend(
-        latestRates.silverEgpPerGram,
-        previousDayRate?.silverEgpPerGram
-      ),
+      value: `${symbol} ${silverInPreferred.toFixed(2)}/g`,
+      trend: calculateTrend(silverInPreferred, prevSilverInPreferred),
       type: "silver",
     },
   ];
 }
 
 /**
- * Helper to get the correct icon for a rate pill
+ * Selects the React element used as the icon inside a rate pill.
+ *
+ * Uses the preferredCurrency to determine which flag to show for currency pills
+ * (treats `"USD"` as `"EUR"` for flag selection).
+ *
+ * @param type - The rate item type ("currency", "gold", or "silver")
+ * @param color - Color to apply to icon glyphs (ignored for flag text)
+ * @param preferredCurrency - The user's preferred currency used to pick a flag
+ * @returns A React element to render inside the pill (flag text for currency, coin icons for gold/silver), or `null` if the type is unrecognized
  */
 function getPillIcon(
   type: Rate["type"],
-  color: string
+  color: string,
+  preferredCurrency: CurrencyType
 ): React.ReactElement | null {
+  const displayCurrency =
+    preferredCurrency === "USD" ? "EUR" : preferredCurrency;
+  const flag = CURRENCY_INFO_MAP[displayCurrency]?.flag ?? "🌐";
   switch (type) {
     case "currency":
-      return <Text className="text-sm">🇺🇸</Text>;
+      return <Text className="text-sm">{flag}</Text>;
     case "gold":
       return <FontAwesome5 name="coins" size={14} color={color} />;
     case "silver":
@@ -111,15 +160,28 @@ function getPillIcon(
   }
 }
 
+/**
+ * Render a horizontal list of live currency and precious-metal rates as pill-style UI.
+ *
+ * Displays loading and staleness indicators, adapts labels and values to `preferredCurrency`,
+ * and optionally shows a "Last updated" timestamp when `lastUpdated` is provided.
+ *
+ * @returns The React element rendering the live rates pills, status indicators, and timestamp.
+ */
 export function LiveRates({
   latestRates,
   previousDayRate,
   isLoading = false,
   lastUpdated,
   isStale,
+  preferredCurrency,
 }: LiveRatesProps): React.ReactElement {
   const { isDark } = useTheme();
-  const ratesDisplay = buildRatesDisplay(latestRates, previousDayRate);
+  const ratesDisplay = buildRatesDisplay(
+    latestRates,
+    previousDayRate,
+    preferredCurrency
+  );
 
   return (
     <View className="my-3">
@@ -166,7 +228,7 @@ export function LiveRates({
               className={`flex-row items-center rounded-full px-3 py-2 ${config.container}`}
             >
               <View className="mr-1.5">
-                {getPillIcon(rate.type, iconColor)}
+                {getPillIcon(rate.type, iconColor, preferredCurrency)}
               </View>
 
               <Text className={`mr-1 text-[13px] font-medium ${config.label}`}>

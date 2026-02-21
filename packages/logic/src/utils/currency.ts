@@ -1,43 +1,27 @@
-import { CurrencyType, MarketRate } from "@astik/db";
-
-export function egpToCurrency(
-  amountInEgp: number,
-  currencyRate: number
-): number {
-  return amountInEgp / currencyRate;
-}
-
-export function currencyToEGP(
-  amountInCurrency: number,
-  currencyRate: number
-): number {
-  return amountInCurrency * currencyRate;
-}
+import type { CurrencyType, MarketRate } from "@astik/db";
 
 /**
- * Convert balance to EGP using market rates
+ * Converts an amount from one currency to another.
+ *
+ * If `marketRates` is `null`, `amount` is `0`, or `fromCurrency` equals `toCurrency`,
+ * the original `amount` is returned unchanged. Otherwise the function uses `marketRates`
+ * to compute the converted value.
+ *
+ * @param amount - The amount in the source currency
+ * @param fromCurrency - Source currency code
+ * @param toCurrency - Target currency code
+ * @param marketRates - Market rate data used to compute cross-currency conversion
+ * @returns The converted amount expressed in the target currency
  */
-export function convertToEGP(
-  balance: number,
-  currency: string,
-  marketRates: NonNullable<MarketRate>
+export function convertCurrency(
+  amount: number,
+  fromCurrency: CurrencyType,
+  toCurrency: CurrencyType,
+  marketRates: MarketRate | null
 ): number {
-  switch (currency) {
-    case "EGP":
-      return balance;
-    case "USD":
-      return currencyToEGP(balance, marketRates.usdEgp);
-    case "EUR":
-      return currencyToEGP(balance, marketRates.eurEgp);
-    case "GBP":
-      return currencyToEGP(balance, marketRates.gbpEgp);
-    case "SAR":
-      return currencyToEGP(balance, marketRates.sarEgp);
-    case "AED":
-      return currencyToEGP(balance, marketRates.aedEgp);
-    default:
-      return balance;
-  }
+  if (!marketRates || amount === 0 || fromCurrency === toCurrency)
+    return amount;
+  return amount * marketRates.getRate(fromCurrency, toCurrency);
 }
 
 const CURRENCY_SYMBOLS: Partial<Record<CurrencyType, string>> = {
