@@ -76,7 +76,8 @@ type ReviewListItem =
   | { readonly kind: "header"; readonly date: string; readonly key: string }
   | {
       readonly kind: "transaction";
-      readonly index: number;
+      readonly originalIndex: number;
+      readonly tx: ParsedSmsTransaction;
       readonly key: string;
     };
 
@@ -85,17 +86,22 @@ type ReviewListItem =
 // ---------------------------------------------------------------------------
 
 function groupByDate(
-  transactions: readonly ParsedSmsTransaction[]
+  transactions: readonly ParsedSmsTransaction[],
+  originalTransactions: readonly ParsedSmsTransaction[]
 ): readonly ReviewListItem[] {
   const items: ReviewListItem[] = [];
   let lastDate = "";
+
+  // Build a lookup from transaction reference → original index
+  const originalIndexMap = new Map<ParsedSmsTransaction, number>();
+  originalTransactions.forEach((tx, i) => originalIndexMap.set(tx, i));
 
   // Transactions are assumed to be roughly sorted by date from the scan
   const sorted = [...transactions].sort(
     (a, b) => b.date.getTime() - a.date.getTime()
   );
 
-  sorted.forEach((tx, index) => {
+  sorted.forEach((tx) => {
     const dateKey = tx.date.toLocaleDateString("en-EG", {
       weekday: "short",
       day: "numeric",
@@ -108,7 +114,13 @@ function groupByDate(
       lastDate = dateKey;
     }
 
-    items.push({ kind: "transaction", index, key: `tx-${index}` });
+    const originalIndex = originalIndexMap.get(tx) ?? 0;
+    items.push({
+      kind: "transaction",
+      originalIndex,
+      tx,
+      key: `tx-${originalIndex}`,
+    });
   });
 
   return items;
@@ -265,14 +277,20 @@ export function SmsTransactionReview({
   );
 
   const listItems = useMemo(
-    () => groupByDate(filteredTransactions),
-    [filteredTransactions]
+    () => groupByDate(filteredTransactions, effectiveTransactions),
+    [filteredTransactions, effectiveTransactions]
   );
 
   // Selection counts based on filtered view
+  const filteredOriginalIndices = useMemo(() => {
+    const indexMap = new Map<ParsedSmsTransaction, number>();
+    effectiveTransactions.forEach((tx, i) => indexMap.set(tx, i));
+    return filteredTransactions.map((tx) => indexMap.get(tx) ?? 0);
+  }, [filteredTransactions, effectiveTransactions]);
+
   const allSelected =
     filteredTransactions.length > 0 &&
-    filteredTransactions.every((_, i) => selectedIndices.has(i));
+    filteredOriginalIndices.every((i) => selectedIndices.has(i));
   const selectedCount = selectedIndices.size;
 
   // ── Callbacks ─────────────────────────────────────────────────────
@@ -367,20 +385,20 @@ export function SmsTransactionReview({
         );
       }
 
-      const tx = filteredTransactions[item.index];
+      const tx = item.tx;
       if (!tx) return null;
 
       return (
         <SmsTransactionItem
           transaction={tx}
-          isSelected={selectedIndices.has(item.index)}
+          isSelected={selectedIndices.has(item.originalIndex)}
           accountName={
-            transactionOverrides.get(item.index)?.accountName ??
-            accountMatches.get(item.index)?.accountName ??
+            transactionOverrides.get(item.originalIndex)?.accountName ??
+            accountMatches.get(item.originalIndex)?.accountName ??
             ""
           }
-          onToggleSelect={() => handleToggleItem(item.index)}
-          onPress={() => handleOpenEditModal(item.index)}
+          onToggleSelect={() => handleToggleItem(item.originalIndex)}
+          onPress={() => handleOpenEditModal(item.originalIndex)}
         />
       );
     },

@@ -144,19 +144,8 @@ export const migrations = schemaMigrations({
       toVersion: 11,
       steps: [
         addColumns({
-          table: "transactions",
-          columns: [
-            { name: "sms_body_hash", type: "string", isOptional: true },
-          ],
-        }),
-      ],
-    },
-    {
-      toVersion: 12,
-      steps: [
-        addColumns({
           table: "accounts",
-          columns: [{ name: "is_default", type: "string" }],
+          columns: [{ name: "is_default", type: "boolean" }],
         }),
       ],
     },

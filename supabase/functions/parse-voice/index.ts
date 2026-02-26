@@ -281,7 +281,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
     if (audioBytes) {
       // Multimodal: audio + text prompt
       const mimeType = detectAudioMimeType(audioBytes);
-      const base64Audio = btoa(String.fromCharCode(...audioBytes));
+      // Encode in chunks to avoid call-stack limits on large buffers
+      const CHUNK_SIZE = 8192;
+      let binaryString = "";
+      for (let i = 0; i < audioBytes.length; i += CHUNK_SIZE) {
+        const chunk = audioBytes.subarray(i, i + CHUNK_SIZE);
+        binaryString += String.fromCharCode(...chunk);
+      }
+      const base64Audio = btoa(binaryString);
 
       contents = [
         {
