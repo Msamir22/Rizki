@@ -283,20 +283,32 @@ Deno.serve(async (req: Request): Promise<Response> => {
       languageHint = formData.get("language") as string | null;
 
       if (audioFile instanceof File) {
-        const buffer = await audioFile.arrayBuffer();
-        audioBytes = new Uint8Array(buffer);
-
-        if (audioBytes.length > MAX_AUDIO_SIZE_BYTES) {
+        if (audioFile.size === 0) {
+          return errorResponse("Audio file is empty.", 400);
+        }
+        if (audioFile.size > MAX_AUDIO_SIZE_BYTES) {
           return errorResponse(
-            `Audio file too large. Maximum size is ${MAX_AUDIO_SIZE_BYTES / 1024 / 1024} MB.`
+            `Audio file too large. Maximum size is ${MAX_AUDIO_SIZE_BYTES / 1024 / 1024} MB.`,
+            413
           );
         }
+        const buffer = await audioFile.arrayBuffer();
+        audioBytes = new Uint8Array(buffer);
       }
     } else if (contentType.includes("application/json")) {
       // Fallback: accept a text transcription for testing / future use
-      const body = await req.json();
-      textQuery = body.query;
-      languageHint = body.language ?? null;
+      let body: { query?: unknown; language?: unknown };
+      try {
+        body = await req.json();
+      } catch {
+        return errorResponse("Invalid JSON body.", 400);
+      }
+
+      if (typeof body.query !== "string" || body.query.trim().length === 0) {
+        return errorResponse("`query` must be a non-empty string.", 400);
+      }
+      textQuery = body.query.trim();
+      languageHint = typeof body.language === "string" ? body.language : null;
     }
 
     if (!audioBytes && !textQuery) {
@@ -318,7 +330,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
     if (audioBytes) {
       // Multimodal: audio + text prompt
       const mimeType = detectAudioMimeType(audioBytes);
-      const base64Audio = btoa(String.fromCharCode(...audioBytes));
+      // Encode in chunks to avoid call-stack limits on large buffers
+      const CHUNK_SIZE = 8192;
+      let binaryString = "";
+      for (let i = 0; i < audioBytes.length; i += CHUNK_SIZE) {
+        const chunk = audioBytes.subarray(i, i + CHUNK_SIZE);
+        binaryString += String.fromCharCode(...chunk);
+      }
+      const base64Audio = btoa(binaryString);
 
       contents = [
         {
@@ -357,14 +376,25 @@ Deno.serve(async (req: Request): Promise<Response> => {
       return jsonResponse({ transactions: [] });
     }
 
-    const parsed: AiResponse = JSON.parse(text);
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      return jsonResponse({ transactions: [] });
+    }
+
+    const transactions = Array.isArray(
+      (parsed as Partial<AiResponse>)?.transactions
+    )
+      ? (parsed as AiResponse).transactions
+      : [];
 
     // 6. Return results
-    return jsonResponse({ transactions: parsed.transactions ?? [] });
+    return jsonResponse({ transactions });
   } catch (error: unknown) {
     const message =
       error instanceof Error ? error.message : "Unknown error occurred";
     console.error("[parse-voice] Error:", message);
-    return errorResponse(message, 500);
+    return errorResponse("Internal server error", 500);
   }
 });
