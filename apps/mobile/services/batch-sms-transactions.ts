@@ -346,5 +346,9 @@ export async function createAccountsFromSmsSetup(
     defaultAccountId = mapping[cards[0].name];
   }
 
+  if (!defaultAccountId) {
+    throw new Error("No default account could be determined");
+  }
+
   return { senderAccountMap: mapping, defaultAccountId };
 }

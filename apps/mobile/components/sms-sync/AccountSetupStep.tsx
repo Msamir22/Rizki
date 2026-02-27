@@ -22,7 +22,6 @@ import type {
   ChannelMapping,
 } from "@/components/sms-sync/types";
 import { useToast } from "@/components/ui/Toast";
-import type { BankAccountWithDetails } from "@/hooks/useAccounts";
 import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
 import {
   createAccountsFromSmsSetup,
@@ -48,7 +47,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 interface AccountSetupStepProps {
   readonly transactions: readonly ParsedSmsTransaction[];
-  readonly bankAccounts: readonly BankAccountWithDetails[];
   readonly accountSuggestions: readonly ParsedSmsAccountSuggestion[];
   readonly existingAccounts: readonly Account[];
   /** Called when setup completes (accounts created) or user skips */

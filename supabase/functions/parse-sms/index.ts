@@ -484,7 +484,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       return errorResponse("'messages' array is required");
     }
     if (body.messages.length === 0) {
-      return jsonResponse({ transactions: [] });
+      return jsonResponse({ transactions: [], accountSuggestions: [] });
     }
 
     // 3. Init Gemini

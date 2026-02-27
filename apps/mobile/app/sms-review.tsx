@@ -22,7 +22,7 @@ import { SmsTransactionReview } from "@/components/sms-sync/SmsTransactionReview
 import { useToast } from "@/components/ui/Toast";
 import { palette } from "@/constants/colors";
 import { useSmsScanContext } from "@/context/SmsScanContext";
-import { useAccounts, useBankAccounts } from "@/hooks/useAccounts";
+import { useAccounts } from "@/hooks/useAccounts";
 import { useSmsSync } from "@/hooks/useSmsSync";
 import {
   type AccountSetupResult,
@@ -62,7 +62,7 @@ export default function SmsReviewScreen(): React.JSX.Element {
     defaultAccountId,
   } = useSmsScanContext();
   const { accounts: existingAccounts } = useAccounts();
-  const { bankAccounts } = useBankAccounts();
+
   const { markSyncComplete } = useSmsSync();
   const { showToast } = useToast();
 
@@ -223,7 +223,6 @@ export default function SmsReviewScreen(): React.JSX.Element {
     return (
       <AccountSetupStep
         transactions={transactions}
-        bankAccounts={bankAccounts}
         accountSuggestions={accountSuggestions}
         existingAccounts={existingAccounts}
         onComplete={handleSetupComplete}

@@ -88,8 +88,11 @@ export default function SmsScanScreen(): React.JSX.Element {
     scanMode,
   } = useSmsScanContext();
   const { lastSyncTimestamp } = useSmsSync();
-  const { accounts: existingAccounts } = useAccounts();
-  const { categories: allCategories } = useAllCategories();
+  const { accounts: existingAccounts, isLoading: isAccountsLoading } =
+    useAccounts();
+  const { categories: allCategories, isLoading: isCategoriesLoading } =
+    useAllCategories();
+  const isAiContextReady = !isAccountsLoading && !isCategoriesLoading;
 
   // Build AI context from existing user data
   const aiContext = useMemo(
@@ -127,13 +130,14 @@ export default function SmsScanScreen(): React.JSX.Element {
   // Track whether scan has been initiated to prevent double-start
   const scanInitiated = useRef(false);
 
-  // Auto-start scan on mount
+  // Auto-start scan on mount — waits until accounts/categories are loaded
   useEffect(() => {
+    if (!isAiContextReady) return;
     if (!scanInitiated.current) {
       scanInitiated.current = true;
       initiateScan().catch(console.error);
     }
-  }, [initiateScan]);
+  }, [initiateScan, isAiContextReady]);
 
   const handleReviewPress = (): void => {
     if (transactions.length > 0) {
@@ -148,7 +152,6 @@ export default function SmsScanScreen(): React.JSX.Element {
   };
 
   const handleRetryPress = (): void => {
-    scanInitiated.current = false;
     initiateScan().catch(console.error);
   };
 
