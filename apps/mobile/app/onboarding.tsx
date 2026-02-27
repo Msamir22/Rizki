@@ -21,7 +21,7 @@ import { useTheme } from "@/context/ThemeContext";
 import { ensureCashAccount } from "@/services/account-service";
 import { getCurrentUserId } from "@/services/supabase";
 
-const SHOW_CASH_TOAST_KEY = "showCashAccountToast";
+import { SHOW_CASH_TOAST_KEY } from "@/constants/storage-keys";
 
 const { width: PAGE_WIDTH, height: PAGE_HEIGHT } = Dimensions.get("window");
 

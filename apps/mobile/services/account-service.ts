@@ -52,18 +52,29 @@ export async function ensureCashAccount(
   userId: string
 ): Promise<EnsureCashAccountResult> {
   try {
-    const existingId = await findCashAccount(userId);
-    if (existingId) {
-      return { created: false, accountId: existingId };
-    }
+    let accountId: string | null = null;
+    let created = false;
 
-    // Create a new Cash account
-    const currency = detectCurrencyFromDevice();
-    let createdId = "";
-
+    // Atomic check-and-create inside a single write block to prevent
+    // TOCTOU races when called concurrently (e.g., index.tsx + onboarding.tsx).
     await database.write(async () => {
       const accountsCollection = database.get<Account>("accounts");
-      const created = await accountsCollection.create((acc) => {
+      const existing = await accountsCollection
+        .query(
+          Q.where("type", CASH_ACCOUNT_TYPE),
+          Q.where("user_id", userId),
+          Q.where("deleted", Q.notEq(true)),
+          Q.sortBy("created_at", Q.asc)
+        )
+        .fetch();
+
+      if (existing.length > 0) {
+        accountId = existing[0].id;
+        return;
+      }
+
+      const currency = detectCurrencyFromDevice();
+      const record = await accountsCollection.create((acc) => {
         acc.userId = userId;
         acc.name = CASH_ACCOUNT_NAME;
         acc.type = CASH_ACCOUNT_TYPE;
@@ -71,10 +82,11 @@ export async function ensureCashAccount(
         acc.balance = 0;
         acc.deleted = false;
       });
-      createdId = created.id;
+      accountId = record.id;
+      created = true;
     });
 
-    return { created: true, accountId: createdId };
+    return { created, accountId };
   } catch (error) {
     const message =
       error instanceof Error
@@ -101,7 +113,8 @@ export async function findCashAccount(userId: string): Promise<string | null> {
       .query(
         Q.where("type", CASH_ACCOUNT_TYPE),
         Q.where("user_id", userId),
-        Q.where("deleted", Q.notEq(true))
+        Q.where("deleted", Q.notEq(true)),
+        Q.sortBy("created_at", Q.asc)
       )
       .fetch();
 

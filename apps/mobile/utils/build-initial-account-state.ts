@@ -80,7 +80,10 @@ function groupTransactionsBySender(
   const groups = new Map<string, GroupedTransactionsBySender>();
 
   for (const tx of transactions) {
-    const compositeKey = `${tx.financialEntity}::${tx.currency}`;
+    const entityKey = (
+      tx.financialEntity?.trim() || tx.senderAddress
+    ).toLowerCase();
+    const compositeKey = `${entityKey}::${tx.currency}`;
     const existing = groups.get(compositeKey);
 
     if (!existing) {
@@ -152,8 +155,13 @@ function suggestionsToCards(
   }));
 
   // Ensure exactly one default
-  if (!cards.some((c) => c.isDefault)) {
+  const firstDefaultIndex = cards.findIndex((c) => c.isDefault);
+  if (firstDefaultIndex === -1) {
     cards[0] = { ...cards[0], isDefault: true };
+  } else {
+    for (let i = 0; i < cards.length; i++) {
+      cards[i] = { ...cards[i], isDefault: i === firstDefaultIndex };
+    }
   }
 
   return cards;

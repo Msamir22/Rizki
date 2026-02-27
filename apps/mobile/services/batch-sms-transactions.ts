@@ -30,7 +30,8 @@ import {
   Transfer,
   type Category,
 } from "@astik/db";
-import type { AccountCardState, ParsedSmsTransaction } from "@astik/logic";
+import type { AccountCardState } from "@/utils/build-initial-account-state";
+import type { ParsedSmsTransaction } from "@astik/logic";
 import { Q, type Model } from "@nozbe/watermelondb";
 import { findCashAccount } from "./account-service";
 import { getCurrentUserId } from "./supabase";

@@ -497,10 +497,11 @@ export async function parseSmsWithAi(
       const mapped = mapAiTransactions(chunkResult.transactions, candidateMap);
       allResults.push(...mapped);
 
-      // Merge account suggestions (deduplicate by name+currency, keep first seen)
-      accountSuggestions = getAccountSuggestions(
-        chunkResult.accountSuggestions
-      );
+      // Merge account suggestions across chunks (deduplicate by name+currency, keep first seen)
+      accountSuggestions = getAccountSuggestions([
+        ...accountSuggestions,
+        ...chunkResult.accountSuggestions,
+      ]);
 
       chunksCompleted++;
 

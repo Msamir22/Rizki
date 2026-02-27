@@ -6,7 +6,7 @@ import { palette } from "@/constants/colors";
 import { ensureCashAccount } from "@/services/account-service";
 import { ensureAuthenticated, getCurrentUserId } from "@/services/supabase";
 
-const SHOW_CASH_TOAST_KEY = "showCashAccountToast";
+import { SHOW_CASH_TOAST_KEY } from "@/constants/storage-keys";
 
 export default function Index(): React.ReactNode {
   const [isReady, setIsReady] = useState(false);

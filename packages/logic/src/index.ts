@@ -11,7 +11,7 @@ export * from "./types";
 export * from "./utils/currency";
 export * from "./utils/currency-data";
 export * from "./utils/build-category-tree";
-export * from "../../../apps/mobile/utils/build-initial-account-state";
+
 export * from "./utils/helpers";
 export * from "./utils/metal";
 export * from "./utils/purity-utils";

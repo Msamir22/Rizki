@@ -27,7 +27,7 @@ import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, ScrollView, View } from "react-native";
 
-const SHOW_CASH_TOAST_KEY = "showCashAccountToast";
+import { SHOW_CASH_TOAST_KEY } from "@/constants/storage-keys";
 const CASH_TOAST_DURATION_MS = 4000;
 
 /**

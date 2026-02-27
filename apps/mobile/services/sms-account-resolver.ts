@@ -101,24 +101,30 @@ function isSenderMatch(
   }
 
   if (normalizedBankSmsSenderName) {
-    return (
+    if (
       normalizedSender.includes(normalizedBankSmsSenderName) ||
       normalizedBankSmsSenderName.includes(normalizedSender)
-    );
+    ) {
+      return true;
+    }
   }
 
   if (normalizedBankName) {
-    return (
+    if (
       normalizedSender.includes(normalizedBankName) ||
       normalizedBankName.includes(normalizedSender)
-    );
+    ) {
+      return true;
+    }
   }
 
   if (normalizedAccountName) {
-    return (
+    if (
       normalizedSender.includes(normalizedAccountName) ||
       normalizedAccountName.includes(normalizedSender)
-    );
+    ) {
+      return true;
+    }
   }
 
   return false;
@@ -165,6 +171,10 @@ export async function resolveAccountForSms(
 
   for (const detail of bankDetails) {
     const account = await detail.account.fetch();
+    // Skip soft-deleted accounts in the primary matching path
+    if (!account || account.deleted) {
+      continue;
+    }
     const isCardMatch = cardFromSms && cardFromSms === detail.cardLast4;
 
     if (
@@ -175,12 +185,10 @@ export async function resolveAccountForSms(
         accountName: account.name,
       })
     ) {
-      if (account) {
-        return {
-          accountId: account.id,
-          accountName: account.name,
-        };
-      }
+      return {
+        accountId: account.id,
+        accountName: account.name,
+      };
     }
   }
 

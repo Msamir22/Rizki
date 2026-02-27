@@ -327,6 +327,7 @@ interface AiTransaction {
 interface AiAccountSuggestion {
   readonly name: string;
   readonly currency: string;
+  readonly accountType: "BANK" | "CASH" | "DIGITAL_WALLET";
   readonly isDefault: boolean;
 }
 

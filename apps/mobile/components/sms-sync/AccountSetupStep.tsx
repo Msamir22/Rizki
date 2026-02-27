@@ -34,8 +34,10 @@ import {
   generateAccountCardKey,
   type AccountCardState,
   type InitialAccountState,
-  type ParsedSmsAccountSuggestion,
-  type ParsedSmsTransaction,
+} from "@/utils/build-initial-account-state";
+import type {
+  ParsedSmsAccountSuggestion,
+  ParsedSmsTransaction,
 } from "@astik/logic";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -213,11 +215,12 @@ export function AccountSetupStep({
   // ── Skip handler ─────────────────────────────────────────────────────
 
   const handleSkip = useCallback(() => {
-    if (existingAccounts.length === 0) return;
+    const firstBankAccount = existingAccounts.find((acc) => acc.isBank);
+    if (!firstBankAccount) return;
 
     onComplete({
       senderAccountMap: { ...autoLinkedMapping },
-      defaultAccountId: existingAccounts[0].id, // ??
+      defaultAccountId: firstBankAccount.id,
     });
   }, [existingAccounts, autoLinkedMapping, onComplete]);
 

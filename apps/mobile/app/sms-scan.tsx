@@ -105,22 +105,23 @@ export default function SmsScanScreen(): React.JSX.Element {
   );
 
   // Shared scan initiation logic (used by both auto-start and retry)
-  const initiateScan = useCallback((): void => {
+  const initiateScan = useCallback(async (): Promise<void> => {
     const minDate =
       scanMode === "incremental" && lastSyncTimestamp
         ? lastSyncTimestamp
         : undefined;
 
-    loadExistingSmsHashes()
-      .then((existingHashes) =>
-        startScan({ minDate, existingHashes, aiContext })
-      )
-      .catch((err: unknown) => {
-        console.error(
-          "[sms-scan] Scan failed:",
-          err instanceof Error ? err.message : String(err)
-        );
-      });
+    let existingHashes: ReadonlySet<string> = new Set();
+    try {
+      existingHashes = await loadExistingSmsHashes();
+    } catch (err: unknown) {
+      console.warn(
+        "[sms-scan] Failed to load existing hashes, continuing with empty set:",
+        err instanceof Error ? err.message : String(err)
+      );
+    }
+
+    startScan({ minDate, existingHashes, aiContext }).catch(console.error);
   }, [startScan, scanMode, lastSyncTimestamp, aiContext]);
 
   // Track whether scan has been initiated to prevent double-start
@@ -130,7 +131,7 @@ export default function SmsScanScreen(): React.JSX.Element {
   useEffect(() => {
     if (!scanInitiated.current) {
       scanInitiated.current = true;
-      initiateScan();
+      initiateScan().catch(console.error);
     }
   }, [initiateScan]);
 
@@ -148,7 +149,7 @@ export default function SmsScanScreen(): React.JSX.Element {
 
   const handleRetryPress = (): void => {
     scanInitiated.current = false;
-    initiateScan();
+    initiateScan().catch(console.error);
   };
 
   // Compute top unique category system names from parsed transactions
