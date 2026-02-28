@@ -38,7 +38,7 @@ export interface UseSmsScanResult {
   /** Error message if scan failed */
   readonly error: string | null;
   /** Start scanning the SMS inbox */
-  readonly startScan: (options?: StartScanOptions) => Promise<void>;
+  readonly startScan: (options: StartScanOptions) => Promise<void>;
   /** Reset the scan state to idle */
   readonly reset: () => void;
 }
@@ -47,9 +47,9 @@ interface StartScanOptions {
   /** Only scan messages after this timestamp (incremental sync). */
   readonly minDate?: number;
   /** Set of existing hashes for dedup. */
-  readonly existingHashes?: ReadonlySet<string>;
+  readonly existingHashes: ReadonlySet<string>;
   /** Context to pass to AI for better account suggestions. */
-  readonly aiContext?: ParseSmsContext;
+  readonly aiContext: ParseSmsContext;
 }
 
 // ---------------------------------------------------------------------------
@@ -69,7 +69,7 @@ export function useSmsScan(): UseSmsScanResult {
   const isScanningRef = useRef(false);
 
   const startScan = useCallback(
-    async (options?: StartScanOptions): Promise<void> => {
+    async (options: StartScanOptions): Promise<void> => {
       if (isScanningRef.current) {
         return;
       }
@@ -83,13 +83,13 @@ export function useSmsScan(): UseSmsScanResult {
 
       try {
         const scanResult = await scanAndParseSms(
+          {
+            minDate: options.minDate,
+            existingHashes: options.existingHashes,
+            aiContext: options.aiContext,
+          },
           (p) => {
             setProgress(p);
-          },
-          {
-            minDate: options?.minDate,
-            existingHashes: options?.existingHashes,
-            aiContext: options?.aiContext,
           }
         );
 

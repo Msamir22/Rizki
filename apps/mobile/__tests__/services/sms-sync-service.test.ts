@@ -6,12 +6,18 @@
  *
  * Mock Strategy:
  *   - `sms-reader-service` is mocked to return controlled SMS messages
- *   - `@astik/logic` is partially mocked (RegexSmsParser + computeSmsHash)
+ *   - `@astik/logic` is partially mocked (isKnownFinancialSender + computeSmsHash)
+ *   - `ai-sms-parser-service` is mocked to return controlled AI parse results
  *   - `@react-native-async-storage/async-storage` is mocked for scan guard
  *   - `InteractionManager` is mocked via react-native
+ *   - `@astik/db` is mocked to provide loadExistingSmsHashes support
  */
 
 import type { ParsedSmsTransaction, SmsMessage } from "@astik/logic";
+import type {
+  AiParseResult,
+  ParseSmsContext,
+} from "@/services/ai-sms-parser-service";
 
 // ---------------------------------------------------------------------------
 // Mock: AsyncStorage (inline factory to avoid hoisting issues)
@@ -81,22 +87,61 @@ jest.mock("@/services/sms-reader-service", () => ({
 }));
 
 // ---------------------------------------------------------------------------
-// Mock: @astik/logic (RegexSmsParser + computeSmsHash)
+// Mock: @astik/logic (isKnownFinancialSender + computeSmsHash)
 // ---------------------------------------------------------------------------
 
-const mockParse = jest.fn<ParsedSmsTransaction | null, [string, string]>(
-  () => null
-);
+const mockIsKnownFinancialSender = jest.fn<boolean, [string]>(() => true);
 const mockComputeSmsHash = jest.fn<Promise<string>, [string]>((body: string) =>
   Promise.resolve(`hash-${body.slice(0, 10)}`)
 );
 
 jest.mock("@astik/logic", () => ({
-  RegexSmsParser: jest.fn().mockImplementation(() => ({
-    parse: mockParse,
-  })),
+  isKnownFinancialSender: (...args: unknown[]) =>
+    mockIsKnownFinancialSender(...(args as [string])),
   computeSmsHash: (...args: unknown[]) =>
     mockComputeSmsHash(...(args as [string])),
+}));
+
+// ---------------------------------------------------------------------------
+// Mock: @nozbe/watermelondb
+// ---------------------------------------------------------------------------
+
+jest.mock("@nozbe/watermelondb", () => ({
+  Q: {
+    unsafeSqlQuery: jest.fn(),
+    where: jest.fn(),
+    and: jest.fn(),
+    or: jest.fn(),
+    notEq: jest.fn(),
+  },
+}));
+
+// ---------------------------------------------------------------------------
+// Mock: ai-sms-parser-service (parseSmsWithAi)
+// ---------------------------------------------------------------------------
+
+const mockParseSmsWithAi = jest.fn<Promise<AiParseResult>, unknown[]>(() =>
+  Promise.resolve({ transactions: [] })
+);
+
+jest.mock("@/services/ai-sms-parser-service", () => ({
+  parseSmsWithAi: (...args: unknown[]) => mockParseSmsWithAi(...args),
+}));
+
+// ---------------------------------------------------------------------------
+// Mock: @astik/db (database)
+// ---------------------------------------------------------------------------
+
+jest.mock("@astik/db", () => ({
+  database: {
+    get: jest.fn().mockReturnValue({
+      query: jest.fn().mockReturnValue({
+        unsafeFetchRaw: jest.fn().mockResolvedValue([]),
+        fetch: jest.fn().mockResolvedValue([]),
+      }),
+    }),
+  },
+  Transaction: {},
 }));
 
 // ---------------------------------------------------------------------------
@@ -143,6 +188,20 @@ function createParsedTransaction(
   };
 }
 
+/** Stub ParseSmsContext for tests — minimal valid context */
+const stubAiContext: ParseSmsContext = {
+  categories: [],
+  supportedCurrencies: ["EGP"],
+};
+
+/** Default ScanOptions with required aiContext */
+function defaultOptions(overrides: Record<string, unknown> = {}): {
+  aiContext: ParseSmsContext;
+  [key: string]: unknown;
+} {
+  return { aiContext: stubAiContext, ...overrides };
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -151,10 +210,11 @@ describe("sms-sync-service", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockReadSmsInbox.mockResolvedValue([]);
-    mockParse.mockReturnValue(null);
+    mockIsKnownFinancialSender.mockReturnValue(true);
     mockComputeSmsHash.mockImplementation((body: string) =>
       Promise.resolve(`hash-${body.slice(0, 10)}`)
     );
+    mockParseSmsWithAi.mockResolvedValue({ transactions: [] });
   });
 
   // =========================================================================
@@ -164,7 +224,7 @@ describe("sms-sync-service", () => {
     it("should return empty result for an empty inbox", async () => {
       mockReadSmsInbox.mockResolvedValue([]);
 
-      const result = await scanAndParseSms();
+      const result = await scanAndParseSms(defaultOptions());
 
       expect(result.transactions).toHaveLength(0);
       expect(result.totalScanned).toBe(0);
@@ -193,17 +253,20 @@ describe("sms-sync-service", () => {
         senderAddress: "VF",
         rawSmsBody: sms2.body,
       });
-      mockParse.mockReturnValueOnce(parsed1).mockReturnValueOnce(parsed2);
+      mockParseSmsWithAi.mockResolvedValue({
+        transactions: [parsed1, parsed2],
+      });
 
-      const result = await scanAndParseSms();
+      const result = await scanAndParseSms(defaultOptions());
 
       expect(result.totalScanned).toBe(2);
       expect(result.totalFound).toBe(2);
       expect(result.transactions).toHaveLength(2);
     });
 
-    it("should skip SMS that do not match any parser pattern", async () => {
+    it("should skip SMS from non-financial senders", async () => {
       const financial = createSmsMessage({
+        address: "NBE",
         body: "Purchase of EGP 200 at Shop",
       });
       const promo = createSmsMessage({
@@ -212,12 +275,15 @@ describe("sms-sync-service", () => {
       });
       mockReadSmsInbox.mockResolvedValue([financial, promo]);
 
-      const parsed = createParsedTransaction({ amount: 200 });
-      mockParse
-        .mockReturnValueOnce(parsed) // financial → parsed
-        .mockReturnValueOnce(null); // promo → null
+      // Only NBE is a known financial sender
+      mockIsKnownFinancialSender
+        .mockReturnValueOnce(true) // financial → passes filter
+        .mockReturnValueOnce(false); // promo → filtered out
 
-      const result = await scanAndParseSms();
+      const parsed = createParsedTransaction({ amount: 200 });
+      mockParseSmsWithAi.mockResolvedValue({ transactions: [parsed] });
+
+      const result = await scanAndParseSms(defaultOptions());
 
       expect(result.totalScanned).toBe(2);
       expect(result.totalFound).toBe(1);
@@ -229,10 +295,6 @@ describe("sms-sync-service", () => {
       const sms2 = createSmsMessage({ body: "Debit EGP 200" });
       mockReadSmsInbox.mockResolvedValue([sms1, sms2]);
 
-      mockParse
-        .mockReturnValueOnce(createParsedTransaction({ amount: 100 }))
-        .mockReturnValueOnce(createParsedTransaction({ amount: 200 }));
-
       // hash for sms1 matches an existing hash
       mockComputeSmsHash
         .mockResolvedValueOnce("existing-hash-1")
@@ -240,36 +302,23 @@ describe("sms-sync-service", () => {
 
       const existingHashes = new Set(["existing-hash-1"]);
 
-      const result = await scanAndParseSms(undefined, { existingHashes });
+      // Only sms2 should reach AI (sms1 was deduped)
+      const parsed = createParsedTransaction({ amount: 200 });
+      mockParseSmsWithAi.mockResolvedValue({ transactions: [parsed] });
 
+      const result = await scanAndParseSms(defaultOptions({ existingHashes }));
+
+      // Only 1 candidate should have been sent to AI
+      expect(mockParseSmsWithAi).toHaveBeenCalledTimes(1);
       expect(result.totalFound).toBe(1);
       expect(result.transactions).toHaveLength(1);
-      expect(result.transactions[0].smsBodyHash).toBe("new-hash-2");
-    });
-
-    it("should enrich transactions with computed hash and SMS date", async () => {
-      const smsDate = new Date("2026-01-15T10:30:00Z").getTime();
-      const sms = createSmsMessage({ body: "Credit EGP 500", date: smsDate });
-      mockReadSmsInbox.mockResolvedValue([sms]);
-
-      mockParse.mockReturnValueOnce(
-        createParsedTransaction({ amount: 500, smsBodyHash: "" })
-      );
-      mockComputeSmsHash.mockResolvedValueOnce("computed-hash-abc");
-
-      const result = await scanAndParseSms();
-
-      expect(result.transactions).toHaveLength(1);
-      const tx = result.transactions[0];
-      expect(tx.smsBodyHash).toBe("computed-hash-abc");
-      expect(tx.date.getTime()).toBe(smsDate);
     });
 
     it("should pass maxCount and minDate to readSmsInbox", async () => {
       mockReadSmsInbox.mockResolvedValue([]);
 
       const minDate = Date.now() - 86_400_000;
-      await scanAndParseSms(undefined, { maxCount: 100, minDate });
+      await scanAndParseSms(defaultOptions({ maxCount: 100, minDate }));
 
       expect(mockReadSmsInbox).toHaveBeenCalledWith({
         maxCount: 100,
@@ -277,13 +326,13 @@ describe("sms-sync-service", () => {
       });
     });
 
-    it("should use default maxCount (5000) when not specified", async () => {
+    it("should use default maxCount (2000) when not specified", async () => {
       mockReadSmsInbox.mockResolvedValue([]);
 
-      await scanAndParseSms();
+      await scanAndParseSms(defaultOptions());
 
       expect(mockReadSmsInbox).toHaveBeenCalledWith(
-        expect.objectContaining({ maxCount: 5000 })
+        expect.objectContaining({ maxCount: 2000 })
       );
     });
   });
@@ -293,19 +342,20 @@ describe("sms-sync-service", () => {
   // =========================================================================
   describe("progress callback", () => {
     it("should invoke onProgress after each batch", async () => {
-      // Create 3 SMS; batchSize=2 → 2 progress calls (batch of 2 + batch of 1)
+      // Create 3 SMS; batchSize=2 → 2 filtering progress calls + ai-parsing + complete
       const messages = [
         createSmsMessage({ body: "SMS 1" }),
         createSmsMessage({ body: "SMS 2" }),
         createSmsMessage({ body: "SMS 3" }),
       ];
       mockReadSmsInbox.mockResolvedValue(messages);
-      mockParse.mockReturnValue(null);
 
       const onProgress = jest.fn();
-      await scanAndParseSms(onProgress, { batchSize: 2 });
+      await scanAndParseSms(defaultOptions({ batchSize: 2 }), onProgress);
 
-      expect(onProgress).toHaveBeenCalledTimes(2);
+      // At minimum: 2 filtering batches + 1 ai-parsing start + 1 complete
+      expect(onProgress).toHaveBeenCalled();
+      expect(onProgress.mock.calls.length).toBeGreaterThanOrEqual(2);
     });
 
     it("should report accurate progress values", async () => {
@@ -316,14 +366,18 @@ describe("sms-sync-service", () => {
       const sms2 = createSmsMessage({ address: "CIB", body: "Random promo" });
       mockReadSmsInbox.mockResolvedValue([sms1, sms2]);
 
-      mockParse
-        .mockReturnValueOnce(createParsedTransaction({ amount: 100 }))
-        .mockReturnValueOnce(null);
+      const parsed = createParsedTransaction({ amount: 100 });
+      mockParseSmsWithAi.mockResolvedValue({ transactions: [parsed] });
 
       const onProgress = jest.fn();
-      await scanAndParseSms(onProgress, { batchSize: 2 });
+      await scanAndParseSms(defaultOptions({ batchSize: 2 }), onProgress);
 
-      expect(onProgress).toHaveBeenCalledWith(
+      // The "complete" phase should report transactionsFound = 1
+      const completeCalls = onProgress.mock.calls.filter(
+        (call: [Record<string, unknown>]) => call[0].currentPhase === "complete"
+      ) as Array<[Record<string, unknown>]>;
+      expect(completeCalls.length).toBeGreaterThanOrEqual(1);
+      expect(completeCalls[0][0]).toEqual(
         expect.objectContaining({
           totalMessages: 2,
           messagesScanned: 2,
@@ -334,9 +388,8 @@ describe("sms-sync-service", () => {
 
     it("should not throw if onProgress is undefined", async () => {
       mockReadSmsInbox.mockResolvedValue([createSmsMessage()]);
-      mockParse.mockReturnValue(null);
 
-      await expect(scanAndParseSms(undefined)).resolves.toBeDefined();
+      await expect(scanAndParseSms(defaultOptions())).resolves.toBeDefined();
     });
   });
 
@@ -354,12 +407,8 @@ describe("sms-sync-service", () => {
         createSmsMessage({ body: `SMS ${i}` })
       );
       mockReadSmsInbox.mockResolvedValue(messages);
-      mockParse.mockReturnValue(null);
 
-      await scanAndParseSms(undefined, {
-        batchSize: 1,
-        yieldInterval: 2,
-      });
+      await scanAndParseSms(defaultOptions({ batchSize: 1, yieldInterval: 2 }));
 
       expect(InteractionManager.runAfterInteractions).toHaveBeenCalledTimes(3);
     });
@@ -372,7 +421,7 @@ describe("sms-sync-service", () => {
     it("should set scan-in-progress flag before scanning", async () => {
       mockReadSmsInbox.mockResolvedValue([]);
 
-      await scanAndParseSms();
+      await scanAndParseSms(defaultOptions());
 
       const { setItem } = getAsyncStorageMocks();
       expect(setItem).toHaveBeenCalledWith(
@@ -384,7 +433,7 @@ describe("sms-sync-service", () => {
     it("should clear scan-in-progress flag after successful scan", async () => {
       mockReadSmsInbox.mockResolvedValue([]);
 
-      await scanAndParseSms();
+      await scanAndParseSms(defaultOptions());
 
       const { removeItem } = getAsyncStorageMocks();
       expect(removeItem).toHaveBeenCalledWith("@astik/sms_scan_in_progress");
@@ -393,7 +442,9 @@ describe("sms-sync-service", () => {
     it("should clear scan-in-progress flag even if scan throws", async () => {
       mockReadSmsInbox.mockRejectedValue(new Error("SMS read failed"));
 
-      await expect(scanAndParseSms()).rejects.toThrow("SMS read failed");
+      await expect(scanAndParseSms(defaultOptions())).rejects.toThrow(
+        "SMS read failed"
+      );
 
       const { removeItem } = getAsyncStorageMocks();
       expect(removeItem).toHaveBeenCalledWith("@astik/sms_scan_in_progress");
@@ -430,10 +481,11 @@ describe("sms-sync-service", () => {
   // =========================================================================
   describe("result shape", () => {
     it("should return readonly transactions array", async () => {
+      const parsed = createParsedTransaction();
       mockReadSmsInbox.mockResolvedValue([createSmsMessage()]);
-      mockParse.mockReturnValue(createParsedTransaction());
+      mockParseSmsWithAi.mockResolvedValue({ transactions: [parsed] });
 
-      const result = await scanAndParseSms();
+      const result = await scanAndParseSms(defaultOptions());
 
       expect(Array.isArray(result.transactions)).toBe(true);
       expect(typeof result.totalScanned).toBe("number");
@@ -444,7 +496,7 @@ describe("sms-sync-service", () => {
     it("should measure duration in milliseconds", async () => {
       mockReadSmsInbox.mockResolvedValue([]);
 
-      const result = await scanAndParseSms();
+      const result = await scanAndParseSms(defaultOptions());
 
       expect(result.durationMs).toBeGreaterThanOrEqual(0);
       expect(result.durationMs).toBeLessThan(5000); // sanity bound

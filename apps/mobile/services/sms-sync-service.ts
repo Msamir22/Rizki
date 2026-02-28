@@ -85,7 +85,7 @@ interface ScanOptions {
    */
   readonly yieldInterval?: number;
   /** Context to pass to AI for better account suggestions and parsing accuracy. */
-  readonly aiContext?: ParseSmsContext;
+  readonly aiContext: ParseSmsContext;
 }
 
 // ---------------------------------------------------------------------------
@@ -151,14 +151,14 @@ export async function loadExistingSmsHashes(): Promise<ReadonlySet<string>> {
  * @returns Parsed, deduplicated transactions ready for review
  */
 export async function scanAndParseSms(
-  onProgress?: (progress: SmsScanProgress) => void,
-  options?: ScanOptions
+  options: ScanOptions,
+  onProgress?: (progress: SmsScanProgress) => void
 ): Promise<SmsScanResult> {
   // Guard against interrupted scans — clean up stale flags
   await AsyncStorage.setItem(SCAN_IN_PROGRESS_KEY, "true");
 
   try {
-    return await executeScanPipeline(onProgress, options);
+    return await executeScanPipeline(options, onProgress);
   } finally {
     // Always clear the flag, even on error/abort
     await AsyncStorage.removeItem(SCAN_IN_PROGRESS_KEY);
@@ -185,8 +185,8 @@ export async function cleanupStaleScanState(): Promise<boolean> {
  * to manage the scan-in-progress guard cleanly.
  */
 async function executeScanPipeline(
-  onProgress?: (progress: SmsScanProgress) => void,
-  options?: ScanOptions
+  options: ScanOptions,
+  onProgress?: (progress: SmsScanProgress) => void
 ): Promise<SmsScanResult> {
   const startTime = Date.now();
   const maxCount = options?.maxCount ?? DEFAULT_MAX_COUNT;
@@ -270,7 +270,7 @@ async function executeScanPipeline(
 
   const aiResult = await parseSmsWithAi(
     candidates,
-    options?.aiContext,
+    options.aiContext,
     (aiProgress) => {
       // Accumulate chunk durations for rolling average
       chunkDurations.push(aiProgress.chunkDurationMs);

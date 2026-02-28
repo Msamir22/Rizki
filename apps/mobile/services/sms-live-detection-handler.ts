@@ -203,9 +203,8 @@ export async function handleDetectedSms(
   try {
     // Step 1: Resolve account using senderAddress + rawSmsBody
     const resolved = await resolveAccountForSms(
-      parsed.senderAddress ?? parsed.senderDisplayName,
-      parsed.rawSmsBody ?? "",
-      db
+      parsed.senderAddress,
+      parsed.rawSmsBody
     );
 
     if (!resolved) {
