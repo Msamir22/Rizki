@@ -16,12 +16,16 @@
  * @module SmsTransactionItem
  */
 
+import { palette } from "@/constants/colors";
+import { formatCurrency, ParsedSmsTransaction } from "@astik/logic";
+import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useState } from "react";
 import { Pressable, Text, View } from "react-native";
-import Animated, { FadeIn, FadeOut, Layout } from "react-native-reanimated";
-import { Ionicons } from "@expo/vector-icons";
-import { palette } from "@/constants/colors";
-import type { ParsedSmsTransaction } from "@astik/logic";
+import Animated, {
+  FadeIn,
+  FadeOut,
+  LinearTransition,
+} from "react-native-reanimated";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -43,14 +47,6 @@ interface SmsTransactionItemProps {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-/** Format a number as currency string */
-function formatAmount(amount: number): string {
-  return amount.toLocaleString("en-EG", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-}
 
 /** Format a Date as "dd MMM" */
 function formatDate(date: Date): string {
@@ -92,7 +88,7 @@ export function SmsTransactionItem({
 
   return (
     <Animated.View
-      layout={Layout.springify()}
+      layout={LinearTransition.springify()}
       className="bg-slate-800/60 rounded-2xl mb-3 overflow-hidden"
     >
       <Pressable
@@ -129,7 +125,7 @@ export function SmsTransactionItem({
               {transaction.isAtmWithdrawal && (
                 <View className="bg-amber-500/20 px-1.5 py-0.5 rounded ml-2">
                   <Text className="text-[10px] font-bold text-amber-400">
-                    ATM
+                    Cash Withdrawal
                   </Text>
                 </View>
               )}
@@ -147,7 +143,10 @@ export function SmsTransactionItem({
               }`}
             >
               {isExpense ? "-" : "+"}
-              {formatAmount(transaction.amount)} {transaction.currency}
+              {formatCurrency({
+                amount: transaction.amount,
+                currency: transaction.currency,
+              })}
             </Text>
           </View>
 

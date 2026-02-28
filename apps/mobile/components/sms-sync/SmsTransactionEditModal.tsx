@@ -154,7 +154,7 @@ export function SmsTransactionEditModal({
 
   const handleSelectAccount = useCallback((acc: AccountWithBankDetails) => {
     setSelectedAccountId(acc.id);
-    setSelectedAccountName(acc.name);
+    setSelectedAccountName(`${acc.name} (${acc.currency})`);
     setIsAccountPickerOpen(false);
   }, []);
 
@@ -349,7 +349,7 @@ export function SmsTransactionEditModal({
                             : "text-slate-300"
                         }`}
                       >
-                        {acc.name}
+                        {acc.name} ({acc.currency})
                       </Text>
                       {acc.id === selectedAccountId && (
                         <Ionicons

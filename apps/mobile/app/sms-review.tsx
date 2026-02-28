@@ -127,20 +127,14 @@ export default function SmsReviewScreen(): React.JSX.Element {
             ]
           );
         } else {
-          Alert.alert(
-            "Success",
-            `Saved ${result.savedCount} transaction${result.savedCount !== 1 ? "s" : ""} from SMS!`,
-            [
-              {
-                text: "View Transactions",
-                onPress: () => {
-                  markSyncComplete().catch(console.error);
-                  clearTransactions();
-                  router.replace("/(tabs)");
-                },
-              },
-            ]
-          );
+          showToast({
+            type: "success",
+            title: "Saved!",
+            message: `Saved ${result.savedCount} transaction${result.savedCount !== 1 ? "s" : ""} from SMS!`,
+          });
+          markSyncComplete().catch(console.error);
+          clearTransactions();
+          router.replace("/(tabs)/transactions");
         }
 
         // Notify user if ATM withdrawals were skipped (FR-007)

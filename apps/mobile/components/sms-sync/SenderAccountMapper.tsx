@@ -212,7 +212,7 @@ export function SenderAccountMapper({
     () =>
       accounts.map((a) => ({
         value: a.key,
-        label: a.name,
+        label: `${a.name} (${a.currency})`,
       })),
     [accounts]
   );
