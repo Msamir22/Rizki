@@ -1,0 +1,12 @@
+# Ensure WatermelonDB schema and types are in sync before pushing
+npm run db:sync-local
+
+# Abort push if the sync produced uncommitted changes
+if ! git diff --quiet; then
+  echo ""
+  echo "❌ Push aborted: db:sync-local modified files."
+  echo "   Please review and commit the changes, then push again."
+  echo ""
+  git diff --stat
+  exit 1
+fi
