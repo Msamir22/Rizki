@@ -17,7 +17,7 @@
  * @module sms-account-matcher
  */
 
-import { Account, BankDetails, database } from "@astik/db";
+import { Account, BankDetails, database, type CurrencyType } from "@astik/db";
 import type { ParsedSmsTransaction } from "@astik/logic";
 import { Q } from "@nozbe/watermelondb";
 
@@ -40,6 +40,7 @@ interface AccountMatch {
 interface AccountWithBankDetails {
   readonly id: string;
   readonly name: string;
+  readonly currency: CurrencyType;
   readonly isDefault: boolean;
   readonly smsSenderName?: string;
   readonly cardLast4?: string;
@@ -83,6 +84,7 @@ async function fetchAccountsWithDetails(
     results.push({
       id: account.id,
       name: account.name,
+      currency: account.currency,
       isDefault: account.isDefault,
       smsSenderName: bankDetails?.smsSenderName ?? undefined,
       cardLast4: bankDetails?.cardLast4 ?? undefined,
