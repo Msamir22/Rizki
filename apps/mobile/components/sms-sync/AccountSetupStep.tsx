@@ -118,6 +118,11 @@ export function AccountSetupStep({
         if (!cancelled) {
           setInitialState({ cards: [], existingAccountMapping: {} });
           setAccountCards([]);
+          showToast({
+            type: "warning",
+            title: "Could not load suggestions",
+            message: "Add accounts manually below.",
+          });
         }
       }
     }

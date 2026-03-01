@@ -606,8 +606,8 @@ function hasAddColumnInTable(content, table, colName) {
   const blocks = [...content.matchAll(/addColumns\(\s*\{([\s\S]*?)\}\s*\)/g)];
   return blocks.some(([, block]) => {
     return (
-      new RegExp(`table:\\s*"${table}"`).test(block) &&
-      new RegExp(`name:\\s*"${colName}"`).test(block)
+      new RegExp(`table:\\s*"${escapeRegex(table)}"`).test(block) &&
+      new RegExp(`name:\\s*"${escapeRegex(colName)}"`).test(block)
     );
   });
 }
@@ -619,7 +619,7 @@ function hasAddColumnInTable(content, table, colName) {
 function hasCreateTable(content, table) {
   const blocks = [...content.matchAll(/createTable\(\s*\{([\s\S]*?)\}\s*\)/g)];
   return blocks.some(([, block]) =>
-    new RegExp(`name:\\s*"${table}"`).test(block)
+    new RegExp(`name:\\s*"${escapeRegex(table)}"`).test(block)
   );
 }
 

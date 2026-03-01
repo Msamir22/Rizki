@@ -173,7 +173,7 @@ export async function loadExistingSmsHashes(): Promise<ReadonlySet<string>> {
          WHERE source = 'SMS'
            AND sms_body_hash IS NOT NULL
            AND deleted != 1
-           AND _status IS NOT 'deleted'`
+           AND _status != 'deleted'`
       )
     )
     .unsafeFetchRaw();
@@ -188,7 +188,7 @@ export async function loadExistingSmsHashes(): Promise<ReadonlySet<string>> {
         `SELECT sms_body_hash FROM transfers
          WHERE sms_body_hash IS NOT NULL
            AND deleted != 1
-           AND _status IS NOT 'deleted'`
+           AND _status != 'deleted'`
       )
     )
     .unsafeFetchRaw();
