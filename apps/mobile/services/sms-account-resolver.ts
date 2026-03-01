@@ -214,8 +214,9 @@ export async function resolveAccountForSms(
         const existingName = account.name.toLowerCase().trim();
         if (
           existingName === normalizedBankName ||
-          existingName.includes(normalizedBankName) ||
-          normalizedBankName.includes(existingName)
+          // Word boundary match: "CIB" matches "CIB Egypt" but not "NCIB"
+          new RegExp(`\\b${normalizedBankName}\\b`).test(existingName) ||
+          new RegExp(`\\b${existingName}\\b`).test(normalizedBankName)
         ) {
           return {
             accountId: account.id,

@@ -20,7 +20,7 @@ import * as Crypto from "expo-crypto";
  * telecom gateways or messaging apps. These are invisible to the user
  * but produce different hash outputs if left in the body.
  */
-const ZERO_WIDTH_CHARS_RE = /\u200B|\u200C|\u200D|\uFEFF/g;
+const ZERO_WIDTH_CHARS_RE = /\u200B\u200C\u200D\uFEFF\u00AD\u2060\u180E/g;
 
 // ---------------------------------------------------------------------------
 // Normalization
