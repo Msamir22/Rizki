@@ -27,7 +27,7 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Dimensions,
   StyleSheet,
@@ -198,6 +198,17 @@ export default function OnboardingScreen(): React.JSX.Element {
     [isDark]
   );
 
+  // Redirect to app if wallet-creation phase reached without userId.
+  // Navigation must happen in an effect, not during render.
+  useEffect(() => {
+    if (phase === "wallet-creation" && selectedCurrency && !userId) {
+      console.error(
+        "[onboarding] No userId available for wallet creation, skipping to app"
+      );
+      router.replace("/(tabs)");
+    }
+  }, [phase, selectedCurrency, userId, router]);
+
   // -----------------------------------------------------------------------
   // Phase: Currency Picker
   // -----------------------------------------------------------------------
@@ -214,14 +225,7 @@ export default function OnboardingScreen(): React.JSX.Element {
   // Phase: Wallet Creation
   // -----------------------------------------------------------------------
   if (phase === "wallet-creation" && selectedCurrency) {
-    // Missing userId — auth failed silently. Skip wallet creation and go home.
-    if (!userId) {
-      console.error(
-        "[onboarding] No userId available for wallet creation, skipping to app"
-      );
-      router.replace("/(tabs)");
-      return <></>;
-    }
+    if (!userId) return <></>;
 
     return (
       <WalletCreationStep

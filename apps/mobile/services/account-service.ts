@@ -55,7 +55,7 @@ export const CURRENCY_UNKNOWN_ERROR = "CURRENCY_UNKNOWN";
  * object to support retry-safe fire-and-forget usage.
  *
  * @param userId - The authenticated user's ID
- * @param currency - Optional explicit currency. Falls back to device detection.
+ * @param currency - Optional explicit currency. Falls back to timezone detection.
  *                   Returns CURRENCY_UNKNOWN error if both are null.
  * @returns Result with created flag and account ID
  */
@@ -64,6 +64,11 @@ export async function ensureCashAccount(
   currency?: CurrencyType | null
 ): Promise<EnsureCashAccountResult> {
   try {
+    const normalizedUserId = userId.trim();
+    if (!normalizedUserId) {
+      return { created: false, accountId: null, error: "USER_ID_REQUIRED" };
+    }
+
     // Resolve currency: explicit param > timezone detection
     const resolvedCurrency = currency ?? detectCurrencyFromTimezone();
     if (!resolvedCurrency) {
@@ -84,7 +89,7 @@ export async function ensureCashAccount(
       const existing = await accountsCollection
         .query(
           Q.where("type", CASH_ACCOUNT_TYPE),
-          Q.where("user_id", userId),
+          Q.where("user_id", normalizedUserId),
           Q.where("currency", resolvedCurrency),
           Q.where("deleted", Q.notEq(true)),
           Q.sortBy("created_at", Q.asc)
@@ -97,7 +102,7 @@ export async function ensureCashAccount(
       }
 
       const record = await accountsCollection.create((acc) => {
-        acc.userId = userId;
+        acc.userId = normalizedUserId;
         acc.name = CASH_ACCOUNT_NAME;
         acc.type = CASH_ACCOUNT_TYPE;
         acc.currency = resolvedCurrency;

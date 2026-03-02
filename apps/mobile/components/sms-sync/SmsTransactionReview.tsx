@@ -205,9 +205,7 @@ export function SmsTransactionReview({
   );
 
   const selectedIndicesRef = useRef(selectedIndices);
-  useEffect(() => {
-    selectedIndicesRef.current = selectedIndices;
-  }, [selectedIndices]);
+  selectedIndicesRef.current = selectedIndices;
 
   // ── Category correction state ─────────────────────────────────────
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
