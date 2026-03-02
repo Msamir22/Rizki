@@ -175,7 +175,7 @@ function normalizeCurrency(raw: string): CurrencyType | null {
     return upper as CurrencyType;
   }
 
-  // It's okay to default to EGP since the SMS parsing functionality will only be available for Egypt as a start.
+  // Unknown currency — return null so callers can skip or handle appropriately.
   return null;
 }
 

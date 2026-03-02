@@ -206,7 +206,16 @@ export default function OnboardingScreen(): React.JSX.Element {
   // -----------------------------------------------------------------------
   // Phase: Wallet Creation
   // -----------------------------------------------------------------------
-  if (phase === "wallet-creation" && selectedCurrency && userId) {
+  if (phase === "wallet-creation" && selectedCurrency) {
+    // Missing userId — auth failed silently. Skip wallet creation and go home.
+    if (!userId) {
+      console.error(
+        "[onboarding] No userId available for wallet creation, skipping to app"
+      );
+      router.replace("/(tabs)");
+      return <></>;
+    }
+
     return (
       <WalletCreationStep
         userId={userId}

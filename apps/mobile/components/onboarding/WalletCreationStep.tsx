@@ -97,6 +97,7 @@ export function WalletCreationStep({
         } catch (e) {
           console.error("Failed to set preferred currency:", e);
         }
+        if (!isMounted) return;
         setPhase("success");
       }
     };
@@ -106,7 +107,11 @@ export function WalletCreationStep({
     return (): void => {
       isMounted = false;
     };
-  }, [userId, currency, setPreferredCurrency]);
+    // setPreferredCurrency is not wrapped in useCallback (returns a new ref
+    // each render). Including it would re-trigger wallet creation on every
+    // render. Safe to omit — the function identity doesn't affect behaviour.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, currency]);
 
   const handleContinue = useCallback((): void => {
     if (phase === "error") {
