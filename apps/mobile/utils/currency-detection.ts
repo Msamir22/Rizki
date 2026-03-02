@@ -35,7 +35,5 @@ export function detectCurrencyFromTimezone(): CurrencyType | null {
 
   if (!timezone) return null;
 
-  console.log("Timezone:", timezone);
-  console.log("Currency:", TIMEZONE_TO_CURRENCY[timezone]);
   return TIMEZONE_TO_CURRENCY[timezone] ?? null;
 }

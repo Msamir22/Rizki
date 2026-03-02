@@ -163,6 +163,34 @@ export default function OnboardingScreen(): React.JSX.Element {
     }
   }, [currentIndex, handleCarouselFinish]);
 
+  const renderCarouselItem = useCallback(
+    ({ item }: { item: OnboardingSlide; index: number }): React.JSX.Element => {
+      const iconColor = item.isSpecial
+        ? palette.nileGreen[500]
+        : isDark
+          ? palette.nileGreen[500]
+          : palette.nileGreen[600];
+
+      return (
+        <View className="flex-1 items-center justify-center px-8">
+          <View className="mb-12 h-[150px] justify-center">
+            {item.icon(iconColor)}
+          </View>
+
+          <View className="items-center gap-4">
+            <Text className="font-bold text-[28px] mb-2 text-center text-text-primary dark:text-text-primary-dark">
+              {item.title}
+            </Text>
+            <Text className="text-center text-text-secondary dark:text-text-secondary-dark text-base max-w-[85%]">
+              {item.description}
+            </Text>
+          </View>
+        </View>
+      );
+    },
+    [isDark]
+  );
+
   // -----------------------------------------------------------------------
   // Phase: Currency Picker
   // -----------------------------------------------------------------------
@@ -179,9 +207,18 @@ export default function OnboardingScreen(): React.JSX.Element {
   // Phase: Wallet Creation
   // -----------------------------------------------------------------------
   if (phase === "wallet-creation" && selectedCurrency) {
+    // Missing userId — auth failed silently. Skip wallet creation and go home.
+    if (!userId) {
+      console.error(
+        "[onboarding] No userId available for wallet creation, skipping to app"
+      );
+      router.replace("/(tabs)");
+      return <></>;
+    }
+
     return (
       <WalletCreationStep
-        userId={userId ?? ""}
+        userId={userId}
         currency={selectedCurrency}
         onComplete={handleGoToApp}
         onError={handleGoToApp}
@@ -192,35 +229,6 @@ export default function OnboardingScreen(): React.JSX.Element {
   // -----------------------------------------------------------------------
   // Phase: Carousel (default)
   // -----------------------------------------------------------------------
-  const renderItem = ({
-    item,
-  }: {
-    item: OnboardingSlide;
-    index: number;
-  }): React.JSX.Element => {
-    const iconColor = item.isSpecial
-      ? palette.nileGreen[500]
-      : isDark
-        ? palette.nileGreen[500]
-        : palette.nileGreen[600];
-
-    return (
-      <View className="flex-1 items-center justify-center px-8">
-        <View className="mb-12 h-[150px] justify-center">
-          {item.icon(iconColor)}
-        </View>
-
-        <View className="items-center gap-4">
-          <Text className="font-bold text-[28px] mb-2 text-center text-text-primary dark:text-text-primary-dark">
-            {item.title}
-          </Text>
-          <Text className="text-center text-text-secondary dark:text-text-secondary-dark text-base max-w-[85%]">
-            {item.description}
-          </Text>
-        </View>
-      </View>
-    );
-  };
 
   return (
     <View className="flex-1">
@@ -255,7 +263,7 @@ export default function OnboardingScreen(): React.JSX.Element {
         data={ONBOARDING_DATA}
         scrollAnimationDuration={500}
         onSnapToItem={(index) => setCurrentIndex(index)}
-        renderItem={renderItem}
+        renderItem={renderCarouselItem}
         style={{ marginTop: insets.top + 40 }}
       />
 

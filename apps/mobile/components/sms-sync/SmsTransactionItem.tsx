@@ -193,7 +193,7 @@ function SmsTransactionItemInner({
             ) : null}
             <TouchableOpacity
               onPress={handleToggleExpand}
-              hitSlop={12}
+              hitSlop={14}
               className="flex-row items-center ml-auto p-1"
               activeOpacity={0.7}
             >

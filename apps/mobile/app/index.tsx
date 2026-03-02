@@ -2,7 +2,7 @@
  * App Entry Point
  *
  * Handles initial app state: authentication, onboarding check,
- * and silent Cash account retry for previously-onboarded users.
+ * and routing to the appropriate screen based on onboarding status.
  *
  * @module Index
  */

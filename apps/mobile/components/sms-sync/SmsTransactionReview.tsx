@@ -405,11 +405,11 @@ export function SmsTransactionReview({
       );
     },
     [
-      selectedIndices,
       accountMatches,
       transactionOverrides,
       handleToggleItem,
       handleOpenEditModal,
+      selectedIndices,
     ]
   );
 
@@ -560,6 +560,7 @@ export function SmsTransactionReview({
           data={listItems}
           renderItem={renderItem}
           keyExtractor={keyExtractor}
+          extraData={selectedIndices}
           contentContainerClassName="px-4 pb-32"
           showsVerticalScrollIndicator={false}
           removeClippedSubviews

@@ -90,8 +90,14 @@ export function WalletCreationStep({
       if (result.error) {
         setPhase("error");
       } else {
-        // Persist the selected currency as the user's preferred currency
-        await setPreferredCurrency(currency);
+        // Persist the selected currency as the user's preferred currency.
+        // Non-critical — wallet was created, so we still show success.
+        try {
+          await setPreferredCurrency(currency);
+        } catch (e) {
+          console.error("Failed to set preferred currency:", e);
+        }
+        if (!isMounted) return;
         setPhase("success");
       }
     };
@@ -101,7 +107,11 @@ export function WalletCreationStep({
     return (): void => {
       isMounted = false;
     };
-  }, [userId, currency, setPreferredCurrency]);
+    // setPreferredCurrency is not wrapped in useCallback (returns a new ref
+    // each render). Including it would re-trigger wallet creation on every
+    // render. Safe to omit — the function identity doesn't affect behaviour.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, currency]);
 
   const handleContinue = useCallback((): void => {
     if (phase === "error") {
@@ -188,7 +198,7 @@ export function WalletCreationStep({
               className="text-sm text-center mt-2 italic"
               style={{ color: palette.nileGreen[400] }}
             >
-              Getting your wallet ready… Even pharaohs kept track of their gold!
+              You&apos;re ready to start tracking like royalty 👑
             </Text>
           </Animated.View>
         )}
