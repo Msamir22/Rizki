@@ -127,6 +127,8 @@ export async function ensureCashAccount(
  *
  * @param userId - The authenticated user's ID
  * @returns The Cash account ID, or null if none exists
+ * Note: Unlike ensureCashAccount, this returns the first Cash account
+ * regardless of currency (sorted by created_at ascending).
  */
 export async function findCashAccount(userId: string): Promise<string | null> {
   try {
