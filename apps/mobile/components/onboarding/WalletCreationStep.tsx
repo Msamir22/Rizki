@@ -90,8 +90,13 @@ export function WalletCreationStep({
       if (result.error) {
         setPhase("error");
       } else {
-        // Persist the selected currency as the user's preferred currency
-        await setPreferredCurrency(currency);
+        // Persist the selected currency as the user's preferred currency.
+        // Non-critical — wallet was created, so we still show success.
+        try {
+          await setPreferredCurrency(currency);
+        } catch (e) {
+          console.error("Failed to set preferred currency:", e);
+        }
         setPhase("success");
       }
     };
@@ -188,7 +193,7 @@ export function WalletCreationStep({
               className="text-sm text-center mt-2 italic"
               style={{ color: palette.nileGreen[400] }}
             >
-              Getting your wallet ready… Even pharaohs kept track of their gold!
+              You&apos;re ready to start tracking like royalty 👑
             </Text>
           </Animated.View>
         )}

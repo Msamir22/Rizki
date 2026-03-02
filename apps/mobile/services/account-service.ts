@@ -14,7 +14,7 @@
  */
 
 import { detectCurrencyFromTimezone } from "@/utils/currency-detection";
-import { Account, CurrencyType, database } from "@astik/db";
+import { Account, type CurrencyType, database } from "@astik/db";
 import { Q } from "@nozbe/watermelondb";
 
 // ---------------------------------------------------------------------------
