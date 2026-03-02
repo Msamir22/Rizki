@@ -8,6 +8,7 @@
  */
 
 import { palette } from "@/constants/colors";
+import { HAS_ONBOARDED_KEY } from "@/constants/storage-keys";
 import { ensureAuthenticated } from "@/services/supabase";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Redirect } from "expo-router";
@@ -28,7 +29,7 @@ export default function Index(): React.ReactNode {
       await ensureAuthenticated();
 
       // 2. Check onboarding status
-      const value = await AsyncStorage.getItem("hasOnboarded");
+      const value = await AsyncStorage.getItem(HAS_ONBOARDED_KEY);
       if (value === "true") {
         setHasOnboarded(true);
       }

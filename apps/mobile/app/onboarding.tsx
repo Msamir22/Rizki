@@ -15,6 +15,7 @@
  */
 
 import { palette } from "@/constants/colors";
+import { HAS_ONBOARDED_KEY } from "@/constants/storage-keys";
 import { useTheme } from "@/context/ThemeContext";
 import { getCurrentUserId } from "@/services/supabase";
 import type { CurrencyType } from "@astik/db";
@@ -126,18 +127,24 @@ export default function OnboardingScreen(): React.JSX.Element {
    */
   const handleCarouselFinish = useCallback(async (): Promise<void> => {
     try {
-      await AsyncStorage.setItem("hasOnboarded", "true");
+      await AsyncStorage.setItem(HAS_ONBOARDED_KEY, "true");
 
       // Resolve user ID for potential wallet creation
       const uid = await getCurrentUserId();
+      if (!uid) {
+        console.warn("No authenticated user, skipping wallet creation");
+        router.replace("/(tabs)");
+        return;
+      }
       setUserId(uid);
 
       // Always show currency picker — user makes the choice
       setPhase("currency-picker");
     } catch (error) {
       console.error("Failed to save onboarding status", error);
+      router.replace("/(tabs)");
     }
-  }, []);
+  }, [router]);
 
   /** Called when user selects a currency and taps "Continue". */
   const handleCurrencySelected = useCallback((currency: CurrencyType): void => {

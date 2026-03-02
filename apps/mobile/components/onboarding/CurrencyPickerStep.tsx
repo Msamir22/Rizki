@@ -52,6 +52,12 @@ interface CurrencyPickerStepProps {
 /** Fallback pre-selected currency when timezone detection fails (target market). */
 const FALLBACK_CURRENCY: CurrencyType = "EGP";
 
+/**
+ * Fixed item height for getItemLayout optimisation.
+ * py-4 (32) + h-10 flag (40) = 72px content + mb-2 (8) margin = 80px per row.
+ */
+const CURRENCY_ITEM_HEIGHT = 80;
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -228,6 +234,14 @@ export function CurrencyPickerStep({
         data={filteredCurrencies}
         renderItem={renderCurrencyItem}
         keyExtractor={keyExtractor}
+        getItemLayout={(
+          _data,
+          index
+        ): { length: number; offset: number; index: number } => ({
+          length: CURRENCY_ITEM_HEIGHT,
+          offset: CURRENCY_ITEM_HEIGHT * index,
+          index,
+        })}
         showsVerticalScrollIndicator={false}
         className="flex-1"
         keyboardShouldPersistTaps="handled"
