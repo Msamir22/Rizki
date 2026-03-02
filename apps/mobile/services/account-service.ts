@@ -4,11 +4,17 @@
  * Service functions for account management operations.
  * Handles Cash account creation and lookup with idempotency guarantees.
  *
+ * Architecture & Design Rationale:
+ * - Pattern: Service Layer (plain async functions, no React hooks)
+ * - SOLID: SRP — handles account CRUD only, no UI concerns
+ * - Currency-aware idempotency: checks both type AND currency to prevent
+ *   duplicates while allowing multi-currency cash accounts.
+ *
  * @module account-service
  */
 
-import { detectCurrencyFromDevice } from "@/utils/currency-detection";
-import { Account, database } from "@astik/db";
+import { detectCurrencyFromTimezone } from "@/utils/currency-detection";
+import { Account, CurrencyType, database } from "@astik/db";
 import { Q } from "@nozbe/watermelondb";
 
 // ---------------------------------------------------------------------------
@@ -30,28 +36,44 @@ export interface EnsureCashAccountResult {
 // ---------------------------------------------------------------------------
 
 const CASH_ACCOUNT_NAME = "Cash";
-const CASH_ACCOUNT_TYPE = "CASH" as const;
+const CASH_ACCOUNT_TYPE = "CASH";
+
+/** Sentinel error code returned when currency cannot be determined. */
+export const CURRENCY_UNKNOWN_ERROR = "CURRENCY_UNKNOWN";
 
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
 /**
- * Ensure a Cash account exists for the given user.
+ * Ensure a Cash account exists for the given user in the specified currency.
  *
- * Idempotent: if a CASH-type account already exists, returns it
- * without creating a duplicate.
+ * Idempotent: if a CASH-type account in the same currency already exists,
+ * returns it without creating a duplicate.
  *
  * This function never throws — errors are captured in the result
- * object to support retry-safe fire-and-forget usage (FR-005).
+ * object to support retry-safe fire-and-forget usage.
  *
  * @param userId - The authenticated user's ID
+ * @param currency - Optional explicit currency. Falls back to device detection.
+ *                   Returns CURRENCY_UNKNOWN error if both are null.
  * @returns Result with created flag and account ID
  */
 export async function ensureCashAccount(
-  userId: string
+  userId: string,
+  currency?: CurrencyType | null
 ): Promise<EnsureCashAccountResult> {
   try {
+    // Resolve currency: explicit param > timezone detection
+    const resolvedCurrency = currency ?? detectCurrencyFromTimezone();
+    if (!resolvedCurrency) {
+      return {
+        created: false,
+        accountId: null,
+        error: CURRENCY_UNKNOWN_ERROR,
+      };
+    }
+
     let accountId: string | null = null;
     let created = false;
 
@@ -63,6 +85,7 @@ export async function ensureCashAccount(
         .query(
           Q.where("type", CASH_ACCOUNT_TYPE),
           Q.where("user_id", userId),
+          Q.where("currency", resolvedCurrency),
           Q.where("deleted", Q.notEq(true)),
           Q.sortBy("created_at", Q.asc)
         )
@@ -73,12 +96,11 @@ export async function ensureCashAccount(
         return;
       }
 
-      const currency = detectCurrencyFromDevice();
       const record = await accountsCollection.create((acc) => {
         acc.userId = userId;
         acc.name = CASH_ACCOUNT_NAME;
         acc.type = CASH_ACCOUNT_TYPE;
-        acc.currency = currency;
+        acc.currency = resolvedCurrency;
         acc.balance = 0;
         acc.deleted = false;
       });

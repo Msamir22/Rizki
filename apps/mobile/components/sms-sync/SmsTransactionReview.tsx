@@ -392,19 +392,19 @@ export function SmsTransactionReview({
       return (
         <SmsTransactionItem
           transaction={tx}
+          index={item.originalIndex}
           isSelected={selectedIndices.has(item.originalIndex)}
           accountName={
             transactionOverrides.get(item.originalIndex)?.accountName ??
             accountMatches.get(item.originalIndex)?.accountName ??
             ""
           }
-          onToggleSelect={() => handleToggleItem(item.originalIndex)}
-          onPress={() => handleOpenEditModal(item.originalIndex)}
+          onToggleSelect={handleToggleItem}
+          onPress={handleOpenEditModal}
         />
       );
     },
     [
-      filteredTransactions,
       selectedIndices,
       accountMatches,
       transactionOverrides,
