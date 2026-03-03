@@ -2,7 +2,7 @@
  * Core types for Astik application
  */
 
-import {
+import type {
   AccountType,
   Category,
   CurrencyType,

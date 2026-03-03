@@ -16,6 +16,13 @@
 import { palette } from "@/constants/colors";
 import type { PendingAccount } from "@/services/pending-account-service";
 import type { AccountWithBankDetails } from "@/services/sms-account-matcher";
+import {
+  isDuplicateAccount,
+  generatePendingTempId,
+  buildPendingAccount,
+  buildTransactionEdits,
+  type TransactionEdits,
+} from "@/services/sms-edit-modal-service";
 import { formatToLocalDateString } from "@/utils/dateHelpers";
 import {
   TransactionValidationErrors,
@@ -49,16 +56,6 @@ import { CategorySelectorModal } from "../modals/CategorySelectorModal";
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
-
-/** Fields that can be overridden in the edit modal */
-interface TransactionEdits {
-  readonly amount: number;
-  readonly counterparty: string;
-  readonly categoryId: string;
-  readonly type: TransactionType;
-  readonly accountId?: string;
-  readonly accountName?: string;
-}
 
 interface SmsTransactionEditModalProps {
   /** Whether the modal is visible */
@@ -97,24 +94,6 @@ interface AccountOption {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-/** Check if an account with the same name AND currency already exists (case-insensitive) */
-function isDuplicateAccount(
-  name: string,
-  currency: string,
-  accounts: readonly AccountWithBankDetails[],
-  pendingAccounts: readonly PendingAccount[]
-): boolean {
-  const normalized = name.trim().toLowerCase();
-  if (!normalized) return false;
-  const existsInAccounts = accounts.some(
-    (acc) => acc.name.toLowerCase() === normalized && acc.currency === currency
-  );
-  const existsInPending = pendingAccounts.some(
-    (pa) => pa.name.toLowerCase() === normalized && pa.currency === currency
-  );
-  return existsInAccounts || existsInPending;
-}
 
 // ---------------------------------------------------------------------------
 // Component
@@ -253,23 +232,12 @@ export function SmsTransactionEditModal({
   // ── Save ──────────────────────────────────────────────────────────
 
   const handleSave = useCallback<() => void>(() => {
-    let tempId: string | null = null;
-
     const isCreatingNewAccount = isCreatingNew || !hasBankAccounts;
-    // If creating a new account or no accounts, handle pending account first
+    let resolvedAccountId: string;
+    let resolvedAccountName: string;
+
     if (isCreatingNewAccount) {
       const trimmedName = newAccountName.trim();
-
-      // Create pending account
-      tempId = `pending-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-      const pending: PendingAccount = {
-        tempId,
-        name: trimmedName,
-        currency: transaction.currency,
-        type: "BANK",
-        senderDisplayName: transaction.senderDisplayName,
-        cardLast4: transaction.cardLast4 ?? undefined,
-      };
 
       if (!trimmedName) {
         setNewAccountError("Account name is required");
@@ -290,18 +258,26 @@ export function SmsTransactionEditModal({
         return;
       }
 
+      const tempId = generatePendingTempId();
+      const pending = buildPendingAccount(tempId, {
+        name: trimmedName,
+        currency: transaction.currency,
+        senderDisplayName: transaction.senderDisplayName,
+        cardLast4: transaction.cardLast4 ?? undefined,
+      });
+
       onCreatePendingAccount(pending);
+      resolvedAccountId = tempId;
+      resolvedAccountName = trimmedName;
+    } else {
+      resolvedAccountId = selectedAccountId;
+      resolvedAccountName = selectedAccountName;
     }
 
-    // It's safe to use the non-null assertion here because we've already
-    // assigned a value to tempId in if the isCreatingNew condition is met
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const accountId = isCreatingNewAccount ? tempId! : selectedAccountId;
-
-    // Standard validation for dropdown mode
+    // Standard validation
     const { isValid, errors } = validateTransactionForm(txType, {
       amount,
-      accountId,
+      accountId: resolvedAccountId,
       categoryId: selectedCategoryId,
     });
 
@@ -312,18 +288,14 @@ export function SmsTransactionEditModal({
 
     setFormErrors({});
 
-    const resolvedAccountName = isCreatingNewAccount
-      ? newAccountName.trim()
-      : selectedAccountName;
-
-    const edits: TransactionEdits = {
-      accountId,
+    const edits = buildTransactionEdits({
+      accountId: resolvedAccountId,
       accountName: resolvedAccountName,
       counterparty,
       type: txType,
       categoryId: selectedCategoryId,
       amount: parseFloat(amount),
-    };
+    });
 
     onSave(edits);
   }, [
@@ -524,28 +496,35 @@ export function SmsTransactionEditModal({
                     color={palette.blue[500]}
                   />
                   <Text className="text-xs text-blue-400 font-medium ml-2 flex-shrink">
-                    {latestRates
-                      ? `≈ ${formatCurrency({
-                          amount: convertCurrency(
-                            parseFloat(amount) || 0,
-                            transaction.currency,
-                            selectedAccountCurrency as Parameters<
-                              typeof convertCurrency
-                            >[2],
-                            latestRates
-                          ),
-                          currency: selectedAccountCurrency as Parameters<
-                            typeof formatCurrency
-                          >[0]["currency"],
-                        })} at rate ${latestRates
+                    {(() => {
+                      if (!latestRates) return "Exchange rate unavailable";
+                      try {
+                        const converted = convertCurrency(
+                          parseFloat(amount) || 0,
+                          transaction.currency,
+                          selectedAccountCurrency as Parameters<
+                            typeof convertCurrency
+                          >[2],
+                          latestRates
+                        );
+                        const rate = latestRates
                           .getRate(
                             transaction.currency,
                             selectedAccountCurrency as Parameters<
                               typeof convertCurrency
                             >[2]
                           )
-                          .toFixed(4)}`
-                      : "Exchange rate unavailable"}
+                          .toFixed(4);
+                        return `≈ ${formatCurrency({
+                          amount: converted,
+                          currency: selectedAccountCurrency as Parameters<
+                            typeof formatCurrency
+                          >[0]["currency"],
+                        })} at rate ${rate}`;
+                      } catch {
+                        return "Conversion unavailable";
+                      }
+                    })()}
                   </Text>
                 </View>
               </View>

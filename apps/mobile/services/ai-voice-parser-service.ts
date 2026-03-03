@@ -16,6 +16,19 @@ import type { ParsedSmsTransaction } from "@astik/logic/src/types";
 import type { CurrencyType, TransactionType } from "@astik/db";
 
 // ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+/** Sender identifier for voice-input transactions (not from SMS). */
+const VOICE_INPUT_SENDER = "voice-input";
+
+/** Default category display name when AI doesn't provide one. */
+const DEFAULT_CATEGORY_DISPLAY_NAME = "uncategorized";
+
+/** Baseline confidence for voice-parsed transactions (0–1). */
+const VOICE_AI_CONFIDENCE_BASELINE = 0.8;
+
+// ---------------------------------------------------------------------------
 // Types — AI response shape
 // ---------------------------------------------------------------------------
 
@@ -31,6 +44,24 @@ interface AiVoiceTransaction {
 interface ParseVoiceResponse {
   readonly transactions: readonly AiVoiceTransaction[];
   readonly error?: string;
+}
+
+/**
+ * Runtime type guard for AI voice transaction objects.
+ * Validates required fields have correct types to prevent
+ * downstream crashes from malformed Edge Function responses.
+ */
+function isValidAiVoiceTransaction(
+  value: unknown
+): value is AiVoiceTransaction {
+  if (typeof value !== "object" || value === null) return false;
+  const obj = value as Record<string, unknown>;
+  return (
+    typeof obj.amount === "number" &&
+    typeof obj.currency === "string" &&
+    typeof obj.type === "string" &&
+    typeof obj.merchant === "string"
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -137,9 +168,18 @@ export async function parseVoiceWithAi(
       return [];
     }
 
-    // Map AI response to ParsedSmsTransaction
+    // Map AI response to ParsedSmsTransaction (filter out malformed entries)
     const now = new Date();
-    const results: ParsedSmsTransaction[] = data.transactions.map(
+    const validTransactions = data.transactions.filter((tx: unknown) => {
+      if (isValidAiVoiceTransaction(tx)) return true;
+      console.warn(
+        "[ai-voice-parser] Skipping malformed transaction entry:",
+        tx
+      );
+      return false;
+    });
+
+    const results: ParsedSmsTransaction[] = validTransactions.map(
       (aiTx: AiVoiceTransaction): ParsedSmsTransaction => ({
         amount: Math.abs(aiTx.amount),
         currency: normalizeCurrency(aiTx.currency),
@@ -148,12 +188,13 @@ export async function parseVoiceWithAi(
         merchant: aiTx.merchant,
         date: now, // Voice transactions default to current time
         smsBodyHash: "", // Not applicable for voice
-        senderDisplayName: "voice-input",
+        senderDisplayName: VOICE_INPUT_SENDER,
         // Voice parser has no DB access — use empty categoryId (must be resolved by consumer)
         categoryId: "",
-        categoryDisplayName: aiTx.categorySystemName || "uncategorized",
+        categoryDisplayName:
+          aiTx.categorySystemName || DEFAULT_CATEGORY_DISPLAY_NAME,
         rawSmsBody: aiTx.description || "",
-        confidence: 0.8, // Voice AI confidence baseline
+        confidence: VOICE_AI_CONFIDENCE_BASELINE,
       })
     );
 

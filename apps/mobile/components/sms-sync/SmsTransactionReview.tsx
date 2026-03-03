@@ -31,10 +31,8 @@ import type {
   GroupingPeriod,
   TransactionTypeFilter,
 } from "@/hooks/useTransactionsGrouping";
-import {
-  type PendingAccount,
-  persistPendingAccounts,
-} from "@/services/pending-account-service";
+import type { PendingAccount } from "@/services/pending-account-service";
+import { prepareSavePayload } from "@/services/sms-review-save-service";
 import {
   type AccountMatch,
   type AccountWithBankDetails,
@@ -386,93 +384,37 @@ export function SmsTransactionReview({
   );
 
   const handleSave = useCallback(async () => {
-    // Collect selected original indices in order
-    const selectedOriginalIndices = Array.from(selectedIndices).sort(
-      (a, b) => a - b
-    );
+    const result = await prepareSavePayload({
+      selectedIndices,
+      transactionOverrides,
+      accountMatches,
+      pendingAccounts,
+      effectiveTransactions,
+    });
 
-    // Build validation map using original indices
-    const originalIndexToAccountId = new Map<number, string>();
-    const missingIndices = new Set<number>();
-
-    for (const i of selectedOriginalIndices) {
-      const override = transactionOverrides.get(i);
-      const match = accountMatches.get(i);
-      const accountId = override?.accountId ?? match?.accountId;
-      if (accountId) {
-        originalIndexToAccountId.set(i, accountId);
+    if (!result.success) {
+      if (result.reason === "missing_accounts") {
+        setInvalidIndices(result.missingIndices);
+        showToast({
+          type: "warning",
+          title: "Missing Info",
+          message: result.message,
+          duration: 4000,
+        });
       } else {
-        missingIndices.add(i);
+        showToast({
+          type: "error",
+          title: "Account Creation Failed",
+          message: result.message,
+        });
       }
-    }
-
-    // Pre-save validation: block if any selected transactions are missing account
-    if (missingIndices.size > 0) {
-      setInvalidIndices(missingIndices);
-      showToast({
-        type: "warning",
-        title: "Missing Info",
-        message: `${missingIndices.size} transaction${missingIndices.size !== 1 ? "s" : ""} still need an account assigned. Tap them to fix.`,
-        duration: 4000,
-      });
       return;
     }
 
     // Clear any previous flags
     setInvalidIndices(new Set());
 
-    // Persist only referenced pending accounts, then remap tempId → realId
-    if (pendingAccounts.length > 0) {
-      const referencedTempIds = new Set(originalIndexToAccountId.values());
-      const referencedPending = pendingAccounts.filter((pa) =>
-        referencedTempIds.has(pa.tempId)
-      );
-
-      if (referencedPending.length > 0) {
-        try {
-          const persistResult = await persistPendingAccounts(referencedPending);
-
-          if (persistResult.errors.length > 0) {
-            showToast({
-              type: "error",
-              title: "Account Creation Failed",
-              message: persistResult.errors.join("; "),
-            });
-            return;
-          }
-
-          // Remap tempId → realId
-          for (const [idx, tempId] of originalIndexToAccountId) {
-            const realId = persistResult.tempToRealIdMap.get(tempId);
-            if (realId) {
-              originalIndexToAccountId.set(idx, realId);
-            }
-          }
-        } catch (err) {
-          const message = err instanceof Error ? err.message : String(err);
-          showToast({
-            type: "error",
-            title: "Account Creation Failed",
-            message: `Failed to create accounts: ${message}`,
-          });
-          return;
-        }
-      }
-    }
-
-    // Build the selected transactions array + sequential index map for onSave
-    const selected = selectedOriginalIndices.map(
-      (i) => effectiveTransactions[i]
-    );
-    const transactionAccountMap = new Map<number, string>();
-    selectedOriginalIndices.forEach((origIdx, seqIdx) => {
-      const accountId = originalIndexToAccountId.get(origIdx);
-      if (accountId) {
-        transactionAccountMap.set(seqIdx, accountId);
-      }
-    });
-
-    await onSave(selected, transactionAccountMap);
+    await onSave(result.selected, result.transactionAccountMap);
   }, [
     effectiveTransactions,
     selectedIndices,

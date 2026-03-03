@@ -8,6 +8,7 @@ import {
   type TransactionSource,
   type TransactionType,
 } from "@astik/db";
+import { ensureCashAccount } from "./account-service";
 
 export interface TransferData {
   amount: number;
@@ -18,6 +19,84 @@ export interface TransferData {
   date?: Date;
   notes?: string;
   exchangeRate?: number;
+}
+
+// ---------------------------------------------------------------------------
+// SMS ATM Transfer
+// ---------------------------------------------------------------------------
+
+/**
+ * Input for creating an ATM withdrawal transfer from a live-detected SMS.
+ *
+ * Architecture & Design Rationale:
+ * - Pattern: Facade — wraps `ensureCashAccount` + `createTransfer` into a
+ *   single domain-specific call for ATM withdrawals.
+ * - Why: Both the live detection handler and future callers need the same
+ *   "ensure cash account → create bank→cash transfer" sequence.
+ *   Centralising it here prevents DRY violations and ensures consistent
+ *   ATM handling across all SMS entry points.
+ * - SOLID: SRP — `createSmsAtmTransfer` only handles ATM routing.
+ *   OCP — new transfer types can be added as separate functions.
+ */
+interface SmsAtmTransferInput {
+  /** Bank account ID to debit */
+  readonly bankAccountId: string;
+  /** Withdrawal amount (always positive) */
+  readonly amount: number;
+  /** Currency of the transaction */
+  readonly currency: CurrencyType;
+  /** Transaction date */
+  readonly date: Date;
+  /** SMS body hash for deduplication */
+  readonly smsBodyHash?: string;
+  /** Sender display name for notes */
+  readonly senderDisplayName?: string;
+}
+
+interface SmsAtmTransferResult {
+  readonly success: boolean;
+  readonly error?: string;
+}
+
+/**
+ * Create an ATM withdrawal as a bank → cash transfer.
+ *
+ * Ensures the cash account exists, then atomically creates the transfer
+ * and updates both account balances. Used by the live SMS detection handler.
+ *
+ * The batch SMS flow (`batch-sms-transactions.ts`) uses `prepareCreate`
+ * for atomic batch writes and calls `ensureCashAccount` separately,
+ * so it does NOT use this function.
+ *
+ * @param input - ATM transfer parameters
+ * @returns Result with success flag and optional error
+ */
+export async function createSmsAtmTransfer(
+  input: SmsAtmTransferInput
+): Promise<SmsAtmTransferResult> {
+  const userId = await getCurrentUserId();
+  if (!userId) {
+    return { success: false, error: "User not authenticated" };
+  }
+
+  const cashResult = await ensureCashAccount(userId, input.currency);
+  if (!cashResult.accountId) {
+    return {
+      success: false,
+      error: `Failed to resolve Cash account in ${input.currency}: ${cashResult.error ?? "unknown"}`,
+    };
+  }
+
+  await createTransfer({
+    fromAccountId: input.bankAccountId,
+    toAccountId: cashResult.accountId,
+    amount: input.amount,
+    currency: input.currency,
+    date: input.date,
+    notes: `ATM Withdrawal${input.senderDisplayName ? ` — ${input.senderDisplayName}` : ""}`,
+  });
+
+  return { success: true };
 }
 
 /**

@@ -85,6 +85,13 @@ type AccountTypeFilter = AccountType | undefined;
 
 const DEFAULT_BATCH_SIZE = 20;
 
+/**
+ * Minimum string length for bidirectional substring matching.
+ * Prevents short sender names like "I" from matching account names
+ * like "CIB" via `includes()`. Direct equality checks are unaffected.
+ */
+const MIN_SUBSTRING_MATCH_LENGTH = 3;
+
 /** Escape special regex characters in a string to prevent injection / ReDoS. */
 function escapeRegExp(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -173,7 +180,13 @@ function isSenderMatch(
   }
 
   // Bidirectional substring match — sender contained in target or vice versa
-  if (normalizedBankSmsSenderName) {
+  // Guard: both sides must be at least MIN_SUBSTRING_MATCH_LENGTH chars
+  // to prevent false positives from very short strings (e.g., "I" matching "CIB")
+  if (
+    normalizedBankSmsSenderName &&
+    normalizedSender.length >= MIN_SUBSTRING_MATCH_LENGTH &&
+    normalizedBankSmsSenderName.length >= MIN_SUBSTRING_MATCH_LENGTH
+  ) {
     if (
       normalizedSender.includes(normalizedBankSmsSenderName) ||
       normalizedBankSmsSenderName.includes(normalizedSender)
@@ -182,7 +195,11 @@ function isSenderMatch(
     }
   }
 
-  if (normalizedBankName) {
+  if (
+    normalizedBankName &&
+    normalizedSender.length >= MIN_SUBSTRING_MATCH_LENGTH &&
+    normalizedBankName.length >= MIN_SUBSTRING_MATCH_LENGTH
+  ) {
     if (
       normalizedSender.includes(normalizedBankName) ||
       normalizedBankName.includes(normalizedSender)
@@ -191,7 +208,11 @@ function isSenderMatch(
     }
   }
 
-  if (normalizedAccountName) {
+  if (
+    normalizedAccountName &&
+    normalizedSender.length >= MIN_SUBSTRING_MATCH_LENGTH &&
+    normalizedAccountName.length >= MIN_SUBSTRING_MATCH_LENGTH
+  ) {
     if (
       normalizedSender.includes(normalizedAccountName) ||
       normalizedAccountName.includes(normalizedSender)
