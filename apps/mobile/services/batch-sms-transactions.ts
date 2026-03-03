@@ -107,8 +107,8 @@ export async function batchCreateSmsTransactions(
   const errors: string[] = [];
 
   // Ensure Cash accounts exist for ATM withdrawal routing
-  const cashAccountIdByCurrency = new Map<string, string>();
-  const atmCurrencies = new Set<string>();
+  const cashAccountIdByCurrency = new Map<CurrencyType, string>();
+  const atmCurrencies = new Set<CurrencyType>();
 
   for (const tx of transactions) {
     if (tx.isAtmWithdrawal) {
@@ -117,7 +117,7 @@ export async function batchCreateSmsTransactions(
   }
 
   for (const currency of atmCurrencies) {
-    const result = await ensureCashAccount(userId, currency as CurrencyType);
+    const result = await ensureCashAccount(userId, currency);
     if (result.accountId) {
       cashAccountIdByCurrency.set(currency, result.accountId);
     } else {
@@ -228,7 +228,7 @@ export async function batchCreateSmsTransactions(
       if (delta && delta !== 0) {
         preparedOps.push(
           account.prepareUpdate((a) => {
-            a.balance = a.balance + delta || 0;
+            a.balance = (a.balance ?? 0) + delta;
           })
         );
       }

@@ -55,7 +55,7 @@ interface PendingAccount {
 interface PersistResult {
   /** Maps PendingAccount.tempId → real WatermelonDB Account.id */
   readonly tempToRealIdMap: ReadonlyMap<string, string>;
-  /** Number of accounts + bank_details created */
+  /** Number of Account records created */
   readonly createdCount: number;
   /** Errors encountered during creation */
   readonly errors: readonly string[];
@@ -124,12 +124,20 @@ async function persistPendingAccounts(
     // Collect all DB operations to commit atomically
     const ops: Array<Account | BankDetails> = [];
 
+    // Deferred mappings — only applied after successful batch commit
+    const pendingMappings: Array<{
+      readonly tempId: string;
+      readonly dedupKey: string;
+      readonly realId: string;
+    }> = [];
+
     for (const pending of pendingAccounts) {
       const dedupKey = `${pending.name.trim().toLowerCase()}|${pending.currency}`;
 
       // Check: already mapped earlier in this batch?
       const batchDuplicate = createdInBatch.get(dedupKey);
       if (batchDuplicate) {
+        // Safe to set immediately — references an already-committed or dedup'd ID
         tempToRealIdMap.set(pending.tempId, batchDuplicate);
         continue;
       }
@@ -137,11 +145,13 @@ async function persistPendingAccounts(
       // Check: already exists in DB?
       const existingMatch = existingAccounts.find(
         (acc) =>
+          // TODO: Move trim().toLowerCase() to a util function
           acc.name.trim().toLowerCase() === pending.name.trim().toLowerCase() &&
           acc.currency === pending.currency
       );
 
       if (existingMatch) {
+        // Safe to set immediately — references a DB-existing record
         tempToRealIdMap.set(pending.tempId, existingMatch.id);
         createdInBatch.set(dedupKey, existingMatch.id);
         continue;
@@ -167,16 +177,20 @@ async function persistPendingAccounts(
         .prepareCreate((record) => {
           record.accountId = account.id;
           record.smsSenderName = pending.senderDisplayName;
-          if (pending.cardLast4) {
-            record.cardLast4 = pending.cardLast4;
-          }
+          record.cardLast4 = pending.cardLast4;
           record.deleted = false;
         });
       ops.push(bankDetails);
 
-      tempToRealIdMap.set(pending.tempId, account.id);
+      // Defer: collect mapping info for post-commit application
+      pendingMappings.push({
+        tempId: pending.tempId,
+        dedupKey,
+        realId: account.id,
+      });
+
+      // Track in createdInBatch so subsequent loop iterations can dedup
       createdInBatch.set(dedupKey, account.id);
-      createdCount++;
     }
 
     // Commit all prepared records atomically
@@ -184,6 +198,12 @@ async function persistPendingAccounts(
       await database.write(async () => {
         await database.batch(ops);
       });
+    }
+
+    // Apply mappings only after successful commit
+    for (const mapping of pendingMappings) {
+      tempToRealIdMap.set(mapping.tempId, mapping.realId);
+      createdCount++;
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

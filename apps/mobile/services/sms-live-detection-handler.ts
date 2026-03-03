@@ -26,6 +26,7 @@ import {
 } from "./notification-service";
 import { resolveAccountForSms } from "./sms-account-resolver";
 import { createTransaction } from "./transaction-service";
+import { createSmsAtmTransfer } from "./transfer-service";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -95,6 +96,30 @@ async function saveDetectedTransaction(
   parsed: ParsedSmsTransaction,
   accountId: string
 ): Promise<void> {
+  // ATM withdrawals: route as bank → cash transfer
+  if (parsed.isAtmWithdrawal) {
+    const result = await createSmsAtmTransfer({
+      bankAccountId: accountId,
+      amount: parsed.amount,
+      currency: parsed.currency,
+      date: parsed.date,
+      smsBodyHash: parsed.smsBodyHash,
+      senderDisplayName: parsed.senderDisplayName,
+    });
+
+    if (!result.success) {
+      throw new Error(
+        `[sms-detection] ATM transfer failed: ${result.error ?? "unknown error"}`
+      );
+    }
+
+    console.info(
+      `[sms-detection] Saved ATM transfer: ${parsed.amount} ${parsed.currency}`
+    );
+    return;
+  }
+
+  // Regular transactions
   await createTransaction({
     amount: parsed.amount,
     currency: parsed.currency,

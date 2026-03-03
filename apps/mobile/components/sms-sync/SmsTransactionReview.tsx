@@ -24,6 +24,7 @@ import { PeriodFilterModal } from "@/components/modals/PeriodFilterModal";
 import { TypeFilterModal } from "@/components/modals/TypeFilterModal";
 import { useToast } from "@/components/ui/Toast";
 import { palette } from "@/constants/colors";
+import { useTheme } from "@/context/ThemeContext";
 import { useCategories } from "@/hooks/useCategories";
 import { useMarketRates } from "@/hooks/useMarketRates";
 import { PERIOD_LABELS, getPeriodDateRange } from "@/hooks/usePeriodSummary";
@@ -31,16 +32,14 @@ import type {
   GroupingPeriod,
   TransactionTypeFilter,
 } from "@/hooks/useTransactionsGrouping";
-import {
-  type PendingAccount,
-  persistPendingAccounts,
-} from "@/services/pending-account-service";
+import type { PendingAccount } from "@/services/pending-account-service";
 import {
   type AccountMatch,
   type AccountWithBankDetails,
   fetchAccountsWithDetails,
   matchTransactionsBatched,
 } from "@/services/sms-account-matcher";
+import { prepareSavePayload } from "@/services/sms-review-save-service";
 import { getCurrentUserId } from "@/services/supabase";
 import type { ParsedSmsTransaction } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
@@ -58,7 +57,6 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  useColorScheme,
 } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import {
@@ -194,14 +192,12 @@ export function SmsTransactionReview({
   onDiscard,
   isSaving,
 }: SmsTransactionReviewProps): React.JSX.Element {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
+  const { isDark } = useTheme();
 
   // ── Filter state ──────────────────────────────────────────────────
   const [period, setPeriod] = useState<GroupingPeriod>("all_time");
   const [selectedTypes, setSelectedTypes] = useState<TransactionTypeFilter[]>([
-    "Income",
-    "Expense",
+    "All",
   ]);
   const [searchQuery, setSearchQuery] = useState("");
   const [periodModalVisible, setPeriodModalVisible] = useState(false);
@@ -286,15 +282,24 @@ export function SmsTransactionReview({
           },
           accounts
         );
-      } catch (err) {
-        console.error("[SmsTransactionReview] Account matching failed:", err);
+      } catch (err: unknown) {
+        if (cancelled) return;
+        console.warn("[SmsTransactionReview] Account matching failed:", err);
+        showToast({
+          type: "warning",
+          title: "Account Matching Failed",
+          message:
+            "Some transactions may not have an account assigned. You can assign them manually.",
+          duration: 4000,
+        });
       }
     };
-    run().catch(console.error);
+    // Inner catch handles all errors — no-op catch for the promise chain
+    run().catch(() => undefined);
     return () => {
       cancelled = true;
     };
-  }, [transactions]);
+  }, [transactions, showToast]);
 
   // ── Derived data ──────────────────────────────────────────────────
   const effectiveTransactions = useMemo((): readonly ParsedSmsTransaction[] => {
@@ -378,94 +383,38 @@ export function SmsTransactionReview({
     [editModalIndex]
   );
 
-  const handleSave = useCallback(async () => {
-    // Collect selected original indices in order
-    const selectedOriginalIndices = Array.from(selectedIndices).sort(
-      (a, b) => a - b
-    );
+  const handleSave = useCallback(async (): Promise<void> => {
+    const result = await prepareSavePayload({
+      selectedIndices,
+      transactionOverrides,
+      accountMatches,
+      pendingAccounts,
+      effectiveTransactions,
+    });
 
-    // Build validation map using original indices
-    const originalIndexToAccountId = new Map<number, string>();
-    const missingIndices = new Set<number>();
-
-    for (const i of selectedOriginalIndices) {
-      const override = transactionOverrides.get(i);
-      const match = accountMatches.get(i);
-      const accountId = override?.accountId ?? match?.accountId;
-      if (accountId) {
-        originalIndexToAccountId.set(i, accountId);
+    if (!result.success) {
+      if (result.reason === "missing_accounts") {
+        setInvalidIndices(result.missingIndices);
+        showToast({
+          type: "warning",
+          title: "Missing Info",
+          message: result.message,
+          duration: 4000,
+        });
       } else {
-        missingIndices.add(i);
+        showToast({
+          type: "error",
+          title: "Account Creation Failed",
+          message: result.message,
+        });
       }
-    }
-
-    // Pre-save validation: block if any selected transactions are missing account
-    if (missingIndices.size > 0) {
-      setInvalidIndices(missingIndices);
-      showToast({
-        type: "warning",
-        title: "Missing Info",
-        message: `${missingIndices.size} transaction${missingIndices.size !== 1 ? "s" : ""} still need an account assigned. Tap them to fix.`,
-        duration: 4000,
-      });
       return;
     }
 
     // Clear any previous flags
     setInvalidIndices(new Set());
 
-    // Persist only referenced pending accounts, then remap tempId → realId
-    if (pendingAccounts.length > 0) {
-      const referencedTempIds = new Set(originalIndexToAccountId.values());
-      const referencedPending = pendingAccounts.filter((pa) =>
-        referencedTempIds.has(pa.tempId)
-      );
-
-      if (referencedPending.length > 0) {
-        try {
-          const persistResult = await persistPendingAccounts(referencedPending);
-
-          if (persistResult.errors.length > 0) {
-            showToast({
-              type: "error",
-              title: "Account Creation Failed",
-              message: persistResult.errors.join("; "),
-            });
-            return;
-          }
-
-          // Remap tempId → realId
-          for (const [idx, tempId] of originalIndexToAccountId) {
-            const realId = persistResult.tempToRealIdMap.get(tempId);
-            if (realId) {
-              originalIndexToAccountId.set(idx, realId);
-            }
-          }
-        } catch (err) {
-          const message = err instanceof Error ? err.message : String(err);
-          showToast({
-            type: "error",
-            title: "Account Creation Failed",
-            message: `Failed to create accounts: ${message}`,
-          });
-          return;
-        }
-      }
-    }
-
-    // Build the selected transactions array + sequential index map for onSave
-    const selected = selectedOriginalIndices.map(
-      (i) => effectiveTransactions[i]
-    );
-    const transactionAccountMap = new Map<number, string>();
-    selectedOriginalIndices.forEach((origIdx, seqIdx) => {
-      const accountId = originalIndexToAccountId.get(origIdx);
-      if (accountId) {
-        transactionAccountMap.set(seqIdx, accountId);
-      }
-    });
-
-    await onSave(selected, transactionAccountMap);
+    await onSave(result.selected, result.transactionAccountMap);
   }, [
     effectiveTransactions,
     selectedIndices,

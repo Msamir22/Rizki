@@ -45,8 +45,13 @@ function getTopCategories(
       );
     }
   }
-  // Exclude "other" category from top categories
-  return [...frequency.entries().filter(([name]) => name !== "other")]
+  // Exclude generic "Other" category from top categories
+  const OTHER_CATEGORY_DISPLAY_NAME = "other";
+  return [
+    ...frequency
+      .entries()
+      .filter(([name]) => name.toLowerCase() !== OTHER_CATEGORY_DISPLAY_NAME),
+  ]
     .sort((a, b) => b[1] - a[1])
     .slice(0, limit)
     .map(([name]) => name);

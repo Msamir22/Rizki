@@ -138,7 +138,7 @@ function SmsTransactionItemInner({
                 className="text-sm font-semibold text-white flex-shrink"
                 numberOfLines={1}
               >
-                {transaction.senderDisplayName}
+                {senderDisplayName}
               </Text>
               {transaction.isAtmWithdrawal && (
                 <View className="bg-amber-500/20 px-1.5 py-0.5 rounded ml-2">
@@ -199,11 +199,9 @@ function SmsTransactionItemInner({
               <View className="bg-blue-900/40 px-2.5 py-1 rounded-lg">
                 <Text className="text-xs text-blue-300">{accountName}</Text>
               </View>
-            ) : matchReason === "none" && senderDisplayName ? (
+            ) : matchReason === "none" ? (
               <View className="bg-slate-700/40 px-2.5 py-1 rounded-lg">
-                <Text className="text-xs text-slate-400 italic">
-                  {senderDisplayName}
-                </Text>
+                <Text className="text-xs text-slate-400 italic">No match</Text>
               </View>
             ) : null}
             <TouchableOpacity
