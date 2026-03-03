@@ -1,38 +1,31 @@
 /**
  * SMS Review Route
  *
- * Expo Router page with two steps:
- *   1. Account Setup — delegated to AccountSetupStep component
- *   2. Transaction Review — list of parsed transactions to confirm/correct
+ * Expo Router page that shows the transaction review list directly.
+ * Account matching is done per-transaction via `matchTransactionsBatched`
+ * on the review component (no separate account setup step).
  *
- * Flow: sms-scan.tsx → setTransactions → navigate here → setup → review → save
+ * Flow: sms-scan.tsx → setTransactions → navigate here → review → save
  *
  * Architecture & Design Rationale:
- * - Pattern: Wizard / Multi-Step Flow (state machine via `step` enum)
- * - Why: Separates account creation from transaction review so each step
- *   is focused (SRP). State machine is simpler than nested routes.
- * - SOLID: Open/Closed — new steps can be added by extending the enum
- *   without touching existing step logic.
+ * - Pattern: Single-Step Flow (direct review)
+ * - Why: Account setup was removed (US1) — matching is now automatic
+ *   per-transaction, making a separate setup step unnecessary.
+ * - SOLID: SRP — this route only orchestrates navigation and save.
+ *   Business logic (matching, persistence) lives in services.
  *
  * @module sms-review
  */
 
-import { AccountSetupStep } from "@/components/sms-sync/AccountSetupStep";
 import { SmsTransactionReview } from "@/components/sms-sync/SmsTransactionReview";
 import { useToast } from "@/components/ui/Toast";
 import { palette } from "@/constants/colors";
 import { useSmsScanContext } from "@/context/SmsScanContext";
-import { useAccounts } from "@/hooks/useAccounts";
-import { useSmsSync } from "@/hooks/useSmsSync";
-import {
-  type AccountSetupResult,
-  batchCreateSmsTransactions,
-} from "@/services/batch-sms-transactions";
+import { batchCreateSmsTransactions } from "@/services/batch-sms-transactions";
 import {
   flushQueuedTransactions,
   setReviewingActive,
 } from "@/services/sms-live-detection-handler";
-import { buildInitialAccountState } from "@/utils/build-initial-account-state";
 import { database } from "@astik/db";
 import type { ParsedSmsTransaction } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
@@ -40,12 +33,7 @@ import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import { Alert, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-
-// ---------------------------------------------------------------------------
-// Flow step enum
-// ---------------------------------------------------------------------------
-
-type FlowStep = "setup" | "review";
+import { useSmsSync } from "@/hooks/useSmsSync";
 
 // ---------------------------------------------------------------------------
 // Component
@@ -53,20 +41,10 @@ type FlowStep = "setup" | "review";
 
 export default function SmsReviewScreen(): React.JSX.Element {
   const router = useRouter();
-  const {
-    transactions,
-    clearTransactions,
-    setSenderAccountMap,
-    setDefaultAccountId,
-    senderAccountMap,
-    defaultAccountId,
-  } = useSmsScanContext();
-  const { accounts: existingAccounts } = useAccounts();
-
+  const { transactions, clearTransactions } = useSmsScanContext();
   const { markSyncComplete } = useSmsSync();
   const { showToast } = useToast();
 
-  const [step, setStep] = useState<FlowStep>("setup");
   const [isSaving, setIsSaving] = useState(false);
 
   // Mark review as active to queue incoming live transactions
@@ -79,67 +57,18 @@ export default function SmsReviewScreen(): React.JSX.Element {
     };
   }, []);
 
-  // ── Setup complete handler ──────────────────────────────────────────
-
-  const handleSetupComplete = useCallback(
-    (result: AccountSetupResult) => {
-      setSenderAccountMap(result.senderAccountMap);
-      setDefaultAccountId(result.defaultAccountId);
-      setStep("review");
-    },
-    [setSenderAccountMap, setDefaultAccountId]
-  );
-
-  // ── Auto-skip setup when all accounts are already matched ───────────
-  const [autoSkipDone, setAutoSkipDone] = useState(false);
-
-  useEffect(() => {
-    if (autoSkipDone || step !== "setup" || transactions.length === 0) return;
-
-    buildInitialAccountState(transactions)
-      .then((state) => {
-        // If no new cards needed (all senders matched existing accounts),
-        // auto-advance to review step using the existing mapping.
-        if (
-          state.cards.length === 0 &&
-          Object.keys(state.existingAccountMapping).length > 0 &&
-          existingAccounts.length > 0
-        ) {
-          const defaultAccount = existingAccounts.find((acc) => acc.isDefault);
-          if (defaultAccount) {
-            handleSetupComplete({
-              senderAccountMap: state.existingAccountMapping,
-              defaultAccountId: defaultAccount.id,
-            });
-          }
-        }
-        setAutoSkipDone(true);
-      })
-      .catch(() => {
-        setAutoSkipDone(true);
-      });
-  }, [autoSkipDone, step, transactions, existingAccounts, handleSetupComplete]);
-
   // ── Save ────────────────────────────────────────────────────────────
 
   const handleSave = useCallback(
-    async (selected: readonly ParsedSmsTransaction[]) => {
-      // TODO: remove this check
-      if (!defaultAccountId) {
-        showToast({
-          message: "No default account set. Go back to setup.",
-          title: "Error",
-          type: "error",
-        });
-        return;
-      }
-
+    async (
+      selected: readonly ParsedSmsTransaction[],
+      transactionAccountMap: ReadonlyMap<number, string>
+    ) => {
       setIsSaving(true);
       try {
         const result = await batchCreateSmsTransactions(
           selected,
-          senderAccountMap,
-          defaultAccountId
+          transactionAccountMap
         );
 
         if (result.failedCount > 0) {
@@ -188,14 +117,7 @@ export default function SmsReviewScreen(): React.JSX.Element {
         setIsSaving(false);
       }
     },
-    [
-      senderAccountMap,
-      defaultAccountId,
-      clearTransactions,
-      router,
-      markSyncComplete,
-      showToast,
-    ]
+    [clearTransactions, router, markSyncComplete, showToast]
   );
 
   // ── Discard ─────────────────────────────────────────────────────────
@@ -241,53 +163,25 @@ export default function SmsReviewScreen(): React.JSX.Element {
     );
   }
 
-  // ── Step 1: Account Setup ───────────────────────────────────────────
-
-  if (step === "setup") {
-    // Wait for auto-skip check to complete before rendering anything
-    if (!autoSkipDone) {
-      return (
-        <SafeAreaView className="flex-1 bg-background dark:bg-background-dark" />
-      );
-    }
-
-    return (
-      <AccountSetupStep
-        transactions={transactions}
-        existingAccounts={existingAccounts}
-        onComplete={handleSetupComplete}
-        onBack={() => router.back()}
-        onCancel={() => {
-          clearTransactions();
-          router.replace("/(tabs)");
-        }}
-      />
-    );
-  }
-
-  // ── Step 2: Transaction Review ──────────────────────────────────────
+  // ── Transaction Review (direct — no setup step) ─────────────────────
 
   return (
     <SafeAreaView className="flex-1 bg-background dark:bg-background-dark">
       {/* Header */}
       <View className="flex-row items-center justify-between px-5 pt-2 pb-3">
-        {autoSkipDone ? (
-          <View className="w-[100px]" />
-        ) : (
-          <TouchableOpacity
-            onPress={() => setStep("setup")}
-            className="flex-row items-center"
-          >
-            <Ionicons
-              name="arrow-back"
-              size={18}
-              color={palette.nileGreen[500]}
-            />
-            <Text className="text-sm text-nileGreen-500 font-medium ml-1.5">
-              Back to Setup
-            </Text>
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity
+          onPress={() => router.back()}
+          className="flex-row items-center"
+        >
+          <Ionicons
+            name="arrow-back"
+            size={18}
+            color={palette.nileGreen[500]}
+          />
+          <Text className="text-sm text-nileGreen-500 font-medium ml-1.5">
+            Back
+          </Text>
+        </TouchableOpacity>
 
         <Text className="text-lg font-bold text-slate-900 dark:text-white">
           Review
