@@ -177,7 +177,7 @@ export function SmsTransactionEditModal({
   }, [accounts, pendingAccounts]);
 
   const bankAccountOptions = useMemo(
-    () => accountOptions.filter((o) => o.type !== "CASH"),
+    () => accountOptions.filter((o) => o.type === "BANK"),
     [accountOptions]
   );
 
@@ -207,9 +207,7 @@ export function SmsTransactionEditModal({
 
   // Reset local state when transaction changes
   // Reset local state when a DIFFERENT transaction is opened or the external
-  // account match changes. bankAccountOptions is intentionally excluded:
-  // it recalculates whenever pendingAccounts changes, which would wipe
-  // the user's in-progress edits after creating a "+ New" account.
+  // account match changes.
   useEffect(() => {
     setAmount(transaction.amount.toString());
     setCounterparty(transaction.counterparty || "");
@@ -232,6 +230,9 @@ export function SmsTransactionEditModal({
     setNewAccountName(transaction.senderDisplayName);
     setNewAccountError(null);
     setFormErrors({});
+    // bankAccountOptions intentionally excluded — it recalculates when
+    // pendingAccounts changes, which would wipe in-progress edits after
+    // creating a "+ New" account. Refactor to split init vs auto-select effects.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [transaction, currentAccountId, currentAccountName]);
 

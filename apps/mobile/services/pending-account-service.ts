@@ -108,10 +108,14 @@ async function persistPendingAccounts(
   let createdCount = 0;
 
   try {
-    // Pre-fetch existing accounts for dedup (name+currency)
+    // Pre-fetch existing active BANK accounts for dedup (name+currency)
     const existingAccounts = await database
       .get<Account>("accounts")
-      .query(Q.where("user_id", userId))
+      .query(
+        Q.where("user_id", userId),
+        Q.where("deleted", false),
+        Q.where("type", "BANK")
+      )
       .fetch();
 
     // Track accounts mapped within this batch to avoid intra-batch duplicates

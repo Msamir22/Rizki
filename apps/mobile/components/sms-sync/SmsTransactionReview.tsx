@@ -269,6 +269,7 @@ export function SmsTransactionReview({
         }
 
         // Progressive batch matching (~20 txns/batch)
+        // Pass pre-fetched accounts to avoid duplicate DB query
         await matchTransactionsBatched(
           transactions,
           userId,
@@ -282,7 +283,8 @@ export function SmsTransactionReview({
               }
               return next;
             });
-          }
+          },
+          accounts
         );
       } catch (err) {
         console.error("[SmsTransactionReview] Account matching failed:", err);
@@ -678,7 +680,14 @@ export function SmsTransactionReview({
         {/* Save Selected */}
         <TouchableOpacity
           onPress={() => {
-            handleSave().catch(console.error);
+            handleSave().catch((err: unknown) => {
+              const message = err instanceof Error ? err.message : String(err);
+              showToast({
+                type: "error",
+                title: "Save Error",
+                message,
+              });
+            });
           }}
           disabled={selectedCount === 0 || isSaving}
           activeOpacity={0.85}

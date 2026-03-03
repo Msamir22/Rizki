@@ -232,14 +232,29 @@ async function fetchAccountsWithDetails(
 
   const results: AccountWithBankDetails[] = [];
 
-  for (const account of accounts) {
-    const bankDetailsList = await database
-      .get<BankDetails>("bank_details")
-      .query(Q.where("account_id", account.id), Q.where("deleted", false))
-      .fetch();
+  // Batch-fetch all bank_details to avoid N+1 per-account queries
+  const accountIds = accounts.map((a) => a.id);
+  const allBankDetails =
+    accountIds.length === 0
+      ? []
+      : await database
+          .get<BankDetails>("bank_details")
+          .query(
+            Q.where("account_id", Q.oneOf(accountIds)),
+            Q.where("deleted", false)
+          )
+          .fetch();
 
-    // An account may have 0..N bank_details rows; we use the first one that has data.
-    const bankDetails = bankDetailsList[0];
+  // Build a lookup: accountId → first BankDetails row
+  const bankDetailsByAccountId = new Map<string, BankDetails>();
+  for (const row of allBankDetails) {
+    if (!bankDetailsByAccountId.has(row.accountId)) {
+      bankDetailsByAccountId.set(row.accountId, row);
+    }
+  }
+
+  for (const account of accounts) {
+    const bankDetails = bankDetailsByAccountId.get(account.id);
 
     results.push({
       id: account.id,
@@ -430,12 +445,20 @@ async function matchTransactionsBatched(
   transactions: readonly ParsedSmsTransaction[],
   userId: string,
   batchSize: number = DEFAULT_BATCH_SIZE,
-  onBatchComplete: (batch: ReadonlyMap<number, AccountMatch>) => void
+  onBatchComplete: (batch: ReadonlyMap<number, AccountMatch>) => void,
+  preloadedAccounts?: readonly AccountWithBankDetails[]
 ): Promise<void> {
-  const accounts = await fetchAccountsWithDetails(userId);
+  // Guard against non-positive batchSize which would cause an infinite loop
+  const safeBatchSize =
+    Number.isInteger(batchSize) && batchSize > 0
+      ? batchSize
+      : DEFAULT_BATCH_SIZE;
 
-  for (let start = 0; start < transactions.length; start += batchSize) {
-    const end = Math.min(start + batchSize, transactions.length);
+  const accounts =
+    preloadedAccounts ?? (await fetchAccountsWithDetails(userId));
+
+  for (let start = 0; start < transactions.length; start += safeBatchSize) {
+    const end = Math.min(start + safeBatchSize, transactions.length);
     const batchResults = new Map<number, AccountMatch>();
 
     for (let i = start; i < end; i++) {
