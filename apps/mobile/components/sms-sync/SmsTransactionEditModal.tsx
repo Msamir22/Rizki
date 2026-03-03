@@ -612,7 +612,7 @@ export function SmsTransactionEditModal({
                 <Text className="text-xs text-slate-500 font-medium uppercase tracking-wider">
                   {isAtmWithdrawal ? "From Account" : "Account"}
                 </Text>
-                {hasAccounts && !isCreatingNew && !isAtmWithdrawal && (
+                {hasBankAccounts && !isCreatingNew && !isAtmWithdrawal && (
                   <TouchableOpacity
                     onPress={handleStartNew}
                     activeOpacity={0.7}
