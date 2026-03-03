@@ -24,6 +24,7 @@ import { CategorySelectorModal } from "@/components/modals/CategorySelectorModal
 import { PeriodFilterModal } from "@/components/modals/PeriodFilterModal";
 import { TypeFilterModal } from "@/components/modals/TypeFilterModal";
 import { palette } from "@/constants/colors";
+import { useToast } from "@/components/ui/Toast";
 import { useCategories } from "@/hooks/useCategories";
 import { PERIOD_LABELS, getPeriodDateRange } from "@/hooks/usePeriodSummary";
 import type {
@@ -238,6 +239,13 @@ export function SmsTransactionReview({
     readonly PendingAccount[]
   >([]);
 
+  // ── Missing info flags (set on failed save validation) ──
+  const [invalidIndices, setInvalidIndices] = useState<ReadonlySet<number>>(
+    new Set()
+  );
+
+  const { showToast } = useToast();
+
   const handleCreatePendingAccount = useCallback((account: PendingAccount) => {
     setPendingAccounts((prev) => [...prev, account]);
   }, []);
@@ -407,14 +415,33 @@ export function SmsTransactionReview({
 
     // Build index → accountId map from resolved matches + user overrides
     const transactionAccountMap = new Map<number, string>();
+    const missingIndices = new Set<number>();
+
     for (const [i] of selectedIndices.entries()) {
       const override = transactionOverrides.get(i);
       const match = accountMatches.get(i);
       const accountId = override?.accountId ?? match?.accountId;
       if (accountId) {
         transactionAccountMap.set(i, accountId);
+      } else {
+        missingIndices.add(i);
       }
     }
+
+    // Pre-save validation: block if any selected transactions are missing account
+    if (missingIndices.size > 0) {
+      setInvalidIndices(missingIndices);
+      showToast({
+        type: "warning",
+        title: "Missing Info",
+        message: `${missingIndices.size} transaction${missingIndices.size !== 1 ? "s" : ""} still need an account assigned. Tap them to fix.`,
+        duration: 4000,
+      });
+      return;
+    }
+
+    // Clear any previous flags
+    setInvalidIndices(new Set());
 
     // Persist only referenced pending accounts, then remap tempId → realId
     if (pendingAccounts.length > 0) {
@@ -444,6 +471,7 @@ export function SmsTransactionReview({
     transactionOverrides,
     pendingAccounts,
     onSave,
+    showToast,
   ]);
 
   const handleTypeToggle = useCallback((type: TransactionTypeFilter) => {
@@ -485,12 +513,14 @@ export function SmsTransactionReview({
           senderDisplayName={tx.senderDisplayName}
           onToggleSelect={handleToggleItem}
           onPress={handleOpenEditModal}
+          hasMissingInfo={invalidIndices.has(item.originalIndex)}
         />
       );
     },
     [
       accountMatches,
       transactionOverrides,
+      invalidIndices,
       handleToggleItem,
       handleOpenEditModal,
     ]

@@ -116,19 +116,20 @@ function formatDate(date: Date): string {
   });
 }
 
-/** Check if a name already exists in accounts or pending accounts (case-insensitive) */
-function isDuplicateName(
+/** Check if an account with the same name AND currency already exists (case-insensitive) */
+function isDuplicateAccount(
   name: string,
+  currency: string,
   accounts: readonly AccountWithBankDetails[],
   pendingAccounts: readonly PendingAccount[]
 ): boolean {
   const normalized = name.trim().toLowerCase();
   if (!normalized) return false;
   const existsInAccounts = accounts.some(
-    (acc) => acc.name.toLowerCase() === normalized
+    (acc) => acc.name.toLowerCase() === normalized && acc.currency === currency
   );
   const existsInPending = pendingAccounts.some(
-    (pa) => pa.name.toLowerCase() === normalized
+    (pa) => pa.name.toLowerCase() === normalized && pa.currency === currency
   );
   return existsInAccounts || existsInPending;
 }
@@ -169,9 +170,6 @@ export function SmsTransactionEditModal({
   );
   const [newAccountError, setNewAccountError] = useState<string | null>(null);
 
-  // Determine if we should show text input (no accounts exist)
-  const hasAccounts = accounts.length > 0 || pendingAccounts.length > 0;
-
   // Merge real accounts + pending accounts for the dropdown
   const accountOptions = useMemo<readonly AccountOption[]>(() => {
     const real: AccountOption[] = accounts.map((acc) => ({
@@ -195,6 +193,9 @@ export function SmsTransactionEditModal({
     () => accountOptions.filter((o) => o.type !== "CASH"),
     [accountOptions]
   );
+
+  // Determine if we should show text input (no bank accounts exist)
+  const hasBankAccounts = bankAccountOptions.length > 0;
 
   const existingCashAccountName = useMemo(() => {
     const cashAcc = accounts.find(
@@ -222,14 +223,25 @@ export function SmsTransactionEditModal({
     setAmount(transaction.amount.toString());
     setCounterparty(transaction.counterparty || "");
     setTxType(transaction.type);
-    setSelectedAccountId(currentAccountId);
-    setSelectedAccountName(currentAccountName);
+
+    // Auto-select first bank account if no match was provided
+    if (currentAccountId && currentAccountName) {
+      setSelectedAccountId(currentAccountId);
+      setSelectedAccountName(currentAccountName);
+    } else if (bankAccountOptions.length > 0) {
+      setSelectedAccountId(bankAccountOptions[0].id);
+      setSelectedAccountName(bankAccountOptions[0].name);
+    } else {
+      setSelectedAccountId("");
+      setSelectedAccountName("");
+    }
+
     setIsAccountPickerOpen(false);
     setIsCreatingNew(false);
     setNewAccountName(transaction.senderDisplayName);
     setNewAccountError(null);
     setValidationError(null);
-  }, [transaction, currentAccountId, currentAccountName]);
+  }, [transaction, currentAccountId, currentAccountName, bankAccountOptions]);
 
   // ── "+ New" handlers ──────────────────────────────────────────────
 
@@ -251,7 +263,7 @@ export function SmsTransactionEditModal({
     const parsedAmount = parseFloat(amount);
 
     // If creating a new account or no accounts, handle pending account first
-    if (isCreatingNew || !hasAccounts) {
+    if (isCreatingNew || !hasBankAccounts) {
       const trimmedName = (
         isCreatingNew ? newAccountName : newAccountName
       ).trim();
@@ -261,8 +273,17 @@ export function SmsTransactionEditModal({
         return;
       }
 
-      if (isDuplicateName(trimmedName, accounts, pendingAccounts)) {
-        setNewAccountError("An account with this name already exists");
+      if (
+        isDuplicateAccount(
+          trimmedName,
+          transaction.currency,
+          accounts,
+          pendingAccounts
+        )
+      ) {
+        setNewAccountError(
+          `An account named "${trimmedName}" in ${transaction.currency} already exists`
+        );
         return;
       }
 
@@ -339,7 +360,7 @@ export function SmsTransactionEditModal({
     transaction,
     currentAccountId,
     isCreatingNew,
-    hasAccounts,
+    hasBankAccounts,
     newAccountName,
     accounts,
     pendingAccounts,
@@ -622,7 +643,7 @@ export function SmsTransactionEditModal({
               </View>
 
               {/* Mode: Text input (no accounts OR creating new) */}
-              {!isAtmWithdrawal && (!hasAccounts || isCreatingNew) ? (
+              {!isAtmWithdrawal && (!hasBankAccounts || isCreatingNew) ? (
                 <View>
                   <TextInput
                     value={newAccountName}

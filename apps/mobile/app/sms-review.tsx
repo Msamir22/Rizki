@@ -72,30 +72,22 @@ export default function SmsReviewScreen(): React.JSX.Element {
         );
 
         if (result.failedCount > 0) {
-          Alert.alert(
-            "Partial Save",
-            `Saved ${result.savedCount} transaction(s). ${result.failedCount} failed:\n${result.errors.join("\n")}`,
-            [
-              {
-                text: "OK",
-                onPress: () => {
-                  markSyncComplete().catch(console.error);
-                  clearTransactions();
-                  router.replace("/(tabs)");
-                },
-              },
-            ]
-          );
+          showToast({
+            type: "error",
+            title: "Save Error",
+            message: `${result.savedCount} saved, ${result.failedCount} failed: ${result.errors.join(", ")}`,
+          });
         } else {
           showToast({
             type: "success",
             title: "Saved!",
             message: `Saved ${result.savedCount} transaction${result.savedCount !== 1 ? "s" : ""} from SMS!`,
           });
-          markSyncComplete().catch(console.error);
-          clearTransactions();
-          router.replace("/(tabs)/transactions");
         }
+
+        markSyncComplete().catch(console.error);
+        clearTransactions();
+        router.replace("/(tabs)/transactions");
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         showToast({

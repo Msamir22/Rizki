@@ -23,6 +23,7 @@ import {
   type BankDetails,
   type CurrencyType,
 } from "@astik/db";
+import { Q } from "@nozbe/watermelondb";
 import { getCurrentUserId } from "./supabase";
 
 // ---------------------------------------------------------------------------
@@ -102,9 +103,41 @@ async function persistPendingAccounts(
   let createdCount = 0;
 
   try {
+    // Pre-fetch existing accounts for dedup (name+currency)
+    const existingAccounts = await database
+      .get<Account>("accounts")
+      .query(Q.where("user_id", userId))
+      .fetch();
+
+    // Track accounts created within this batch to avoid intra-batch duplicates
+    const createdInBatch = new Map<string, string>(); // "name|currency" → realId
+
     await database.write(async () => {
       for (const pending of pendingAccounts) {
         try {
+          const dedupKey = `${pending.name.trim().toLowerCase()}|${pending.currency}`;
+
+          // Check: already created earlier in this batch?
+          const batchDuplicate = createdInBatch.get(dedupKey);
+          if (batchDuplicate) {
+            tempToRealIdMap.set(pending.tempId, batchDuplicate);
+            continue;
+          }
+
+          // Check: already exists in DB?
+          const existingMatch = existingAccounts.find(
+            (acc) =>
+              acc.name.trim().toLowerCase() ===
+                pending.name.trim().toLowerCase() &&
+              acc.currency === pending.currency
+          );
+
+          if (existingMatch) {
+            tempToRealIdMap.set(pending.tempId, existingMatch.id);
+            createdInBatch.set(dedupKey, existingMatch.id);
+            continue;
+          }
+
           // Create Account record
           const account = await database
             .get<Account>("accounts")
@@ -127,6 +160,7 @@ async function persistPendingAccounts(
           });
 
           tempToRealIdMap.set(pending.tempId, account.id);
+          createdInBatch.set(dedupKey, account.id);
           createdCount++;
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);

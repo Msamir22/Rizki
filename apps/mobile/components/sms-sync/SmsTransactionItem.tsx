@@ -52,6 +52,8 @@ interface SmsTransactionItemProps {
   readonly onToggleSelect: (index: number) => void;
   /** Called when user taps the item to edit — receives index */
   readonly onPress: (index: number) => void;
+  /** Whether this item has missing required info (no account, etc.) */
+  readonly hasMissingInfo?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -90,6 +92,7 @@ function SmsTransactionItemInner({
   senderDisplayName,
   onToggleSelect,
   onPress,
+  hasMissingInfo = false,
 }: SmsTransactionItemProps): React.JSX.Element {
   const [isExpanded, setIsExpanded] = useState(false);
   const isExpense = transaction.type === "EXPENSE";
@@ -156,6 +159,13 @@ function SmsTransactionItemInner({
                 <View className="bg-amber-500/20 px-1.5 py-0.5 rounded ml-2">
                   <Text className="text-[10px] font-bold text-amber-400">
                     Needs Review
+                  </Text>
+                </View>
+              )}
+              {hasMissingInfo && (
+                <View className="bg-red-500/20 px-1.5 py-0.5 rounded ml-2">
+                  <Text className="text-[10px] font-bold text-red-400">
+                    Missing Info
                   </Text>
                 </View>
               )}
