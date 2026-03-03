@@ -11,30 +11,46 @@
  */
 
 import { supabase } from "./supabase";
+import { z } from "zod";
 
 import type { ParsedSmsTransaction } from "@astik/logic/src/types";
 import type { CurrencyType, TransactionType } from "@astik/db";
 
 // ---------------------------------------------------------------------------
-// Types — AI response shape
+// Constants
 // ---------------------------------------------------------------------------
 
-interface AiVoiceTransaction {
-  readonly amount: number;
-  readonly currency: string;
-  readonly type: string;
-  readonly merchant: string;
-  readonly categorySystemName: string;
-  readonly description: string;
-}
+/** Sender identifier for voice-input transactions (not from SMS). */
+const VOICE_INPUT_SENDER = "voice-input";
+
+/** Default category display name when AI doesn't provide one. */
+const DEFAULT_CATEGORY_DISPLAY_NAME = "other";
+
+/** Baseline confidence for voice-parsed transactions (0–1). */
+const VOICE_AI_CONFIDENCE_BASELINE = 0.8;
+
+// ---------------------------------------------------------------------------
+// Schemas — AI response validation
+// ---------------------------------------------------------------------------
+
+const AiVoiceTransactionSchema = z.object({
+  amount: z.number(),
+  currency: z.string(),
+  type: z.string(),
+  merchant: z.string(),
+  categorySystemName: z.string().optional().default(""),
+  description: z.string().optional().default(""),
+});
+
+type AiVoiceTransaction = z.infer<typeof AiVoiceTransactionSchema>;
 
 interface ParseVoiceResponse {
-  readonly transactions: ReadonlyArray<AiVoiceTransaction>;
+  readonly transactions: readonly unknown[];
   readonly error?: string;
 }
 
 // ---------------------------------------------------------------------------
-// Constants
+// Validation Sets
 // ---------------------------------------------------------------------------
 
 const VALID_CURRENCIES: ReadonlySet<string> = new Set([
@@ -88,7 +104,7 @@ function normalizeType(raw: string): TransactionType {
 export async function parseVoiceWithAi(
   options: { audioUri: string } | { textQuery: string },
   languageHint?: "ar" | "en"
-): Promise<ReadonlyArray<ParsedSmsTransaction>> {
+): Promise<readonly ParsedSmsTransaction[]> {
   try {
     let response: {
       data: ParseVoiceResponse | null;
@@ -137,9 +153,23 @@ export async function parseVoiceWithAi(
       return [];
     }
 
-    // Map AI response to ParsedSmsTransaction
+    // Map AI response to ParsedSmsTransaction (filter out malformed entries)
     const now = new Date();
-    const results: ParsedSmsTransaction[] = data.transactions.map(
+    const validTransactions: AiVoiceTransaction[] = [];
+    for (const raw of data.transactions) {
+      const parsed = AiVoiceTransactionSchema.safeParse(raw);
+      if (parsed.success) {
+        validTransactions.push(parsed.data);
+      } else {
+        console.warn(
+          "[ai-voice-parser] Skipping malformed transaction entry:",
+          raw,
+          parsed.error.issues
+        );
+      }
+    }
+
+    const results: ParsedSmsTransaction[] = validTransactions.map(
       (aiTx: AiVoiceTransaction): ParsedSmsTransaction => ({
         amount: Math.abs(aiTx.amount),
         currency: normalizeCurrency(aiTx.currency),
@@ -148,11 +178,13 @@ export async function parseVoiceWithAi(
         merchant: aiTx.merchant,
         date: now, // Voice transactions default to current time
         smsBodyHash: "", // Not applicable for voice
-        senderAddress: "voice-input",
-        senderDisplayName: aiTx.merchant,
-        categorySystemName: aiTx.categorySystemName || "uncategorized",
+        senderDisplayName: VOICE_INPUT_SENDER,
+        // Voice parser has no DB access — use empty categoryId (must be resolved by consumer)
+        categoryId: "",
+        categoryDisplayName:
+          aiTx.categorySystemName || DEFAULT_CATEGORY_DISPLAY_NAME,
         rawSmsBody: aiTx.description || "",
-        confidence: 0.8, // Voice AI confidence baseline
+        confidence: VOICE_AI_CONFIDENCE_BASELINE,
       })
     );
 

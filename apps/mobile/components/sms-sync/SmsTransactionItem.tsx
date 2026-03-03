@@ -24,7 +24,8 @@
  */
 
 import { palette } from "@/constants/colors";
-import { formatCurrency, ParsedSmsTransaction } from "@astik/logic";
+import type { MatchReason } from "@/services/sms-account-matcher";
+import { formatCurrency, type ParsedSmsTransaction } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
 import React, { memo, useCallback, useState } from "react";
 import { Text, TouchableOpacity, View } from "react-native";
@@ -43,10 +44,16 @@ interface SmsTransactionItemProps {
   readonly isSelected: boolean;
   /** Matched account name (or empty if unmatched) */
   readonly accountName: string;
+  /** How the match was determined (used for fallback display) */
+  readonly matchReason: MatchReason;
+  /** SMS sender display name (fallback when no account match) */
+  readonly senderDisplayName: string;
   /** Toggle selection — receives index so parent can use a stable ref */
   readonly onToggleSelect: (index: number) => void;
   /** Called when user taps the item to edit — receives index */
   readonly onPress: (index: number) => void;
+  /** Whether this item has missing required info (no account, etc.) */
+  readonly hasMissingInfo?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -61,14 +68,6 @@ function formatDate(date: Date): string {
   });
 }
 
-/** Clean category system name for display: "food_dining" → "Food Dining" */
-function formatCategoryName(systemName: string): string {
-  return systemName
-    .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
-}
-
 /** Confidence threshold — scores at or below this trigger a "Needs Review" tag. */
 const CONFIDENCE_REVIEW_THRESHOLD = 0.8;
 
@@ -81,8 +80,11 @@ function SmsTransactionItemInner({
   index,
   isSelected,
   accountName,
+  matchReason,
+  senderDisplayName,
   onToggleSelect,
   onPress,
+  hasMissingInfo = false,
 }: SmsTransactionItemProps): React.JSX.Element {
   const [isExpanded, setIsExpanded] = useState(false);
   const isExpense = transaction.type === "EXPENSE";
@@ -129,14 +131,14 @@ function SmsTransactionItemInner({
 
         {/* Content */}
         <View className="flex-1 mr-3">
-          {/* Top row: sender (financialEntity) + amount */}
+          {/* Top row: sender (senderDisplayName) + amount */}
           <View className="flex-row items-center justify-between mb-1">
             <View className="flex-row items-center flex-shrink">
               <Text
                 className="text-sm font-semibold text-white flex-shrink"
                 numberOfLines={1}
               >
-                {transaction.senderDisplayName}
+                {senderDisplayName}
               </Text>
               {transaction.isAtmWithdrawal && (
                 <View className="bg-amber-500/20 px-1.5 py-0.5 rounded ml-2">
@@ -149,6 +151,13 @@ function SmsTransactionItemInner({
                 <View className="bg-amber-500/20 px-1.5 py-0.5 rounded ml-2">
                   <Text className="text-[10px] font-bold text-amber-400">
                     Needs Review
+                  </Text>
+                </View>
+              )}
+              {hasMissingInfo && (
+                <View className="bg-red-500/20 px-1.5 py-0.5 rounded ml-2">
+                  <Text className="text-[10px] font-bold text-red-400">
+                    Missing Info
                   </Text>
                 </View>
               )}
@@ -183,12 +192,16 @@ function SmsTransactionItemInner({
           <View className="flex-row items-center flex-wrap gap-1.5">
             <View className="bg-slate-700/60 px-2.5 py-1 rounded-lg">
               <Text className="text-xs text-slate-300">
-                {formatCategoryName(transaction.categorySystemName)}
+                {transaction.categoryDisplayName}
               </Text>
             </View>
             {accountName ? (
               <View className="bg-blue-900/40 px-2.5 py-1 rounded-lg">
                 <Text className="text-xs text-blue-300">{accountName}</Text>
+              </View>
+            ) : matchReason === "none" ? (
+              <View className="bg-slate-700/40 px-2.5 py-1 rounded-lg">
+                <Text className="text-xs text-slate-400 italic">No match</Text>
               </View>
             ) : null}
             <TouchableOpacity

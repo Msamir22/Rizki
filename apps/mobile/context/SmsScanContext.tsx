@@ -14,7 +14,6 @@
  * @module SmsScanContext
  */
 
-import type { SenderAccountMap } from "@/services/batch-sms-transactions";
 import type { ParsedSmsTransaction } from "@astik/logic";
 import React, {
   createContext,
@@ -37,14 +36,6 @@ interface SmsScanContextValue {
   readonly setTransactions: (txns: readonly ParsedSmsTransaction[]) => void;
   /** Clear transactions (called after save or discard) */
   readonly clearTransactions: () => void;
-  /** Sender config ID → account ID mapping (set by account setup step) */
-  readonly senderAccountMap: SenderAccountMap;
-  /** Set the sender → account mapping */
-  readonly setSenderAccountMap: (map: SenderAccountMap) => void;
-  /** Default account ID for unmapped senders */
-  readonly defaultAccountId: string | null;
-  /** Set the default account ID */
-  readonly setDefaultAccountId: (id: string | null) => void;
   /** Whether the next scan should be incremental or full */
   readonly scanMode: SmsScanMode;
   /** Set the scan mode before navigating to scan page */
@@ -71,11 +62,6 @@ export function SmsScanProvider({
   const [transactions, setTransactionsState] = useState<
     readonly ParsedSmsTransaction[]
   >([]);
-  const [senderAccountMap, setSenderAccountMapState] =
-    useState<SenderAccountMap>({});
-  const [defaultAccountId, setDefaultAccountIdState] = useState<string | null>(
-    null
-  );
   const [scanMode, setScanModeState] = useState<SmsScanMode>("incremental");
 
   const setTransactions = useCallback(
@@ -87,16 +73,6 @@ export function SmsScanProvider({
 
   const clearTransactions = useCallback(() => {
     setTransactionsState([]);
-    setSenderAccountMapState({});
-    setDefaultAccountIdState(null);
-  }, []);
-
-  const setSenderAccountMap = useCallback((map: SenderAccountMap) => {
-    setSenderAccountMapState(map);
-  }, []);
-
-  const setDefaultAccountId = useCallback((id: string | null) => {
-    setDefaultAccountIdState(id);
   }, []);
 
   const setScanMode = useCallback((mode: SmsScanMode) => {
@@ -108,24 +84,10 @@ export function SmsScanProvider({
       transactions,
       setTransactions,
       clearTransactions,
-      senderAccountMap,
-      setSenderAccountMap,
-      defaultAccountId,
-      setDefaultAccountId,
       scanMode,
       setScanMode,
     }),
-    [
-      transactions,
-      setTransactions,
-      clearTransactions,
-      senderAccountMap,
-      setSenderAccountMap,
-      defaultAccountId,
-      setDefaultAccountId,
-      scanMode,
-      setScanMode,
-    ]
+    [transactions, setTransactions, clearTransactions, scanMode, setScanMode]
   );
 
   return (

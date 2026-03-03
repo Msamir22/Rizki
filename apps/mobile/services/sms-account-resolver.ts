@@ -1,21 +1,29 @@
 /**
  * SMS Account Resolver
  *
- * Resolves which account an incoming SMS transaction belongs to by
- * matching against the `bank_details` table in WatermelonDB.
+ * Thin wrapper for live SMS detection (single incoming SMS).
+ * Fetches accounts, extracts cardLast4 from raw SMS body,
+ * and delegates to `matchAccountCore` for the actual resolution.
+ *
+ * Architecture & Design Rationale:
+ * - Pattern: Adapter — maps raw SMS data (senderDisplayName, smsBody) into
+ *   the `MatchInput` interface expected by `matchAccountCore`.
+ * - Why: Live detection receives raw SMS data, while the core matcher
+ *   works with a normalized input. This adapter bridges the gap.
+ * - SOLID: SRP — only handles data preparation for live detection.
+ *   DIP — depends on the `matchAccountCore` abstraction, not concrete DB queries.
  *
  * @module sms-account-resolver
  */
 
-import { Q } from "@nozbe/watermelondb";
+import type { CurrencyType } from "@astik/db";
+import { getCurrentUserId } from "./supabase";
 import {
-  database,
-  type BankDetails,
-  type Account,
-  type CurrencyType,
-} from "@astik/db";
-import { isKnownFinancialSender } from "@astik/logic";
-import { getDefaultAccountId } from "./sender-account-mapping";
+  matchAccountCore,
+  fetchAccountsWithDetails,
+  extractCardLast4,
+  type MatchInput,
+} from "./sms-account-matcher";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -28,239 +36,56 @@ export interface ResolvedAccount {
 }
 
 // ---------------------------------------------------------------------------
-// Card extraction
-// ---------------------------------------------------------------------------
-
-/**
- * Regex patterns for extracting card last 4 digits from SMS body.
- * Matches common formats used by Egyptian banks:
- * - *1234 or *XXXX
- * - ending 1234 / ending in 1234
- * - xxxx1234 (masked card numbers)
- */
-const CARD_LAST_4_PATTERNS: readonly RegExp[] = [
-  /\*(\d{4})/,
-  /ending\s+(?:in\s+)?(\d{4})/i,
-  /x{4,}(\d{4})/i,
-  /card\s+(?:no\.?\s+)?(?:\*+|\d+)(\d{4})/i,
-];
-
-/**
- * Extract card last 4 digits from an SMS body.
- * Tries multiple patterns in order; returns first match.
- *
- * @param smsBody - The raw SMS message body
- * @returns The last 4 digits string, or null if not found
- */
-function extractCardLast4(smsBody: string): string | null {
-  for (const pattern of CARD_LAST_4_PATTERNS) {
-    const match = pattern.exec(smsBody);
-    if (match?.[1]) {
-      return match[1];
-    }
-  }
-  return null;
-}
-
-// ---------------------------------------------------------------------------
-// Sender matching
-// ---------------------------------------------------------------------------
-
-/**
- * Check if an SMS sender address matches a bank_details sms_sender_name.
- *
- * Uses case-insensitive substring matching to handle variations
- * in how carrier/bank SMS sender names appear.
- *
- * @param smsSenderAddress  - The sender address from the SMS
- * @param { bankSmsSenderName, bankName, accountName } - The sms_sender_name , bankName from bank_details & accountName
- * @returns Whether the sender matches
- */
-function isSenderMatch(
-  smsSenderAddress: string,
-  {
-    bankSmsSenderName,
-    bankName,
-    accountName,
-  }: {
-    bankSmsSenderName?: string;
-    bankName?: string;
-    accountName?: string;
-  }
-): boolean {
-  if (!bankSmsSenderName && !bankName && !accountName) {
-    return false;
-  }
-
-  const normalizedSender = smsSenderAddress.toLowerCase().trim();
-  const normalizedBankSmsSenderName = bankSmsSenderName?.toLowerCase().trim();
-  const normalizedBankName = bankName?.toLowerCase().trim();
-  const normalizedAccountName = accountName?.toLowerCase().trim();
-
-  // Direct equality
-  if (
-    normalizedSender === normalizedBankSmsSenderName ||
-    normalizedSender === normalizedBankName ||
-    normalizedSender === normalizedAccountName
-  ) {
-    return true;
-  }
-
-  if (normalizedBankSmsSenderName) {
-    if (
-      normalizedSender.includes(normalizedBankSmsSenderName) ||
-      normalizedBankSmsSenderName.includes(normalizedSender)
-    ) {
-      return true;
-    }
-  }
-
-  if (normalizedBankName) {
-    if (
-      normalizedSender.includes(normalizedBankName) ||
-      normalizedBankName.includes(normalizedSender)
-    ) {
-      return true;
-    }
-  }
-
-  if (normalizedAccountName) {
-    if (
-      normalizedSender.includes(normalizedAccountName) ||
-      normalizedAccountName.includes(normalizedSender)
-    ) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
 /**
  * Resolve which account an incoming SMS transaction belongs to.
  *
- * Resolution chain (highest confidence → lowest):
- * 1. SMS sender + card last 4 digits match a bank_details record
- * 2. SMS sender alone matches a bank_details record
- * 3. Account name+currency match via bank registry lookup
- * 4. Default account from user Settings
+ * This is a thin wrapper that:
+ * 1. Gets the current user ID
+ * 2. Fetches all accounts with bank details
+ * 3. Extracts cardLast4 from the raw SMS body
+ * 4. Delegates to `matchAccountCore` for the 5-step resolution chain
  *
- * @param senderAddress - The SMS sender address (e.g., "CIB", "NBE")
- * @param smsBody       - The raw SMS body text
- * @param currency      - Optional transaction currency for name+currency matching
+ * @param senderDisplayName - The SMS sender display name (e.g., "CIB", "NBE")
+ * @param smsBody           - The raw SMS body text
+ * @param currency          - Optional transaction currency for name+currency matching
  * @returns Resolved account with match details, or null if no match
  */
 export async function resolveAccountForSms(
-  senderAddress: string,
+  senderDisplayName: string,
   smsBody: string,
   currency?: CurrencyType
 ): Promise<ResolvedAccount | null> {
-  // Step 1 & 2: Query bank_details with non-null sms_sender_name or card_last_4
-  const bankDetails = await database
-    .get<BankDetails>("bank_details")
-    .query(
-      Q.and(
-        Q.where("deleted", Q.notEq(true)),
-        Q.or(
-          Q.where("sms_sender_name", Q.notEq(null)),
-          Q.where("card_last_4", Q.notEq(null))
-        )
-      )
-    )
-    .fetch();
-
-  // Extract card last 4 from SMS body for Step 1 matching
-  const cardFromSms = extractCardLast4(smsBody);
-
-  for (const detail of bankDetails) {
-    const account = await detail.account.fetch();
-    // Skip soft-deleted accounts in the primary matching path
-    if (!account || account.deleted) {
-      continue;
-    }
-    const isCardMatch = cardFromSms && cardFromSms === detail.cardLast4;
-
-    if (
-      isCardMatch ||
-      isSenderMatch(senderAddress, {
-        bankSmsSenderName: detail.smsSenderName,
-        bankName: detail.bankName,
-        accountName: account.name,
-      })
-    ) {
-      return {
-        accountId: account.id,
-        accountName: account.name,
-      };
-    }
-  }
-
-  // Step 3: Name+currency match via bank registry
-  if (currency) {
-    const bankInfo = isKnownFinancialSender(senderAddress);
-    if (bankInfo) {
-      const normalizedBankName = bankInfo.shortName.toLowerCase().trim();
-
-      const allAccounts = await database
-        .get<Account>("accounts")
-        .query(Q.where("deleted", Q.notEq(true)), Q.where("currency", currency))
-        .fetch();
-
-      for (const account of allAccounts) {
-        const existingName = account.name.toLowerCase().trim();
-        if (
-          existingName === normalizedBankName ||
-          // Word boundary match: "CIB" matches "CIB Egypt" but not "NCIB"
-          new RegExp(`\\b${normalizedBankName}\\b`).test(existingName) ||
-          new RegExp(`\\b${existingName}\\b`).test(normalizedBankName)
-        ) {
-          return {
-            accountId: account.id,
-            accountName: account.name,
-          };
-        }
-      }
-    }
-  }
-
-  // Step 4: Default account fallback
-  const defaultAccountId = await getDefaultAccountId();
-  if (defaultAccountId) {
-    const account = await fetchAccount(defaultAccountId);
-    if (account) {
-      return {
-        accountId: defaultAccountId,
-        accountName: account.name,
-      };
-    }
-  }
-
-  // No resolution possible — caller should prompt user to configure
-  return null;
-}
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Fetch an account by ID from WatermelonDB.
- * Returns null if the account doesn't exist or is deleted.
- */
-async function fetchAccount(accountId: string): Promise<Account | null> {
-  try {
-    const account = await database.get<Account>("accounts").find(accountId);
-    if (account.deleted) {
-      return null;
-    }
-
-    return account;
-  } catch {
-    // Account not found
+  const userId = await getCurrentUserId();
+  if (!userId) {
+    console.warn(
+      "[sms-resolver] No authenticated user — cannot resolve account"
+    );
     return null;
   }
+
+  const accounts = await fetchAccountsWithDetails(userId);
+
+  // Extract card last 4 from raw SMS body for Step 1 matching
+  const cardFromSms = extractCardLast4(smsBody);
+
+  const input: MatchInput = {
+    senderDisplayName,
+    cardLast4: cardFromSms ?? undefined,
+    currency,
+  };
+
+  const result = matchAccountCore(input, accounts);
+
+  // Return null when no match found (backward-compatible with callers)
+  if (result.matchReason === "none") {
+    return null;
+  }
+
+  return {
+    accountId: result.accountId,
+    accountName: result.accountName,
+  };
 }

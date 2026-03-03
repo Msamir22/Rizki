@@ -1,11 +1,17 @@
 /**
  * SMS Account Matcher Service
  *
- * Matches parsed SMS transactions to user accounts using multiple strategies:
- * 1. SMS sender name (bank_details.sms_sender_name) — substring match against financialEntity
- * 2. Account name — substring match against financialEntity
- * 3. Card last 4 digits — exact match against bank_details.card_last_4
- * 4. Fallback — default account (is_default = true)
+ * Single source of truth for all SMS → Account matching logic.
+ * Both live detection (`resolveAccountForSms`) and batch review-page matching
+ * delegate to `matchAccountCore` — a pure function implementing a 5-step
+ * resolution chain using `senderDisplayName`.
+ *
+ * Resolution chain (highest confidence → lowest):
+ * 1. Card last 4 + sender match against bank_details
+ * 2. Sender match alone against bank_details / account name
+ * 3. Name + currency match via bank registry (isKnownFinancialSender)
+ * 4. Default account (isDefault flag)
+ * 5. First bank account fallback (sorted by created_at ASC)
  *
  * Architecture & Design Rationale:
  * - Pattern: Strategy (multi-strategy matching with priority ordering)
@@ -13,28 +19,39 @@
  *   strategy covers all cases. Priority ordering ensures best-match first.
  * - SOLID: SRP — only handles account matching, no transaction creation.
  *   OCP — new matching strategies can be added without modifying existing ones.
+ *   DRY — both live and batch paths use the same core function.
  *
  * @module sms-account-matcher
  */
 
-import { Account, BankDetails, database, type CurrencyType } from "@astik/db";
-import type { ParsedSmsTransaction } from "@astik/logic";
+import {
+  Account,
+  AccountType,
+  BankDetails,
+  database,
+  type CurrencyType,
+} from "@astik/db";
+import { ParsedSmsTransaction, isKnownFinancialSender } from "@astik/logic";
 import { Q } from "@nozbe/watermelondb";
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
+/** How the match was determined. */
+type MatchReason =
+  | "card_last4"
+  | "sms_sender"
+  | "account_name"
+  | "bank_registry"
+  | "default"
+  | "first_bank"
+  | "none";
+
 interface AccountMatch {
   readonly accountId: string;
   readonly accountName: string;
-  /** How the match was determined */
-  readonly matchReason:
-    | "sms_sender"
-    | "account_name"
-    | "card_last4"
-    | "default"
-    | "none";
+  readonly matchReason: MatchReason;
 }
 
 interface AccountWithBankDetails {
@@ -42,101 +59,289 @@ interface AccountWithBankDetails {
   readonly name: string;
   readonly currency: CurrencyType;
   readonly isDefault: boolean;
+  readonly createdAt: Date;
+  readonly type: AccountType;
   readonly smsSenderName?: string;
+  readonly bankName?: string;
   readonly cardLast4?: string;
 }
 
+/**
+ * Input for the pure `matchAccountCore` function.
+ * Both live detection and batch matching map their data into this shape.
+ */
+interface MatchInput {
+  readonly senderDisplayName: string;
+  readonly cardLast4?: string;
+  readonly currency?: CurrencyType;
+}
+
+/** Optional filter for `fetchAccountsWithDetails`. */
+type AccountTypeFilter = AccountType | undefined;
+
 // ---------------------------------------------------------------------------
-// Internal helpers
+// Constants
 // ---------------------------------------------------------------------------
 
+const DEFAULT_BATCH_SIZE = 20;
+
 /**
- * Case-insensitive substring match.
- * Returns true if `haystack` contains `needle` (both normalised to lowercase).
+ * Minimum string length for bidirectional substring matching.
+ * Prevents short sender names like "I" from matching account names
+ * like "CIB" via `includes()`. Direct equality checks are unaffected.
  */
-function substringMatch(haystack: string, needle: string): boolean {
-  if (!haystack || !needle) return false;
-  return haystack.toLowerCase().includes(needle.toLowerCase());
+const MIN_SUBSTRING_MATCH_LENGTH = 3;
+
+/** Escape special regex characters in a string to prevent injection / ReDoS. */
+function escapeRegExp(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 /**
+ * Regex patterns for extracting card last 4 digits from SMS body.
+ * Matches common formats used by Egyptian banks:
+ * - *1234 or *XXXX
+ * - ending 1234 / ending in 1234
+ * - xxxx1234 (masked card numbers)
+ */
+const CARD_LAST_4_PATTERNS: readonly RegExp[] = [
+  /\*(\d{4})/,
+  /ending\s+(?:in\s+)?(\d{4})/i,
+  /x{4,}(\d{4})/i,
+  /card\s+(?:no\.?\s+)?(?:\*+|\d+)(\d{4})/i,
+];
+
+// ---------------------------------------------------------------------------
+// Internal helpers — card extraction
+// ---------------------------------------------------------------------------
+
+/**
+ * Extract card last 4 digits from an SMS body.
+ * Tries multiple patterns in order; returns first match.
+ *
+ * @param smsBody - The raw SMS message body
+ * @returns The last 4 digits string, or null if not found
+ */
+function extractCardLast4(smsBody: string): string | null {
+  for (const pattern of CARD_LAST_4_PATTERNS) {
+    const match = pattern.exec(smsBody);
+    if (match?.[1]) {
+      return match[1];
+    }
+  }
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// Internal helpers — sender matching
+// ---------------------------------------------------------------------------
+
+/**
+ * Check if an SMS sender address matches account-level bank details.
+ *
+ * Uses case-insensitive bidirectional substring matching to handle
+ * variations in how carrier/bank SMS sender names appear.
+ *
+ * @param smsSenderDisplayName - The sender address from the SMS
+ * @param fields - The comparison targets from bank_details and account
+ * @returns Whether the sender matches
+ */
+function isSenderMatch(
+  smsSenderDisplayName: string,
+  {
+    bankSmsSenderName,
+    bankName,
+    accountName,
+  }: {
+    readonly bankSmsSenderName?: string;
+    readonly bankName?: string;
+    readonly accountName?: string;
+  }
+): boolean {
+  if (!bankSmsSenderName && !bankName && !accountName) {
+    return false;
+  }
+
+  const normalizedSender = smsSenderDisplayName.toLowerCase().trim();
+  if (!normalizedSender) {
+    return false;
+  }
+  const normalizedBankSmsSenderName = bankSmsSenderName?.toLowerCase().trim();
+  const normalizedBankName = bankName?.toLowerCase().trim();
+  const normalizedAccountName = accountName?.toLowerCase().trim();
+
+  // Direct equality check first (fastest path)
+  if (
+    normalizedSender === normalizedBankSmsSenderName ||
+    normalizedSender === normalizedBankName ||
+    normalizedSender === normalizedAccountName
+  ) {
+    return true;
+  }
+
+  // Bidirectional substring match — sender contained in target or vice versa
+  // Guard: both sides must be at least MIN_SUBSTRING_MATCH_LENGTH chars
+  // to prevent false positives from very short strings (e.g., "I" matching "CIB")
+  if (
+    normalizedBankSmsSenderName &&
+    normalizedSender.length >= MIN_SUBSTRING_MATCH_LENGTH &&
+    normalizedBankSmsSenderName.length >= MIN_SUBSTRING_MATCH_LENGTH
+  ) {
+    if (
+      normalizedSender.includes(normalizedBankSmsSenderName) ||
+      normalizedBankSmsSenderName.includes(normalizedSender)
+    ) {
+      return true;
+    }
+  }
+
+  if (
+    normalizedBankName &&
+    normalizedSender.length >= MIN_SUBSTRING_MATCH_LENGTH &&
+    normalizedBankName.length >= MIN_SUBSTRING_MATCH_LENGTH
+  ) {
+    if (
+      normalizedSender.includes(normalizedBankName) ||
+      normalizedBankName.includes(normalizedSender)
+    ) {
+      return true;
+    }
+  }
+
+  if (
+    normalizedAccountName &&
+    normalizedSender.length >= MIN_SUBSTRING_MATCH_LENGTH &&
+    normalizedAccountName.length >= MIN_SUBSTRING_MATCH_LENGTH
+  ) {
+    if (
+      normalizedSender.includes(normalizedAccountName) ||
+      normalizedAccountName.includes(normalizedSender)
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+// ---------------------------------------------------------------------------
+// Data Access
+// ---------------------------------------------------------------------------
+
+/**
  * Fetches all non-deleted accounts with their bank details for the current user.
+ * Optionally filtered by account type (e.g., BANK only for review page).
+ *
+ * @param userId - The current user's ID
+ * @param accountType - Optional filter: "BANK", "CASH", or undefined for all
+ * @returns Accounts enriched with bank_details data, sorted by created_at ASC
  */
 async function fetchAccountsWithDetails(
-  userId: string
+  userId: string,
+  accountType?: AccountTypeFilter
 ): Promise<readonly AccountWithBankDetails[]> {
+  const clauses = [Q.where("user_id", userId), Q.where("deleted", false)];
+
+  if (accountType) {
+    clauses.push(Q.where("type", accountType));
+  }
+
   const accounts = await database
     .get<Account>("accounts")
-    .query(Q.where("user_id", userId), Q.where("deleted", false))
+    .query(...clauses)
     .fetch();
 
   const results: AccountWithBankDetails[] = [];
 
-  for (const account of accounts) {
-    const bankDetailsList = await database
-      .get<BankDetails>("bank_details")
-      .query(Q.where("account_id", account.id), Q.where("deleted", false))
-      .fetch();
+  // Batch-fetch all bank_details to avoid N+1 per-account queries
+  const accountIds = accounts.map((a) => a.id);
+  const allBankDetails =
+    accountIds.length === 0
+      ? []
+      : await database
+          .get<BankDetails>("bank_details")
+          .query(
+            Q.where("account_id", Q.oneOf(accountIds)),
+            Q.where("deleted", false)
+          )
+          .fetch();
 
-    // An account may have 0..N bank_details rows; we use the first one that has data.
-    const bankDetails = bankDetailsList[0];
+  // Build a lookup: accountId → first BankDetails row
+  const bankDetailsByAccountId = new Map<string, BankDetails>();
+  for (const row of allBankDetails) {
+    if (!bankDetailsByAccountId.has(row.accountId)) {
+      bankDetailsByAccountId.set(row.accountId, row);
+    }
+  }
+
+  for (const account of accounts) {
+    const bankDetails = bankDetailsByAccountId.get(account.id);
 
     results.push({
       id: account.id,
       name: account.name,
       currency: account.currency,
       isDefault: account.isDefault,
+      createdAt: account.createdAt,
+      type: account.type,
       smsSenderName: bankDetails?.smsSenderName ?? undefined,
+      bankName: bankDetails?.bankName ?? undefined,
       cardLast4: bankDetails?.cardLast4 ?? undefined,
     });
   }
+
+  // Sort by created_at ASC for deterministic fallback ordering
+  results.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
 
   return results;
 }
 
 // ---------------------------------------------------------------------------
-// Public API
+// Core matching logic — PURE FUNCTION
 // ---------------------------------------------------------------------------
 
 /**
- * Matches a single parsed SMS transaction to the best-fit user account.
+ * Pure function implementing the 5-step account resolution chain.
+ * Uses `senderDisplayName` only.
  *
- * @param transaction - The parsed SMS transaction
- * @param accounts - Pre-fetched list of accounts with bank details
+ * This is the single source of truth used by both:
+ * - `resolveAccountForSms` (live detection, single SMS)
+ * - `matchTransactionsBatched` (review page, batch processing)
+ *
+ * @param input - The match criteria (senderDisplayName, cardLast4, currency)
+ * @param accounts - Pre-fetched accounts with bank details
  * @returns The best match, or a "none" match if nothing fits
  */
-function matchTransaction(
-  transaction: ParsedSmsTransaction,
+function matchAccountCore(
+  input: MatchInput,
   accounts: readonly AccountWithBankDetails[]
 ): AccountMatch {
-  const entity = transaction.financialEntity ?? transaction.senderDisplayName;
+  const { senderDisplayName, cardLast4, currency } = input;
 
-  // Strategy 1: SMS sender name match (highest priority)
-  for (const acc of accounts) {
-    if (acc.smsSenderName && substringMatch(entity, acc.smsSenderName)) {
-      return {
-        accountId: acc.id,
-        accountName: acc.name,
-        matchReason: "sms_sender",
-      };
-    }
-  }
-
-  // Strategy 2: Account name match
-  for (const acc of accounts) {
-    if (substringMatch(entity, acc.name)) {
-      return {
-        accountId: acc.id,
-        accountName: acc.name,
-        matchReason: "account_name",
-      };
-    }
-  }
-
-  // Strategy 3: Card last 4 digits exact match
-  if (transaction.cardLast4) {
+  // Step 1: Card last 4 + sender match (highest confidence)
+  if (cardLast4) {
     for (const acc of accounts) {
-      if (acc.cardLast4 && acc.cardLast4 === transaction.cardLast4) {
+      if (acc.cardLast4 && acc.cardLast4 === cardLast4) {
+        // Card match found — verify sender also matches for highest confidence
+        if (
+          isSenderMatch(senderDisplayName, {
+            bankSmsSenderName: acc.smsSenderName,
+            bankName: acc.bankName,
+            accountName: acc.name,
+          })
+        ) {
+          return {
+            accountId: acc.id,
+            accountName: acc.name,
+            matchReason: "card_last4",
+          };
+        }
+      }
+    }
+
+    // Card match without sender verification (still high confidence)
+    for (const acc of accounts) {
+      if (acc.cardLast4 && acc.cardLast4 === cardLast4) {
         return {
           accountId: acc.id,
           accountName: acc.name,
@@ -146,7 +351,54 @@ function matchTransaction(
     }
   }
 
-  // Strategy 4: Default account fallback
+  // Step 2: Sender match alone against bank_details / account name
+  for (const acc of accounts) {
+    if (
+      isSenderMatch(senderDisplayName, {
+        bankSmsSenderName: acc.smsSenderName,
+        bankName: acc.bankName,
+        accountName: acc.name,
+      })
+    ) {
+      return {
+        accountId: acc.id,
+        accountName: acc.name,
+        matchReason: "sms_sender",
+      };
+    }
+  }
+
+  // Step 3: Name + currency match via bank registry
+  if (currency) {
+    const bankInfo = isKnownFinancialSender(senderDisplayName);
+    if (bankInfo) {
+      const normalizedBankName = bankInfo.shortName.toLowerCase().trim();
+
+      for (const acc of accounts) {
+        if (acc.currency !== currency) continue;
+
+        const existingName = acc.name.toLowerCase().trim();
+        if (
+          existingName === normalizedBankName ||
+          // Word boundary match: "CIB" matches "CIB Egypt" but not "NCIB"
+          new RegExp(`\\b${escapeRegExp(normalizedBankName)}\\b`).test(
+            existingName
+          ) ||
+          new RegExp(`\\b${escapeRegExp(existingName)}\\b`).test(
+            normalizedBankName
+          )
+        ) {
+          return {
+            accountId: acc.id,
+            accountName: acc.name,
+            matchReason: "bank_registry",
+          };
+        }
+      }
+    }
+  }
+
+  // Step 4: Default account fallback
   const defaultAcc = accounts.find((a) => a.isDefault);
   if (defaultAcc) {
     return {
@@ -156,9 +408,98 @@ function matchTransaction(
     };
   }
 
+  // Step 5: First bank account fallback (NEW — sorted by created_at ASC)
+  const firstBankAccount = accounts.find((a) => a.type === "BANK");
+  if (firstBankAccount) {
+    return {
+      accountId: firstBankAccount.id,
+      accountName: firstBankAccount.name,
+      matchReason: "first_bank",
+    };
+  }
+
   // No match at all
   return { accountId: "", accountName: "", matchReason: "none" };
 }
+
+// ---------------------------------------------------------------------------
+// Public API — single transaction matching
+// ---------------------------------------------------------------------------
+
+/**
+ * Matches a single parsed SMS transaction to the best-fit user account.
+ * Maps `ParsedSmsTransaction` → `MatchInput` and delegates to `matchAccountCore`.
+ *
+ * @param transaction - The parsed SMS transaction
+ * @param accounts - Pre-fetched list of accounts with bank details
+ * @returns The best match, or a "none" match if nothing fits
+ */
+function matchTransaction(
+  transaction: ParsedSmsTransaction,
+  accounts: readonly AccountWithBankDetails[]
+): AccountMatch {
+  const input: MatchInput = {
+    senderDisplayName: transaction.senderDisplayName,
+    cardLast4: transaction.cardLast4 ?? undefined,
+    currency: transaction.currency ?? undefined,
+  };
+
+  return matchAccountCore(input, accounts);
+}
+
+// ---------------------------------------------------------------------------
+// Public API — batched matching for review page
+// ---------------------------------------------------------------------------
+
+/**
+ * Matches parsed SMS transactions to user accounts in batches.
+ * Fetches accounts once, then processes ~20 txns/batch, calling
+ * `matchAccountCore` for each. Yields results via callback for
+ * progressive rendering.
+ *
+ * @param transactions - Array of parsed SMS transactions
+ * @param userId - Current user's ID
+ * @param batchSize - Number of transactions per batch (default: 20)
+ * @param onBatchComplete - Called after each batch with index → match map
+ */
+async function matchTransactionsBatched(
+  transactions: readonly ParsedSmsTransaction[],
+  userId: string,
+  batchSize: number = DEFAULT_BATCH_SIZE,
+  onBatchComplete: (batch: ReadonlyMap<number, AccountMatch>) => void,
+  preloadedAccounts?: readonly AccountWithBankDetails[]
+): Promise<void> {
+  // Guard against non-positive batchSize which would cause an infinite loop
+  const safeBatchSize =
+    Number.isInteger(batchSize) && batchSize > 0
+      ? batchSize
+      : DEFAULT_BATCH_SIZE;
+
+  const accounts =
+    preloadedAccounts ?? (await fetchAccountsWithDetails(userId));
+
+  for (let start = 0; start < transactions.length; start += safeBatchSize) {
+    const end = Math.min(start + safeBatchSize, transactions.length);
+    const batchResults = new Map<number, AccountMatch>();
+
+    for (let i = start; i < end; i++) {
+      batchResults.set(i, matchTransaction(transactions[i], accounts));
+    }
+
+    onBatchComplete(batchResults);
+
+    // Yield to the event loop between batches for progressive rendering
+    if (end < transactions.length) {
+      await new Promise<void>((resolve) => {
+        setTimeout(resolve, 0);
+      });
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Public API — legacy bulk matching (kept for backward compatibility)
+// ---------------------------------------------------------------------------
 
 /**
  * Matches all parsed SMS transactions to user accounts.
@@ -181,5 +522,25 @@ async function matchAllTransactions(
   return matches;
 }
 
-export { matchAllTransactions, matchTransaction, fetchAccountsWithDetails };
-export type { AccountMatch, AccountWithBankDetails };
+// ---------------------------------------------------------------------------
+// Exports
+// ---------------------------------------------------------------------------
+
+export {
+  CARD_LAST_4_PATTERNS,
+  extractCardLast4,
+  fetchAccountsWithDetails,
+  isSenderMatch,
+  matchAccountCore,
+  matchAllTransactions,
+  matchTransaction,
+  matchTransactionsBatched,
+};
+
+export type {
+  AccountMatch,
+  AccountTypeFilter,
+  AccountWithBankDetails,
+  MatchInput,
+  MatchReason,
+};

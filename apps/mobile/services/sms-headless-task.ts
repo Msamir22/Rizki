@@ -18,7 +18,6 @@
 
 import { AppRegistry } from "react-native";
 import { RegexSmsParser, computeSmsHash } from "@astik/logic";
-import { database } from "@astik/db";
 import { handleDetectedSms } from "./sms-live-detection-handler";
 
 // ---------------------------------------------------------------------------
@@ -71,7 +70,7 @@ async function smsDetectionTask(taskData: SmsTaskData): Promise<void> {
     // from Tier 1. WatermelonDB dedup (sms_body_hash) handles this.
 
     // Delegate to shared detection handler
-    await handleDetectedSms(parsed, database);
+    await handleDetectedSms(parsed);
 
     console.log("[sms-headless] Successfully processed SMS transaction");
   } catch (err) {

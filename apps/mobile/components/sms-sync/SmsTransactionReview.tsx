@@ -20,22 +20,26 @@
  * @module SmsTransactionReview
  */
 
-import { CategorySelectorModal } from "@/components/modals/CategorySelectorModal";
 import { PeriodFilterModal } from "@/components/modals/PeriodFilterModal";
 import { TypeFilterModal } from "@/components/modals/TypeFilterModal";
+import { useToast } from "@/components/ui/Toast";
 import { palette } from "@/constants/colors";
+import { useTheme } from "@/context/ThemeContext";
 import { useCategories } from "@/hooks/useCategories";
+import { useMarketRates } from "@/hooks/useMarketRates";
 import { PERIOD_LABELS, getPeriodDateRange } from "@/hooks/usePeriodSummary";
 import type {
   GroupingPeriod,
   TransactionTypeFilter,
 } from "@/hooks/useTransactionsGrouping";
+import type { PendingAccount } from "@/services/pending-account-service";
 import {
-  AccountMatch,
-  AccountWithBankDetails,
+  type AccountMatch,
+  type AccountWithBankDetails,
   fetchAccountsWithDetails,
-  matchAllTransactions,
+  matchTransactionsBatched,
 } from "@/services/sms-account-matcher";
+import { prepareSavePayload } from "@/services/sms-review-save-service";
 import { getCurrentUserId } from "@/services/supabase";
 import type { ParsedSmsTransaction } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
@@ -53,12 +57,11 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  useColorScheme,
 } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import {
   SmsTransactionEditModal,
-  TransactionEdits,
+  type TransactionEdits,
 } from "./SmsTransactionEditModal";
 import { SmsTransactionItem } from "./SmsTransactionItem";
 
@@ -69,8 +72,11 @@ import { SmsTransactionItem } from "./SmsTransactionItem";
 interface SmsTransactionReviewProps {
   /** All parsed transactions from the scan */
   readonly transactions: readonly ParsedSmsTransaction[];
-  /** Called when user saves selected transactions */
-  readonly onSave: (selected: readonly ParsedSmsTransaction[]) => void;
+  /** Called when user saves selected transactions with their account mappings */
+  readonly onSave: (
+    selected: readonly ParsedSmsTransaction[],
+    transactionAccountMap: ReadonlyMap<number, string>
+  ) => Promise<void>;
   /** Called when user discards all */
   readonly onDiscard: () => void;
   /** Whether save is in progress */
@@ -186,14 +192,12 @@ export function SmsTransactionReview({
   onDiscard,
   isSaving,
 }: SmsTransactionReviewProps): React.JSX.Element {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
+  const { isDark } = useTheme();
 
   // ── Filter state ──────────────────────────────────────────────────
   const [period, setPeriod] = useState<GroupingPeriod>("all_time");
   const [selectedTypes, setSelectedTypes] = useState<TransactionTypeFilter[]>([
-    "Income",
-    "Expense",
+    "All",
   ]);
   const [searchQuery, setSearchQuery] = useState("");
   const [periodModalVisible, setPeriodModalVisible] = useState(false);
@@ -206,9 +210,6 @@ export function SmsTransactionReview({
 
   const selectedIndicesRef = useRef(selectedIndices);
   selectedIndicesRef.current = selectedIndices;
-
-  // ── Category correction state ─────────────────────────────────────
-  const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
   // ── Unified transaction overrides ─────────────────────────────────
   // Stores all user edits (amount, counterparty, type, category, account)
@@ -225,40 +226,82 @@ export function SmsTransactionReview({
     readonly AccountWithBankDetails[]
   >([]);
 
+  // ── Pending accounts (in-memory, created via "+ New" in edit modal) ──
+  const [pendingAccounts, setPendingAccounts] = useState<
+    readonly PendingAccount[]
+  >([]);
+
+  // ── Missing info flags (set on failed save validation) ──
+  const [invalidIndices, setInvalidIndices] = useState<ReadonlySet<number>>(
+    new Set()
+  );
+
+  const { showToast } = useToast();
+
+  const handleCreatePendingAccount = useCallback((account: PendingAccount) => {
+    setPendingAccounts((prev) => [...prev, account]);
+  }, []);
+
+  // ── Market rates for currency conversion ────────────────────────
+  const { latestRates } = useMarketRates();
+
   // ── Inline edit modal state ──────────────────────────────────────
   const [editModalIndex, setEditModalIndex] = useState<number | null>(null);
 
   const { categories: rootCategories } = useCategories();
-  // All categories (including L2) for UUID → systemName resolution
-  const { categories: allCategories } = useCategories({ topLevelOnly: false });
 
-  // Run account matching on mount
+  const batchSize = 20;
+
+  // Run batched account matching on mount (progressive rendering)
   useEffect(() => {
     let cancelled = false;
-    const runMatching = async (): Promise<void> => {
+    const run = async (): Promise<void> => {
       try {
         const userId = await getCurrentUserId();
         if (!userId || cancelled) return;
 
-        // TODO: Replace matchAllTransactions with the resolveAccountForSms
-        const [matches, accounts] = await Promise.all([
-          matchAllTransactions(transactions, userId),
-          fetchAccountsWithDetails(userId),
-        ]);
-
+        // Fetch accounts first (also used for edit modal dropdown)
+        const accounts = await fetchAccountsWithDetails(userId);
         if (!cancelled) {
-          setAccountMatches(matches);
           setUserAccounts(accounts);
         }
-      } catch (err) {
-        console.error("[SmsTransactionReview] Account matching failed:", err);
+
+        // Progressive batch matching (~20 txns/batch)
+        // Pass pre-fetched accounts to avoid duplicate DB query
+        await matchTransactionsBatched(
+          transactions,
+          userId,
+          batchSize,
+          (batchResults) => {
+            if (cancelled) return;
+            setAccountMatches((prev) => {
+              const next = new Map(prev);
+              for (const [idx, match] of batchResults) {
+                next.set(idx, match);
+              }
+              return next;
+            });
+          },
+          accounts
+        );
+      } catch (err: unknown) {
+        if (cancelled) return;
+        console.warn("[SmsTransactionReview] Account matching failed:", err);
+        showToast({
+          type: "warning",
+          title: "Account Matching Failed",
+          message:
+            "Some transactions may not have an account assigned. You can assign them manually.",
+          duration: 4000,
+        });
       }
     };
-    runMatching().catch(console.error);
+    // Inner catch handles all errors — no-op catch for the promise chain
+    run().catch(() => undefined);
     return () => {
       cancelled = true;
     };
-  }, [transactions]);
+  }, [transactions, showToast]);
 
   // ── Derived data ──────────────────────────────────────────────────
   const effectiveTransactions = useMemo((): readonly ParsedSmsTransaction[] => {
@@ -267,14 +310,10 @@ export function SmsTransactionReview({
       if (!overrides) return tx;
       return {
         ...tx,
-        ...(overrides.amount !== undefined && { amount: overrides.amount }),
-        ...(overrides.counterparty !== undefined && {
-          counterparty: overrides.counterparty,
-        }),
-        ...(overrides.type !== undefined && { type: overrides.type }),
-        ...(overrides.categorySystemName !== undefined && {
-          categorySystemName: overrides.categorySystemName,
-        }),
+        amount: overrides.amount,
+        counterparty: overrides.counterparty,
+        type: overrides.type,
+        categoryId: overrides.categoryId,
       };
     });
   }, [transactions, transactionOverrides]);
@@ -325,10 +364,6 @@ export function SmsTransactionReview({
     });
   }, []);
 
-  const handleEditCategory = useCallback((index: number) => {
-    setEditingIndex(index);
-  }, []);
-
   const handleOpenEditModal = useCallback((index: number) => {
     setEditModalIndex(index);
   }, []);
@@ -350,30 +385,47 @@ export function SmsTransactionReview({
     [editModalIndex]
   );
 
-  const handleCategorySelected = useCallback(
-    (categoryId: string) => {
-      if (editingIndex !== null) {
-        // Resolve UUID → systemName using the categories list
-        const category = allCategories.find((c) => c.id === categoryId);
-        const resolved = category?.systemName ?? categoryId;
-        setTransactionOverrides((prev) => {
-          const next = new Map(prev);
-          const existing = next.get(editingIndex) ?? {};
-          next.set(editingIndex, { ...existing, categorySystemName: resolved });
-          return next;
+  const handleSave = useCallback(async (): Promise<void> => {
+    const result = await prepareSavePayload({
+      selectedIndices,
+      transactionOverrides,
+      accountMatches,
+      pendingAccounts,
+      effectiveTransactions,
+    });
+
+    if (!result.success) {
+      if (result.reason === "missing_accounts") {
+        setInvalidIndices(result.missingIndices);
+        showToast({
+          type: "warning",
+          title: "Missing Info",
+          message: result.message,
+          duration: 4000,
+        });
+      } else {
+        showToast({
+          type: "error",
+          title: "Account Creation Failed",
+          message: result.message,
         });
       }
-      setEditingIndex(null);
-    },
-    [editingIndex, allCategories]
-  );
+      return;
+    }
 
-  const handleSave = useCallback(() => {
-    const selected = effectiveTransactions.filter((_, i) =>
-      selectedIndices.has(i)
-    );
-    onSave(selected);
-  }, [effectiveTransactions, selectedIndices, onSave]);
+    // Clear any previous flags
+    setInvalidIndices(new Set());
+
+    await onSave(result.selected, result.transactionAccountMap);
+  }, [
+    effectiveTransactions,
+    selectedIndices,
+    accountMatches,
+    transactionOverrides,
+    pendingAccounts,
+    onSave,
+    showToast,
+  ]);
 
   const handleTypeToggle = useCallback((type: TransactionTypeFilter) => {
     setSelectedTypes((prev) => {
@@ -408,32 +460,26 @@ export function SmsTransactionReview({
             accountMatches.get(item.originalIndex)?.accountName ??
             ""
           }
+          matchReason={
+            accountMatches.get(item.originalIndex)?.matchReason ?? "none"
+          }
+          senderDisplayName={tx.senderDisplayName}
           onToggleSelect={handleToggleItem}
           onPress={handleOpenEditModal}
+          hasMissingInfo={invalidIndices.has(item.originalIndex)}
         />
       );
     },
     [
       accountMatches,
       transactionOverrides,
+      invalidIndices,
       handleToggleItem,
       handleOpenEditModal,
     ]
   );
 
   const keyExtractor = useCallback((item: ReviewListItem) => item.key, []);
-
-  const editingTx =
-    editingIndex !== null ? effectiveTransactions[editingIndex] : null;
-
-  // Resolve the editing transaction's categorySystemName → UUID for the picker
-  const editingCategoryUuid = useMemo(() => {
-    if (!editingTx) return "";
-    const found = allCategories.find(
-      (c) => c.systemName === editingTx.categorySystemName
-    );
-    return found?.id ?? "";
-  }, [editingTx, allCategories]);
 
   return (
     <View className="flex-1">
@@ -584,7 +630,16 @@ export function SmsTransactionReview({
       >
         {/* Save Selected */}
         <TouchableOpacity
-          onPress={handleSave}
+          onPress={() => {
+            handleSave().catch((err: unknown) => {
+              const message = err instanceof Error ? err.message : String(err);
+              showToast({
+                type: "error",
+                title: "Save Error",
+                message,
+              });
+            });
+          }}
           disabled={selectedCount === 0 || isSaving}
           activeOpacity={0.85}
           className={`w-full py-4 rounded-2xl items-center mb-3 ${
@@ -630,18 +685,6 @@ export function SmsTransactionReview({
         onClose={() => setTypeModalVisible(false)}
       />
 
-      {/* ── Category selector modal ─────────────────────────────── */}
-      {editingTx !== null && (
-        <CategorySelectorModal
-          visible={editingIndex !== null}
-          rootCategories={rootCategories as never}
-          selectedId={editingCategoryUuid}
-          type={editingTx.type}
-          onSelect={handleCategorySelected}
-          onClose={() => setEditingIndex(null)}
-        />
-      )}
-
       {/* ── Inline edit modal ──────────────────────────────────── */}
       {editModalIndex !== null && effectiveTransactions[editModalIndex] && (
         <SmsTransactionEditModal
@@ -658,11 +701,12 @@ export function SmsTransactionReview({
             ""
           }
           accounts={userAccounts}
+          rootCategories={rootCategories}
+          pendingAccounts={pendingAccounts}
+          latestRates={latestRates}
           onSave={handleEditModalSave}
+          onCreatePendingAccount={handleCreatePendingAccount}
           onClose={() => setEditModalIndex(null)}
-          onEditCategory={() => {
-            handleEditCategory(editModalIndex);
-          }}
         />
       )}
     </View>

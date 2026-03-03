@@ -11,34 +11,31 @@
  */
 
 import { supabase } from "./supabase";
+import { z } from "zod";
 
 import type { Category, CurrencyType, TransactionType } from "@astik/db";
 import { SUPPORTED_CURRENCIES, buildCategoryTree } from "@astik/logic";
 import type { ParsedSmsTransaction, SmsMessage } from "@astik/logic/src/types";
 
 // ---------------------------------------------------------------------------
-// Types — AI response shape
+// Schemas — AI response validation
 // ---------------------------------------------------------------------------
 
-interface AiSmsTransaction {
-  readonly messageId: string;
-  readonly amount: number;
-  readonly currency: string;
-  readonly type: string;
-  readonly counterparty: string;
-  readonly date: string;
-  readonly categorySystemName: string;
-  /** Bank/wallet/fintech name extracted from message content (not sender name). */
-  readonly financialEntity?: string;
-  /** True for ATM cash withdrawal transactions. */
-  readonly isAtmWithdrawal?: boolean;
-  /** Last 4 digits of the card found in the SMS body. */
-  readonly cardLast4?: string;
-  /** AI self-assessed confidence in the accuracy of this extraction (0.0–1.0). */
-  readonly confidenceScore: number;
-  /** True if the AI is highly confident this is a real completed transaction. */
-  readonly isTrusted: boolean;
-}
+const AiSmsTransactionSchema = z.object({
+  messageId: z.string(),
+  amount: z.number(),
+  currency: z.string(),
+  type: z.string(),
+  counterparty: z.string(),
+  date: z.string(),
+  categorySystemName: z.string(),
+  isAtmWithdrawal: z.boolean().optional().default(false),
+  cardLast4: z.string().optional(),
+  confidenceScore: z.number(),
+  isTrusted: z.boolean(),
+});
+
+type AiSmsTransaction = z.infer<typeof AiSmsTransactionSchema>;
 
 /** Result from AI parsing */
 export interface AiParseResult {
@@ -51,6 +48,11 @@ export interface ParseSmsContext {
   readonly categories: readonly Category[];
   readonly supportedCurrencies: readonly string[];
 }
+
+type CategoryMap = Map<
+  Category["systemName"],
+  { name: Category["displayName"]; id: Category["id"] }
+>;
 
 // ---------------------------------------------------------------------------
 // Input type — candidate SMS for AI processing
@@ -105,27 +107,6 @@ const INTER_CHUNK_DELAY_MS = 2000;
 // ---------------------------------------------------------------------------
 
 /**
- * Runtime type guard for a single AI transaction object.
- * Validates that all required properties exist with correct types.
- */
-function isValidAiTransaction(value: unknown): value is AiSmsTransaction {
-  if (typeof value !== "object" || value === null) return false;
-
-  const obj = value as Record<string, unknown>;
-
-  return (
-    typeof obj.messageId === "string" &&
-    typeof obj.amount === "number" &&
-    typeof obj.currency === "string" &&
-    typeof obj.type === "string" &&
-    typeof obj.counterparty === "string" &&
-    typeof obj.date === "string" &&
-    typeof obj.categorySystemName === "string" &&
-    typeof obj.confidenceScore === "number"
-  );
-}
-
-/**
  * Parsed edge function response.
  */
 interface ChunkAiResult {
@@ -136,6 +117,7 @@ interface ChunkAiResult {
 
 /**
  * Safely parse and validate the Edge Function response.
+ * Uses Zod schema validation for each transaction entry.
  * Returns empty transactions if the response shape is unexpected.
  */
 function parseAiResponse(data: unknown): ChunkAiResult {
@@ -158,11 +140,26 @@ function parseAiResponse(data: unknown): ChunkAiResult {
     return emptyResult;
   }
 
-  const transactions = obj.transactions.filter(isValidAiTransaction);
-  const invalid = obj.transactions.length - transactions.length;
-  if (invalid > 0) {
+  const transactions: AiSmsTransaction[] = [];
+  let invalidCount = 0;
+
+  for (const raw of obj.transactions) {
+    const parsed = AiSmsTransactionSchema.safeParse(raw);
+    if (parsed.success) {
+      transactions.push(parsed.data);
+    } else {
+      invalidCount++;
+      console.warn(
+        "[ai-sms-parser] Skipping malformed transaction entry:",
+        raw,
+        parsed.error.issues
+      );
+    }
+  }
+
+  if (invalidCount > 0) {
     console.warn(
-      `[ai-sms-parser] parseAiResponse: ${invalid}/${obj.transactions.length} transactions failed validation`
+      `[ai-sms-parser] parseAiResponse: ${invalidCount}/${obj.transactions.length} transactions failed validation`
     );
   }
 
@@ -193,15 +190,20 @@ function normalizeType(raw: string): TransactionType {
  * Validate and normalize an AI-returned category system_name.
  * Falls back to "other" if the AI returned an unknown category.
  */
-function validateCategory(
-  raw: string,
-  validCategories: ReadonlySet<string>
-): string {
-  if (validCategories.has(raw)) return raw;
+function parseCategory(
+  categorySystemName: string,
+  validCategories: CategoryMap
+): { name: Category["displayName"]; id: Category["id"] } | null {
+  const directMatch = validCategories.get(categorySystemName);
+  if (directMatch) return directMatch;
+
+  const fallbackCategory = validCategories.get("other");
+  if (fallbackCategory) return fallbackCategory;
   console.warn(
-    `[ai-sms-parser] Unknown category "${raw}" from AI, falling back to "other"`
+    `[ai-sms-parser] Unknown category "${categorySystemName}" from AI and no "other" fallback category exists`
   );
-  return "other";
+
+  return null;
 }
 
 function parseDate(dateStr: string, fallbackMs: number): Date {
@@ -218,7 +220,7 @@ function parseDate(dateStr: string, fallbackMs: number): Date {
 function mapAiTransactions(
   aiTransactions: readonly AiSmsTransaction[],
   candidateMap: ReadonlyMap<string, SmsCandidate>,
-  validCategoryNames: ReadonlySet<string>
+  validCategoryMap: CategoryMap
 ): ParsedSmsTransaction[] {
   const results: ParsedSmsTransaction[] = [];
 
@@ -244,7 +246,7 @@ function mapAiTransactions(
     // Filter out untrusted transactions (promotional offers, ambiguous messages)
     if (!aiTx.isTrusted) {
       console.info(
-        `[ai-sms-parser] Untrusted transaction from ${aiTx.financialEntity ?? candidate.message.address}, ` +
+        `[ai-sms-parser] Untrusted transaction from ${candidate.message.address}, ` +
           `amount: ${aiTx.amount} ${aiTx.currency}, skipping`
       );
       continue;
@@ -252,11 +254,20 @@ function mapAiTransactions(
 
     // Counterparty guard: must never equal the financial entity
     const counterparty =
-      aiTx.financialEntity &&
+      candidate.message.address &&
       aiTx.counterparty.toLowerCase().trim() ===
-        aiTx.financialEntity.toLowerCase().trim()
+        candidate.message.address.toLowerCase().trim()
         ? ""
         : aiTx.counterparty;
+
+    const category = parseCategory(aiTx.categorySystemName, validCategoryMap);
+
+    if (!category) {
+      console.warn(
+        `[ai-sms-parser] No valid category mapping for messageId: ${aiTx.messageId}, skipping`
+      );
+      continue;
+    }
 
     results.push({
       amount: Math.abs(aiTx.amount),
@@ -265,16 +276,11 @@ function mapAiTransactions(
       counterparty,
       date: parseDate(aiTx.date, candidate.message.date),
       smsBodyHash: candidate.smsBodyHash,
-      senderAddress: candidate.message.address,
-      // Prefer financialEntity (extracted bank name) over raw sender address
-      senderDisplayName: aiTx.financialEntity || candidate.message.address,
-      categorySystemName: validateCategory(
-        aiTx.categorySystemName,
-        validCategoryNames
-      ),
+      senderDisplayName: candidate.message.address,
+      categoryId: category.id,
+      categoryDisplayName: category.name,
       rawSmsBody: candidate.message.body,
       confidence: Math.min(1, Math.max(0, aiTx.confidenceScore)),
-      financialEntity: aiTx.financialEntity,
       isAtmWithdrawal: aiTx.isAtmWithdrawal ?? false,
       cardLast4: aiTx.cardLast4,
     });
@@ -365,8 +371,11 @@ export async function parseSmsWithAi(
   if (candidates.length === 0) return emptyResult;
 
   // Build validation set once for the entire parse session
-  const validCategoryNames = new Set(
-    context.categories.map((c) => c.systemName)
+  const validCategoryMap: CategoryMap = new Map(
+    context.categories.map((c) => [
+      c.systemName,
+      { name: c.displayName, id: c.id },
+    ])
   );
 
   try {
@@ -454,7 +463,7 @@ export async function parseSmsWithAi(
       const mapped = mapAiTransactions(
         chunkResult.transactions,
         candidateMap,
-        validCategoryNames
+        validCategoryMap
       );
       allResults.push(...mapped);
 
