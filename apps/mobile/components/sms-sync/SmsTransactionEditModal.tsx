@@ -5,14 +5,6 @@
  * from the review page. Allows editing: amount, category, account, counterparty,
  * date, and transaction type — without navigating away.
  *
- * Architecture & Design Rationale:
- * - Pattern: Controlled Form (local state mirrors props, diverges on user edits)
- * - Why: Bottom-sheet stays mounted so we manage form state locally
- *   and only emit a diff (TransactionEdits) on save. The parent
- *   (SmsTransactionReview) merges diffs into a Map<index, edits>.
- * - SOLID: SRP — only renders the edit UI and emits TransactionEdits.
- *   The parent handles persistence and state management.
- *
  * Account modes:
  * 1. Dropdown (default) — when bank accounts exist, shows tappable list
  * 2. Text input — when no accounts exist OR user taps "+ New"
@@ -24,6 +16,7 @@
 import { palette } from "@/constants/colors";
 import type { PendingAccount } from "@/services/pending-account-service";
 import type { AccountWithBankDetails } from "@/services/sms-account-matcher";
+import { formatToLocalDateString } from "@/utils/dateHelpers";
 import {
   TransactionValidationErrors,
   validateTransactionForm,
@@ -104,16 +97,6 @@ interface AccountOption {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-/** Format a Date as a readable string */
-function formatDate(date: Date): string {
-  return date.toLocaleDateString("en-EG", {
-    weekday: "short",
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
 
 /** Check if an account with the same name AND currency already exists (case-insensitive) */
 function isDuplicateAccount(
@@ -254,21 +237,21 @@ export function SmsTransactionEditModal({
 
   // ── "+ New" handlers ──────────────────────────────────────────────
 
-  const handleStartNew = useCallback(() => {
+  const handleStartNew = useCallback<() => void>(() => {
     setIsCreatingNew(true);
     setIsAccountPickerOpen(false);
     setNewAccountName(transaction.senderDisplayName);
     setNewAccountError(null);
   }, [transaction.senderDisplayName]);
 
-  const handleCancelNew = useCallback(() => {
+  const handleCancelNew = useCallback<() => void>(() => {
     setIsCreatingNew(false);
     setNewAccountError(null);
   }, []);
 
   // ── Save ──────────────────────────────────────────────────────────
 
-  const handleSave = useCallback(() => {
+  const handleSave = useCallback<() => void>(() => {
     let tempId: string | null = null;
 
     const isCreatingNewAccount = isCreatingNew || !hasBankAccounts;
@@ -312,7 +295,7 @@ export function SmsTransactionEditModal({
     // It's safe to use the non-null assertion here because we've already
     // assigned a value to tempId in if the isCreatingNew condition is met
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const accountId = isCreatingNew ? tempId! : selectedAccountId;
+    const accountId = isCreatingNewAccount ? tempId! : selectedAccountId;
 
     // Standard validation for dropdown mode
     const { isValid, errors } = validateTransactionForm(txType, {
@@ -328,9 +311,13 @@ export function SmsTransactionEditModal({
 
     setFormErrors({});
 
+    const resolvedAccountName = isCreatingNewAccount
+      ? newAccountName.trim()
+      : selectedAccountName;
+
     const edits: TransactionEdits = {
       accountId,
-      accountName: selectedAccountName,
+      accountName: resolvedAccountName,
       counterparty,
       type: txType,
       categoryId: selectedCategoryId,
@@ -355,16 +342,19 @@ export function SmsTransactionEditModal({
     onCreatePendingAccount,
   ]);
 
-  const onEditCategory = useCallback(() => {
+  const onEditCategory = useCallback<() => void>(() => {
     setIsCategoryPickerOpen(true);
   }, []);
 
-  const handleSelectAccount = useCallback((opt: AccountOption) => {
-    setSelectedAccountId(opt.id);
-    setSelectedAccountName(opt.name);
-    setIsAccountPickerOpen(false);
-    setFormErrors({});
-  }, []);
+  const handleSelectAccount = useCallback<(opt: AccountOption) => void>(
+    (opt) => {
+      setSelectedAccountId(opt.id);
+      setSelectedAccountName(opt.name);
+      setIsAccountPickerOpen(false);
+      setFormErrors({});
+    },
+    []
+  );
 
   // ── Render ────────────────────────────────────────────────────────
 
@@ -439,7 +429,7 @@ export function SmsTransactionEditModal({
                   {transaction.senderDisplayName}
                 </Text>
                 <Text className="text-[10px] text-slate-400 mt-0.5">
-                  {formatDate(transaction.date)}
+                  {formatToLocalDateString(transaction.date)}
                 </Text>
               </View>
             </View>

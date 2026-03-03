@@ -161,6 +161,16 @@ export function formatDate(date: Date, format: DateFormat): string {
   }
 }
 
+/** Format a Date as a readable string */
+export function formatToLocalDateString(date: Date): string {
+  return date.toLocaleDateString("en-EG", {
+    weekday: "short",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
 export function formatTimeAgo(date: Date): string {
   const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
 
