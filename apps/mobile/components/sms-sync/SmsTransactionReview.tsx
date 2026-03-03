@@ -287,14 +287,21 @@ export function SmsTransactionReview({
           accounts
         );
       } catch (err) {
-        console.error("[SmsTransactionReview] Account matching failed:", err);
+        const message = err instanceof Error ? err.message : String(err);
+        showToast({
+          type: "warning",
+          title: "Account Matching Failed",
+          message: `Some transactions may not have an account assigned: ${message}`,
+          duration: 4000,
+        });
       }
     };
-    run().catch(console.error);
+    // Inner catch handles all errors — no-op catch for the promise chain
+    run().catch(() => undefined);
     return () => {
       cancelled = true;
     };
-  }, [transactions]);
+  }, [transactions, showToast]);
 
   // ── Derived data ──────────────────────────────────────────────────
   const effectiveTransactions = useMemo((): readonly ParsedSmsTransaction[] => {
