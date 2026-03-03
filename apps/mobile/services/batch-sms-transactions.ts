@@ -30,7 +30,6 @@ import {
   Transfer,
   type Category,
 } from "@astik/db";
-import type { AccountCardState } from "@/utils/build-initial-account-state";
 import type { ParsedSmsTransaction } from "@astik/logic";
 import { Q, type Model } from "@nozbe/watermelondb";
 import { findCashAccount } from "./account-service";
@@ -96,19 +95,11 @@ function accumulateBalanceDelta(
 // ---------------------------------------------------------------------------
 
 /**
- * Mapping from SMS sender address → WatermelonDB account ID.
- * Used to route each transaction to its correct account.
- * Keys are raw sender addresses (e.g., "CIB", "NBE", "ValU").
- */
-export interface SenderAccountMap {
-  readonly [senderAddress: string]: string;
-}
-
-/**
  * Save confirmed SMS transactions to the database.
  *
- * Each transaction is routed to the correct account based on its
- * senderAddress. If no mapping exists, falls back to defaultAccountId.
+ * Each transaction is routed to the correct account via the
+ * `transactionAccountMap` (index → accountId), built by the
+ * review page's batched resolution.
  *
  * ATM withdrawals (isAtmWithdrawal === true) are automatically
  * processed as transfers from the bank account to a Cash account.
@@ -117,15 +108,13 @@ export interface SenderAccountMap {
  * updated in a single atomic `database.batch()` call, reducing
  * the operation from O(n) write actions to O(1).
  *
- * @param transactions    - Selected, potentially category-corrected transactions
- * @param senderAccountMap - Mapping from sender address → account ID
- * @param defaultAccountId - Fallback account ID for unmapped senders
+ * @param transactions          - Selected, potentially edited transactions
+ * @param transactionAccountMap - Mapping from transaction index → account ID
  * @returns Summary of saved/failed counts
  */
 export async function batchCreateSmsTransactions(
   transactions: readonly ParsedSmsTransaction[],
-  senderAccountMap: SenderAccountMap,
-  defaultAccountId: string
+  transactionAccountMap: ReadonlyMap<number, string>
 ): Promise<BatchSaveResult> {
   if (transactions.length === 0) {
     return { savedCount: 0, failedCount: 0, skippedAtmCount: 0, errors: [] };
@@ -164,11 +153,17 @@ export async function batchCreateSmsTransactions(
   let skippedAtmCount = 0;
   let failedCount = 0;
 
-  for (const tx of transactions) {
-    // Route to correct account: sender mapping → default fallback
-    const accountId =
-      (tx.senderAddress ? senderAccountMap[tx.senderAddress] : undefined) ??
-      defaultAccountId;
+  for (let i = 0; i < transactions.length; i++) {
+    const tx = transactions[i];
+    const accountId = transactionAccountMap.get(i);
+
+    if (!accountId) {
+      errors.push(
+        `No account mapped for transaction index ${i} (${tx.counterparty})`
+      );
+      failedCount++;
+      continue;
+    }
 
     // ── ATM Withdrawal: prepare as Transfer (bank → cash) ──
     if (tx.isAtmWithdrawal) {
@@ -280,69 +275,4 @@ export async function batchCreateSmsTransactions(
       : undefined;
 
   return { savedCount, failedCount, skippedAtmCount, atmSkipReason, errors };
-}
-
-// ---------------------------------------------------------------------------
-// Account creation from SMS setup
-// ---------------------------------------------------------------------------
-
-/** Result of creating accounts from the SMS setup wizard. */
-export interface AccountSetupResult {
-  /** Mapping from financial entity name → created/existing account ID */
-  readonly senderAccountMap: SenderAccountMap;
-  /** The default account ID (from the card marked isDefault) */
-  readonly defaultAccountId: string;
-}
-
-/**
- * Create WatermelonDB accounts from SMS setup cards and build the
- * sender→account mapping needed for transaction routing.
- *
- * @param cards - Account cards from the setup wizard
- * @param autoLinkedMapping - Pre-built mapping for existing account matches
- * @returns Sender→account mapping + default account ID
- * @throws Error if user is not authenticated
- */
-export async function createAccountsFromSmsSetup(
-  cards: readonly AccountCardState[],
-  autoLinkedMapping: Readonly<Record<string, string>>
-): Promise<AccountSetupResult> {
-  const userId = await getCurrentUserId();
-  if (!userId) {
-    throw new Error("User not authenticated");
-  }
-
-  const mapping: Record<string, string> = { ...autoLinkedMapping };
-  let defaultAccountId = "";
-
-  for (const card of cards) {
-    const account = await database.write(async () => {
-      return database.get<Account>("accounts").create((acc) => {
-        acc.userId = userId;
-        acc.name = card.name.trim();
-        acc.type = card.accountType;
-        acc.balance = 0;
-        acc.currency = card.currency;
-        acc.deleted = false;
-      });
-    });
-
-    // Map card name → new account ID for transaction routing
-    mapping[card.name.trim()] = account.id;
-
-    if (card.isDefault) {
-      defaultAccountId = account.id;
-    }
-  }
-
-  // Fallback: if no card was marked default, use the first created
-  if (!defaultAccountId && cards.length > 0) {
-    defaultAccountId = mapping[cards[0].name.trim()];
-  }
-
-  if (!defaultAccountId) {
-    throw new Error("No default account could be determined");
-  }
-
-  return { senderAccountMap: mapping, defaultAccountId };
 }
