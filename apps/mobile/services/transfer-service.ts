@@ -135,10 +135,7 @@ export async function createTransfer(data: TransferData): Promise<void> {
       transfer.currency = data.currency;
       transfer.date = data.date || new Date();
       transfer.notes = data.notes;
-
-      if (data.smsBodyHash) {
-        transfer.smsBodyHash = data.smsBodyHash;
-      }
+      transfer.smsBodyHash = data.smsBodyHash;
 
       // Multi-currency fields
       if (data.convertedAmount) {
