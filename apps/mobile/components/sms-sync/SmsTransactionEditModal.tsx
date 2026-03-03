@@ -31,6 +31,7 @@ import {
 import type {
   AccountType,
   Category,
+  CurrencyType,
   MarketRate,
   TransactionType,
 } from "@astik/db";
@@ -86,7 +87,7 @@ interface SmsTransactionEditModalProps {
 interface AccountOption {
   readonly id: string;
   readonly name: string;
-  readonly currency: string;
+  readonly currency: CurrencyType;
   readonly isPending: boolean;
   readonly type?: AccountType;
 }
@@ -94,6 +95,31 @@ interface AccountOption {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+/**
+ * Build the "≈ X.XX EGP at rate Y.YYYY" preview string for cross-currency
+ * transactions. Returns a user-friendly fallback on missing rates or errors.
+ */
+function formatConversionPreview(
+  amount: string,
+  fromCurrency: CurrencyType,
+  toCurrency: CurrencyType,
+  rates: MarketRate | null
+): string {
+  if (!rates) return "Exchange rate unavailable";
+  try {
+    const converted = convertCurrency(
+      parseFloat(amount) || 0,
+      fromCurrency,
+      toCurrency,
+      rates
+    );
+    const rate = rates.getRate(fromCurrency, toCurrency).toFixed(4);
+    return `≈ ${formatCurrency({ amount: converted, currency: toCurrency })} at rate ${rate}`;
+  } catch {
+    return "Conversion unavailable";
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Component
@@ -496,35 +522,12 @@ export function SmsTransactionEditModal({
                     color={palette.blue[500]}
                   />
                   <Text className="text-xs text-blue-400 font-medium ml-2 flex-shrink">
-                    {(() => {
-                      if (!latestRates) return "Exchange rate unavailable";
-                      try {
-                        const converted = convertCurrency(
-                          parseFloat(amount) || 0,
-                          transaction.currency,
-                          selectedAccountCurrency as Parameters<
-                            typeof convertCurrency
-                          >[2],
-                          latestRates
-                        );
-                        const rate = latestRates
-                          .getRate(
-                            transaction.currency,
-                            selectedAccountCurrency as Parameters<
-                              typeof convertCurrency
-                            >[2]
-                          )
-                          .toFixed(4);
-                        return `≈ ${formatCurrency({
-                          amount: converted,
-                          currency: selectedAccountCurrency as Parameters<
-                            typeof formatCurrency
-                          >[0]["currency"],
-                        })} at rate ${rate}`;
-                      } catch {
-                        return "Conversion unavailable";
-                      }
-                    })()}
+                    {formatConversionPreview(
+                      amount,
+                      transaction.currency,
+                      selectedAccountCurrency,
+                      latestRates
+                    )}
                   </Text>
                 </View>
               </View>
