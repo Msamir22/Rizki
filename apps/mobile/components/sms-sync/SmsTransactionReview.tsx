@@ -31,12 +31,13 @@ import type {
   TransactionTypeFilter,
 } from "@/hooks/useTransactionsGrouping";
 import {
-  AccountMatch,
-  AccountWithBankDetails,
+  type AccountMatch,
+  type AccountWithBankDetails,
   fetchAccountsWithDetails,
-  matchAllTransactions,
+  matchTransactionsBatched,
 } from "@/services/sms-account-matcher";
 import { getCurrentUserId } from "@/services/supabase";
+import { useMarketRates } from "@/hooks/useMarketRates";
 import type { ParsedSmsTransaction } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
 import React, {
@@ -58,9 +59,13 @@ import {
 import Animated, { FadeInDown } from "react-native-reanimated";
 import {
   SmsTransactionEditModal,
-  TransactionEdits,
+  type TransactionEdits,
 } from "./SmsTransactionEditModal";
 import { SmsTransactionItem } from "./SmsTransactionItem";
+import {
+  type PendingAccount,
+  persistPendingAccounts,
+} from "@/services/pending-account-service";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -69,8 +74,11 @@ import { SmsTransactionItem } from "./SmsTransactionItem";
 interface SmsTransactionReviewProps {
   /** All parsed transactions from the scan */
   readonly transactions: readonly ParsedSmsTransaction[];
-  /** Called when user saves selected transactions */
-  readonly onSave: (selected: readonly ParsedSmsTransaction[]) => void;
+  /** Called when user saves selected transactions with their account mappings */
+  readonly onSave: (
+    selected: readonly ParsedSmsTransaction[],
+    transactionAccountMap: ReadonlyMap<number, string>
+  ) => Promise<void>;
   /** Called when user discards all */
   readonly onDiscard: () => void;
   /** Whether save is in progress */
@@ -225,6 +233,18 @@ export function SmsTransactionReview({
     readonly AccountWithBankDetails[]
   >([]);
 
+  // ── Pending accounts (in-memory, created via "+ New" in edit modal) ──
+  const [pendingAccounts, setPendingAccounts] = useState<
+    readonly PendingAccount[]
+  >([]);
+
+  const handleCreatePendingAccount = useCallback((account: PendingAccount) => {
+    setPendingAccounts((prev) => [...prev, account]);
+  }, []);
+
+  // ── Market rates for currency conversion ────────────────────────
+  const { latestRates } = useMarketRates();
+
   // ── Inline edit modal state ──────────────────────────────────────
   const [editModalIndex, setEditModalIndex] = useState<number | null>(null);
 
@@ -232,29 +252,41 @@ export function SmsTransactionReview({
   // All categories (including L2) for UUID → systemName resolution
   const { categories: allCategories } = useCategories({ topLevelOnly: false });
 
-  // Run account matching on mount
+  // Run batched account matching on mount (progressive rendering)
   useEffect(() => {
     let cancelled = false;
-    const runMatching = async (): Promise<void> => {
+    const run = async (): Promise<void> => {
       try {
         const userId = await getCurrentUserId();
         if (!userId || cancelled) return;
 
-        // TODO: Replace matchAllTransactions with the resolveAccountForSms
-        const [matches, accounts] = await Promise.all([
-          matchAllTransactions(transactions, userId),
-          fetchAccountsWithDetails(userId),
-        ]);
-
+        // Fetch accounts first (also used for edit modal dropdown)
+        const accounts = await fetchAccountsWithDetails(userId);
         if (!cancelled) {
-          setAccountMatches(matches);
           setUserAccounts(accounts);
         }
+
+        // Progressive batch matching (~20 txns/batch)
+        await matchTransactionsBatched(
+          transactions,
+          userId,
+          20,
+          (batchResults) => {
+            if (cancelled) return;
+            setAccountMatches((prev) => {
+              const next = new Map(prev);
+              for (const [idx, match] of batchResults) {
+                next.set(idx, match);
+              }
+              return next;
+            });
+          }
+        );
       } catch (err) {
         console.error("[SmsTransactionReview] Account matching failed:", err);
       }
     };
-    runMatching().catch(console.error);
+    run().catch(console.error);
     return () => {
       cancelled = true;
     };
@@ -368,12 +400,51 @@ export function SmsTransactionReview({
     [editingIndex, allCategories]
   );
 
-  const handleSave = useCallback(() => {
+  const handleSave = useCallback(async () => {
     const selected = effectiveTransactions.filter((_, i) =>
       selectedIndices.has(i)
     );
-    onSave(selected);
-  }, [effectiveTransactions, selectedIndices, onSave]);
+
+    // Build index → accountId map from resolved matches + user overrides
+    const transactionAccountMap = new Map<number, string>();
+    for (const [i] of selectedIndices.entries()) {
+      const override = transactionOverrides.get(i);
+      const match = accountMatches.get(i);
+      const accountId = override?.accountId ?? match?.accountId;
+      if (accountId) {
+        transactionAccountMap.set(i, accountId);
+      }
+    }
+
+    // Persist only referenced pending accounts, then remap tempId → realId
+    if (pendingAccounts.length > 0) {
+      const referencedTempIds = new Set(transactionAccountMap.values());
+      const referencedPending = pendingAccounts.filter((pa) =>
+        referencedTempIds.has(pa.tempId)
+      );
+
+      if (referencedPending.length > 0) {
+        const persistResult = await persistPendingAccounts(referencedPending);
+
+        // Remap tempId → realId in the transactionAccountMap
+        for (const [idx, tempId] of transactionAccountMap) {
+          const realId = persistResult.tempToRealIdMap.get(tempId);
+          if (realId) {
+            transactionAccountMap.set(idx, realId);
+          }
+        }
+      }
+    }
+
+    await onSave(selected, transactionAccountMap);
+  }, [
+    effectiveTransactions,
+    selectedIndices,
+    accountMatches,
+    transactionOverrides,
+    pendingAccounts,
+    onSave,
+  ]);
 
   const handleTypeToggle = useCallback((type: TransactionTypeFilter) => {
     setSelectedTypes((prev) => {
@@ -408,6 +479,10 @@ export function SmsTransactionReview({
             accountMatches.get(item.originalIndex)?.accountName ??
             ""
           }
+          matchReason={
+            accountMatches.get(item.originalIndex)?.matchReason ?? "none"
+          }
+          senderDisplayName={tx.senderDisplayName}
           onToggleSelect={handleToggleItem}
           onPress={handleOpenEditModal}
         />
@@ -584,7 +659,9 @@ export function SmsTransactionReview({
       >
         {/* Save Selected */}
         <TouchableOpacity
-          onPress={handleSave}
+          onPress={() => {
+            handleSave().catch(console.error);
+          }}
           disabled={selectedCount === 0 || isSaving}
           activeOpacity={0.85}
           className={`w-full py-4 rounded-2xl items-center mb-3 ${
@@ -658,7 +735,10 @@ export function SmsTransactionReview({
             ""
           }
           accounts={userAccounts}
+          pendingAccounts={pendingAccounts}
+          latestRates={latestRates}
           onSave={handleEditModalSave}
+          onCreatePendingAccount={handleCreatePendingAccount}
           onClose={() => setEditModalIndex(null)}
           onEditCategory={() => {
             handleEditCategory(editModalIndex);

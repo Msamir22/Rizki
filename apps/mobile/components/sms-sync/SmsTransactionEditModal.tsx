@@ -6,31 +6,42 @@
  * date, and transaction type — without navigating away.
  *
  * Architecture & Design Rationale:
- * - Pattern: Controlled Modal (parent owns state; modal reports changes via callback)
- * - Why: Keeps the review page as the single source of truth for overrides.
- *   The modal only emits deltas, not full state.
- * - SOLID: SRP — only handles editing display + user input, delegates persistence
- *   to the parent via onSave callback.
+ * - Pattern: Controlled Form (local state mirrors props, diverges on user edits)
+ * - Why: Bottom-sheet stays mounted so we manage form state locally
+ *   and only emit a diff (TransactionEdits) on save. The parent
+ *   (SmsTransactionReview) merges diffs into a Map<index, edits>.
+ * - SOLID: SRP — only renders the edit UI and emits TransactionEdits.
+ *   The parent handles persistence and state management.
+ *
+ * Account modes:
+ * 1. Dropdown (default) — when bank accounts exist, shows tappable list
+ * 2. Text input — when no accounts exist OR user taps "+ New"
+ * 3. "+ New" toggle — creates a PendingAccount on save
  *
  * @module SmsTransactionEditModal
  */
 
-import React, { useCallback, useEffect, useState } from "react";
+import { palette } from "@/constants/colors";
+import type { AccountWithBankDetails } from "@/services/sms-account-matcher";
+import type { PendingAccount } from "@/services/pending-account-service";
 import {
+  convertCurrency,
+  formatCurrency,
+  type ParsedSmsTransaction,
+} from "@astik/logic";
+import type { TransactionType, MarketRate } from "@astik/db";
+import { Ionicons } from "@expo/vector-icons";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  KeyboardAvoidingView,
   Modal,
+  Platform,
+  ScrollView,
   Text,
   TextInput,
   TouchableOpacity,
   View,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { palette } from "@/constants/colors";
-import type { ParsedSmsTransaction } from "@astik/logic";
-import type { TransactionType } from "@astik/db";
-import type { AccountWithBankDetails } from "@/services/sms-account-matcher";
 import { validateTransactionForm } from "@/validation/transaction-validation";
 
 // ---------------------------------------------------------------------------
@@ -45,6 +56,8 @@ interface TransactionEdits {
   readonly type?: TransactionType;
   readonly accountId?: string;
   readonly accountName?: string;
+  readonly toAccountId?: string;
+  readonly toAccountName?: string;
 }
 
 interface SmsTransactionEditModalProps {
@@ -56,14 +69,28 @@ interface SmsTransactionEditModalProps {
   readonly currentAccountName: string;
   /** Currently assigned account ID */
   readonly currentAccountId: string;
-  /** Available accounts for the account picker */
+  /** Available bank accounts for the account picker */
   readonly accounts: readonly AccountWithBankDetails[];
+  /** In-memory pending accounts created this session */
+  readonly pendingAccounts: readonly PendingAccount[];
+  /** Market rates for currency conversion (optional, from useMarketRates) */
+  readonly latestRates: MarketRate | null;
   /** Called with the edits when user saves */
   readonly onSave: (edits: TransactionEdits) => void;
+  /** Called when a new PendingAccount is created via "+ New" */
+  readonly onCreatePendingAccount: (account: PendingAccount) => void;
   /** Called when modal is dismissed without saving */
   readonly onClose: () => void;
   /** Called when user wants to change the category (opens the category picker) */
   readonly onEditCategory: () => void;
+}
+
+/** Account display item — either a real account or a pending one */
+interface AccountOption {
+  readonly id: string;
+  readonly name: string;
+  readonly currency: string;
+  readonly isPending: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -88,6 +115,23 @@ function formatDate(date: Date): string {
   });
 }
 
+/** Check if a name already exists in accounts or pending accounts (case-insensitive) */
+function isDuplicateName(
+  name: string,
+  accounts: readonly AccountWithBankDetails[],
+  pendingAccounts: readonly PendingAccount[]
+): boolean {
+  const normalized = name.trim().toLowerCase();
+  if (!normalized) return false;
+  const existsInAccounts = accounts.some(
+    (acc) => acc.name.toLowerCase() === normalized
+  );
+  const existsInPending = pendingAccounts.some(
+    (pa) => pa.name.toLowerCase() === normalized
+  );
+  return existsInAccounts || existsInPending;
+}
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -98,7 +142,10 @@ export function SmsTransactionEditModal({
   currentAccountName,
   currentAccountId,
   accounts,
+  pendingAccounts,
+  latestRates,
   onSave,
+  onCreatePendingAccount,
   onClose,
   onEditCategory,
 }: SmsTransactionEditModalProps): React.JSX.Element {
@@ -114,6 +161,47 @@ export function SmsTransactionEditModal({
   const [isAccountPickerOpen, setIsAccountPickerOpen] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
 
+  // "+ New" account creation state
+  const [isCreatingNew, setIsCreatingNew] = useState(false);
+  const [newAccountName, setNewAccountName] = useState(
+    transaction.senderDisplayName
+  );
+  const [newAccountError, setNewAccountError] = useState<string | null>(null);
+
+  // Determine if we should show text input (no accounts exist)
+  const hasAccounts = accounts.length > 0 || pendingAccounts.length > 0;
+
+  // Merge real accounts + pending accounts for the dropdown
+  const accountOptions = useMemo<readonly AccountOption[]>(() => {
+    const real: AccountOption[] = accounts.map((acc) => ({
+      id: acc.id,
+      name: acc.name,
+      currency: acc.currency,
+      isPending: false,
+    }));
+    const pending: AccountOption[] = pendingAccounts.map((pa) => ({
+      id: pa.tempId,
+      name: pa.name,
+      currency: pa.currency,
+      isPending: true,
+    }));
+    return [...real, ...pending];
+  }, [accounts, pendingAccounts]);
+
+  // Determine selected account's currency for conversion notice
+  const selectedAccountCurrency = useMemo(() => {
+    const found = accountOptions.find((opt) => opt.id === selectedAccountId);
+    return found?.currency ?? "";
+  }, [accountOptions, selectedAccountId]);
+
+  // Check if currencies differ (for conversion notice)
+  const hasCurrencyMismatch =
+    selectedAccountCurrency !== "" &&
+    selectedAccountCurrency !== transaction.currency;
+
+  // Cash withdrawal mode
+  const isAtmWithdrawal = transaction.isAtmWithdrawal === true;
+
   // Reset local state when transaction changes
   useEffect(() => {
     setAmount(transaction.amount.toString());
@@ -122,12 +210,80 @@ export function SmsTransactionEditModal({
     setSelectedAccountId(currentAccountId);
     setSelectedAccountName(currentAccountName);
     setIsAccountPickerOpen(false);
+    setIsCreatingNew(false);
+    setNewAccountName(transaction.senderDisplayName);
+    setNewAccountError(null);
+    setValidationError(null);
   }, [transaction, currentAccountId, currentAccountName]);
+
+  // ── "+ New" handlers ──────────────────────────────────────────────
+
+  const handleStartNew = useCallback(() => {
+    setIsCreatingNew(true);
+    setIsAccountPickerOpen(false);
+    setNewAccountName(transaction.senderDisplayName);
+    setNewAccountError(null);
+  }, [transaction.senderDisplayName]);
+
+  const handleCancelNew = useCallback(() => {
+    setIsCreatingNew(false);
+    setNewAccountError(null);
+  }, []);
+
+  // ── Save ──────────────────────────────────────────────────────────
 
   const handleSave = useCallback(() => {
     const parsedAmount = parseFloat(amount);
 
-    // Validate using shared validation
+    // If creating a new account or no accounts, handle pending account first
+    if (isCreatingNew || !hasAccounts) {
+      const trimmedName = (
+        isCreatingNew ? newAccountName : newAccountName
+      ).trim();
+
+      if (!trimmedName) {
+        setNewAccountError("Account name is required");
+        return;
+      }
+
+      if (isDuplicateName(trimmedName, accounts, pendingAccounts)) {
+        setNewAccountError("An account with this name already exists");
+        return;
+      }
+
+      // Create pending account
+      const tempId = `pending-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+      const pending: PendingAccount = {
+        tempId,
+        name: trimmedName,
+        currency: transaction.currency,
+        type: "BANK",
+        senderAddress: transaction.senderAddress,
+        cardLast4: undefined,
+      };
+      onCreatePendingAccount(pending);
+
+      // Use the pending account's tempId + name for the edits
+      const edits: Record<string, unknown> = {
+        accountId: tempId,
+        accountName: `${trimmedName} (${transaction.currency})`,
+      };
+
+      if (parsedAmount !== transaction.amount) {
+        edits.amount = parsedAmount;
+      }
+      if (counterparty !== (transaction.counterparty || "")) {
+        edits.counterparty = counterparty;
+      }
+      if (txType !== transaction.type) {
+        edits.type = txType;
+      }
+
+      onSave(edits as TransactionEdits);
+      return;
+    }
+
+    // Standard validation for dropdown mode
     const { isValid, errors } = validateTransactionForm(txType, {
       amount,
       accountId: selectedAccountId,
@@ -135,7 +291,6 @@ export function SmsTransactionEditModal({
     });
 
     if (!isValid) {
-      // Show the first validation error
       const firstError = Object.values(errors).find(Boolean);
       setValidationError(firstError ?? "Please fix the form errors.");
       return;
@@ -168,14 +323,22 @@ export function SmsTransactionEditModal({
     selectedAccountName,
     transaction,
     currentAccountId,
+    isCreatingNew,
+    hasAccounts,
+    newAccountName,
+    accounts,
+    pendingAccounts,
     onSave,
+    onCreatePendingAccount,
   ]);
 
-  const handleSelectAccount = useCallback((acc: AccountWithBankDetails) => {
-    setSelectedAccountId(acc.id);
-    setSelectedAccountName(`${acc.name} (${acc.currency})`);
+  const handleSelectAccount = useCallback((opt: AccountOption) => {
+    setSelectedAccountId(opt.id);
+    setSelectedAccountName(`${opt.name} (${opt.currency})`);
     setIsAccountPickerOpen(false);
   }, []);
+
+  // ── Render ────────────────────────────────────────────────────────
 
   return (
     <Modal
@@ -250,40 +413,58 @@ export function SmsTransactionEditModal({
               </Text>
             </View>
 
-            {/* Type toggle */}
-            <View className="mb-4">
-              <Text className="text-xs text-slate-500 mb-2 font-medium uppercase tracking-wider">
-                Type
-              </Text>
-              <View className="flex-row gap-2">
-                {(["EXPENSE", "INCOME"] as const).map((type) => (
-                  <TouchableOpacity
-                    key={type}
-                    onPress={() => setTxType(type)}
-                    activeOpacity={0.7}
-                    className={`flex-1 py-2.5 rounded-xl items-center border ${
-                      txType === type
-                        ? type === "EXPENSE"
-                          ? "bg-red-500/20 border-red-500/40"
-                          : "bg-emerald-500/20 border-emerald-500/40"
-                        : "bg-slate-800/60 border-slate-700/50"
-                    }`}
-                  >
-                    <Text
-                      className={`text-sm font-bold ${
+            {/* Type toggle — hidden for cash withdrawals (always Transfer) */}
+            {!isAtmWithdrawal && (
+              <View className="mb-4">
+                <Text className="text-xs text-slate-500 mb-2 font-medium uppercase tracking-wider">
+                  Type
+                </Text>
+                <View className="flex-row gap-2">
+                  {(["EXPENSE", "INCOME"] as const).map((type) => (
+                    <TouchableOpacity
+                      key={type}
+                      onPress={() => setTxType(type)}
+                      activeOpacity={0.7}
+                      className={`flex-1 py-2.5 rounded-xl items-center border ${
                         txType === type
                           ? type === "EXPENSE"
-                            ? "text-red-400"
-                            : "text-emerald-400"
-                          : "text-slate-500"
+                            ? "bg-red-500/20 border-red-500/40"
+                            : "bg-emerald-500/20 border-emerald-500/40"
+                          : "bg-slate-800/60 border-slate-700/50"
                       }`}
                     >
-                      {type === "EXPENSE" ? "Expense" : "Income"}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                      <Text
+                        className={`text-sm font-bold ${
+                          txType === type
+                            ? type === "EXPENSE"
+                              ? "text-red-400"
+                              : "text-emerald-400"
+                            : "text-slate-500"
+                        }`}
+                      >
+                        {type === "EXPENSE" ? "Expense" : "Income"}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
               </View>
-            </View>
+            )}
+
+            {/* Cash Withdrawal badge (read-only) */}
+            {isAtmWithdrawal && (
+              <View className="mb-4 bg-amber-500/15 rounded-xl p-3 border border-amber-500/30">
+                <View className="flex-row items-center">
+                  <Ionicons
+                    name="cash-outline"
+                    size={18}
+                    color={palette.gold[500]}
+                  />
+                  <Text className="text-sm font-bold text-amber-400 ml-2">
+                    Cash Withdrawal (Transfer)
+                  </Text>
+                </View>
+              </View>
+            )}
 
             {/* Amount */}
             <View className="mb-4">
@@ -302,6 +483,36 @@ export function SmsTransactionEditModal({
                 placeholder="0.00"
               />
             </View>
+
+            {/* Currency conversion notice (T034-T036) */}
+            {hasCurrencyMismatch && (
+              <View className="mb-4 bg-blue-500/10 rounded-xl p-3 border border-blue-500/25">
+                <View className="flex-row items-center">
+                  <Ionicons
+                    name="swap-horizontal"
+                    size={16}
+                    color={palette.blue[500]}
+                  />
+                  <Text className="text-xs text-blue-400 font-medium ml-2 flex-shrink">
+                    {latestRates
+                      ? `≈ ${formatCurrency({
+                          amount: convertCurrency(
+                            parseFloat(amount) || 0,
+                            transaction.currency,
+                            selectedAccountCurrency as Parameters<
+                              typeof convertCurrency
+                            >[2],
+                            latestRates
+                          ),
+                          currency: selectedAccountCurrency as Parameters<
+                            typeof formatCurrency
+                          >[0]["currency"],
+                        })} at current rate`
+                      : "Exchange rate unavailable"}
+                  </Text>
+                </View>
+              </View>
+            )}
 
             {/* Counterparty */}
             <View className="mb-4">
@@ -338,56 +549,133 @@ export function SmsTransactionEditModal({
               </TouchableOpacity>
             </View>
 
-            {/* Account */}
+            {/* ── Account Section ──────────────────────────────────── */}
             <View className="mb-6">
-              <Text className="text-xs text-slate-500 mb-2 font-medium uppercase tracking-wider">
-                Account
-              </Text>
-              <TouchableOpacity
-                onPress={() => setIsAccountPickerOpen(!isAccountPickerOpen)}
-                activeOpacity={0.7}
-                className="bg-slate-800/60 rounded-xl px-4 py-3 flex-row items-center justify-between border border-slate-700/50"
-              >
-                <Text className="text-base text-white font-semibold">
-                  {selectedAccountName || "No account matched"}
+              {/* Account label + "+ New" / "✕ Cancel" pill */}
+              <View className="flex-row items-center justify-between mb-2">
+                <Text className="text-xs text-slate-500 font-medium uppercase tracking-wider">
+                  Account
                 </Text>
-                <Ionicons
-                  name={isAccountPickerOpen ? "chevron-up" : "chevron-down"}
-                  size={18}
-                  color={palette.slate[500]}
-                />
-              </TouchableOpacity>
+                {hasAccounts && !isCreatingNew && (
+                  <TouchableOpacity
+                    onPress={handleStartNew}
+                    activeOpacity={0.7}
+                    className="flex-row items-center bg-emerald-500/15 px-2.5 py-1 rounded-full"
+                  >
+                    <Ionicons
+                      name="add"
+                      size={14}
+                      color={palette.nileGreen[400]}
+                    />
+                    <Text className="text-xs text-emerald-400 font-semibold ml-0.5">
+                      New
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                {isCreatingNew && (
+                  <TouchableOpacity
+                    onPress={handleCancelNew}
+                    activeOpacity={0.7}
+                    className="flex-row items-center bg-red-500/15 px-2.5 py-1 rounded-full"
+                  >
+                    <Ionicons name="close" size={14} color={palette.red[400]} />
+                    <Text className="text-xs text-red-400 font-semibold ml-0.5">
+                      Cancel
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
 
-              {/* Inline account picker */}
-              {isAccountPickerOpen && (
-                <View className="mt-2 bg-slate-800/80 rounded-xl overflow-hidden border border-slate-700/40">
-                  {accounts.map((acc) => (
-                    <TouchableOpacity
-                      key={acc.id}
-                      onPress={() => handleSelectAccount(acc)}
-                      activeOpacity={0.7}
-                      className={`px-4 py-3 flex-row items-center justify-between border-b border-slate-700/30 ${
-                        acc.id === selectedAccountId ? "bg-emerald-500/10" : ""
-                      }`}
-                    >
-                      <Text
-                        className={`text-sm font-semibold ${
-                          acc.id === selectedAccountId
-                            ? "text-emerald-400"
-                            : "text-slate-300"
-                        }`}
-                      >
-                        {acc.name} ({acc.currency})
-                      </Text>
-                      {acc.id === selectedAccountId && (
-                        <Ionicons
-                          name="checkmark"
-                          size={18}
-                          color={palette.nileGreen[400]}
-                        />
-                      )}
-                    </TouchableOpacity>
-                  ))}
+              {/* Mode: Text input (no accounts OR creating new) */}
+              {!hasAccounts || isCreatingNew ? (
+                <View>
+                  <TextInput
+                    value={newAccountName}
+                    onChangeText={(text) => {
+                      setNewAccountName(text);
+                      setNewAccountError(null);
+                    }}
+                    className={`bg-slate-800/60 rounded-xl px-4 py-3 text-white text-base font-semibold border ${
+                      isCreatingNew
+                        ? "border-emerald-500/60"
+                        : "border-slate-700/50"
+                    }`}
+                    placeholderTextColor={palette.slate[600]}
+                    placeholder="Account name"
+                    autoFocus={isCreatingNew}
+                  />
+                  {newAccountError && (
+                    <Text className="text-xs text-red-400 mt-1.5 ml-1">
+                      {newAccountError}
+                    </Text>
+                  )}
+                  <Text className="text-xs text-slate-500 mt-2 ml-1">
+                    {isCreatingNew
+                      ? "A new bank account will be created when you save all transactions."
+                      : "No bank accounts found. Enter a name and we'll create one for you."}
+                  </Text>
+                </View>
+              ) : (
+                /* Mode: Dropdown (accounts exist, not creating) */
+                <View>
+                  <TouchableOpacity
+                    onPress={() => setIsAccountPickerOpen(!isAccountPickerOpen)}
+                    activeOpacity={0.7}
+                    className="bg-slate-800/60 rounded-xl px-4 py-3 flex-row items-center justify-between border border-slate-700/50"
+                  >
+                    <Text className="text-base text-white font-semibold">
+                      {selectedAccountName || "No account matched"}
+                    </Text>
+                    <Ionicons
+                      name={isAccountPickerOpen ? "chevron-up" : "chevron-down"}
+                      size={18}
+                      color={palette.slate[500]}
+                    />
+                  </TouchableOpacity>
+
+                  {/* Inline account picker */}
+                  {isAccountPickerOpen && (
+                    <View className="mt-2 bg-slate-800/80 rounded-xl overflow-hidden border border-slate-700/40">
+                      {accountOptions.map((opt) => (
+                        <TouchableOpacity
+                          key={opt.id}
+                          onPress={() => handleSelectAccount(opt)}
+                          activeOpacity={0.7}
+                          className={`px-4 py-3 flex-row items-center justify-between border-b border-slate-700/30 ${
+                            opt.id === selectedAccountId
+                              ? "bg-emerald-500/10"
+                              : ""
+                          }`}
+                        >
+                          <View className="flex-row items-center">
+                            <Text
+                              className={`text-sm font-semibold ${
+                                opt.id === selectedAccountId
+                                  ? "text-emerald-400"
+                                  : "text-slate-300"
+                              }`}
+                            >
+                              {opt.name} ({opt.currency})
+                            </Text>
+                            {opt.isPending && (
+                              <View className="bg-amber-500/20 px-1.5 py-0.5 rounded ml-2">
+                                <Text className="text-[10px] font-bold text-amber-400">
+                                  NEW
+                                </Text>
+                              </View>
+                            )}
+                          </View>
+                          {opt.id === selectedAccountId && (
+                            <Ionicons
+                              name="checkmark"
+                              size={18}
+                              color={palette.nileGreen[400]}
+                            />
+                          )}
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
                 </View>
               )}
             </View>

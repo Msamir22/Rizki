@@ -24,7 +24,8 @@
  */
 
 import { palette } from "@/constants/colors";
-import { formatCurrency, ParsedSmsTransaction } from "@astik/logic";
+import type { MatchReason } from "@/services/sms-account-matcher";
+import { formatCurrency, type ParsedSmsTransaction } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
 import React, { memo, useCallback, useState } from "react";
 import { Text, TouchableOpacity, View } from "react-native";
@@ -43,6 +44,10 @@ interface SmsTransactionItemProps {
   readonly isSelected: boolean;
   /** Matched account name (or empty if unmatched) */
   readonly accountName: string;
+  /** How the match was determined (used for fallback display) */
+  readonly matchReason: MatchReason;
+  /** SMS sender display name (fallback when no account match) */
+  readonly senderDisplayName: string;
   /** Toggle selection — receives index so parent can use a stable ref */
   readonly onToggleSelect: (index: number) => void;
   /** Called when user taps the item to edit — receives index */
@@ -81,6 +86,8 @@ function SmsTransactionItemInner({
   index,
   isSelected,
   accountName,
+  matchReason,
+  senderDisplayName,
   onToggleSelect,
   onPress,
 }: SmsTransactionItemProps): React.JSX.Element {
@@ -189,6 +196,12 @@ function SmsTransactionItemInner({
             {accountName ? (
               <View className="bg-blue-900/40 px-2.5 py-1 rounded-lg">
                 <Text className="text-xs text-blue-300">{accountName}</Text>
+              </View>
+            ) : matchReason === "none" && senderDisplayName ? (
+              <View className="bg-slate-700/40 px-2.5 py-1 rounded-lg">
+                <Text className="text-xs text-slate-400 italic">
+                  {senderDisplayName}
+                </Text>
               </View>
             ) : null}
             <TouchableOpacity
