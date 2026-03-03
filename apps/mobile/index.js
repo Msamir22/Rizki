@@ -1,3 +1,4 @@
+import "react-native-url-polyfill/auto";
 import { registerSmsHeadlessTask } from "./services/sms-headless-task";
 import "expo-router/entry";
 
