@@ -24,8 +24,16 @@
 import { palette } from "@/constants/colors";
 import type { PendingAccount } from "@/services/pending-account-service";
 import type { AccountWithBankDetails } from "@/services/sms-account-matcher";
-import { validateTransactionForm } from "@/validation/transaction-validation";
-import type { AccountType, MarketRate, TransactionType } from "@astik/db";
+import {
+  TransactionValidationErrors,
+  validateTransactionForm,
+} from "@/validation/transaction-validation";
+import type {
+  AccountType,
+  Category,
+  MarketRate,
+  TransactionType,
+} from "@astik/db";
 import {
   convertCurrency,
   formatCurrency,
@@ -43,6 +51,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { CategorySelectorModal } from "../modals/CategorySelectorModal";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -50,10 +59,10 @@ import {
 
 /** Fields that can be overridden in the edit modal */
 interface TransactionEdits {
-  readonly amount?: number;
-  readonly counterparty?: string;
-  readonly categorySystemName?: string;
-  readonly type?: TransactionType;
+  readonly amount: number;
+  readonly counterparty: string;
+  readonly categoryId: string;
+  readonly type: TransactionType;
   readonly accountId?: string;
   readonly accountName?: string;
 }
@@ -73,14 +82,14 @@ interface SmsTransactionEditModalProps {
   readonly pendingAccounts: readonly PendingAccount[];
   /** Market rates for currency conversion (optional, from useMarketRates) */
   readonly latestRates: MarketRate | null;
+  /** Root categories for the category picker */
+  readonly rootCategories: readonly Category[];
   /** Called with the edits when user saves */
   readonly onSave: (edits: TransactionEdits) => void;
   /** Called when a new PendingAccount is created via "+ New" */
   readonly onCreatePendingAccount: (account: PendingAccount) => void;
   /** Called when modal is dismissed without saving */
   readonly onClose: () => void;
-  /** Called when user wants to change the category (opens the category picker) */
-  readonly onEditCategory: () => void;
 }
 
 /** Account display item — either a real account or a pending one */
@@ -95,14 +104,6 @@ interface AccountOption {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-/** Clean category system name for display */
-function formatCategoryName(systemName: string): string {
-  return systemName
-    .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
-}
 
 /** Format a Date as a readable string */
 function formatDate(date: Date): string {
@@ -144,28 +145,33 @@ export function SmsTransactionEditModal({
   accounts,
   pendingAccounts,
   latestRates,
+  rootCategories,
   onSave,
   onCreatePendingAccount,
   onClose,
-  onEditCategory,
 }: SmsTransactionEditModalProps): React.JSX.Element {
   // Local editable state
   const [amount, setAmount] = useState(transaction.amount.toString());
-  const [counterparty, setCounterparty] = useState(
-    transaction.counterparty || ""
-  );
+  const [counterparty, setCounterparty] = useState(transaction.counterparty);
   const [txType, setTxType] = useState<TransactionType>(transaction.type);
   const [selectedAccountId, setSelectedAccountId] = useState(currentAccountId);
   const [selectedAccountName, setSelectedAccountName] =
     useState(currentAccountName);
   const [isAccountPickerOpen, setIsAccountPickerOpen] = useState(false);
-  const [validationError, setValidationError] = useState<string | null>(null);
+  const [formErrors, setFormErrors] = useState<TransactionValidationErrors>({});
 
   // "+ New" account creation state
   const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [newAccountName, setNewAccountName] = useState(
     transaction.senderDisplayName
   );
+
+  const [isCategoryPickerOpen, setIsCategoryPickerOpen] = useState(false);
+
+  const [selectedCategoryId, setSelectedCategoryId] = useState(
+    transaction.categoryId
+  );
+
   const [newAccountError, setNewAccountError] = useState<string | null>(null);
 
   // Merge real accounts + pending accounts for the dropdown
@@ -242,7 +248,7 @@ export function SmsTransactionEditModal({
     setIsCreatingNew(false);
     setNewAccountName(transaction.senderDisplayName);
     setNewAccountError(null);
-    setValidationError(null);
+    setFormErrors({});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [transaction, currentAccountId, currentAccountName]);
 
@@ -263,19 +269,23 @@ export function SmsTransactionEditModal({
   // ── Save ──────────────────────────────────────────────────────────
 
   const handleSave = useCallback(() => {
-    const parsedAmount = parseFloat(amount);
+    let tempId: string | null = null;
 
+    const isCreatingNewAccount = isCreatingNew || !hasBankAccounts;
     // If creating a new account or no accounts, handle pending account first
-    if (isCreatingNew || !hasBankAccounts) {
-      // Validate amount early — this path skips validateTransactionForm
-      if (isNaN(parsedAmount) || !isFinite(parsedAmount) || parsedAmount <= 0) {
-        setValidationError("Please enter a valid amount.");
-        return;
-      }
+    if (isCreatingNewAccount) {
+      const trimmedName = newAccountName.trim();
 
-      const trimmedName = (
-        isCreatingNew ? newAccountName : newAccountName
-      ).trim();
+      // Create pending account
+      tempId = `pending-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+      const pending: PendingAccount = {
+        tempId,
+        name: trimmedName,
+        currency: transaction.currency,
+        type: "BANK",
+        senderDisplayName: transaction.senderDisplayName,
+        cardLast4: transaction.cardLast4 ?? undefined,
+      };
 
       if (!trimmedName) {
         setNewAccountError("Account name is required");
@@ -296,70 +306,38 @@ export function SmsTransactionEditModal({
         return;
       }
 
-      // Create pending account
-      const tempId = `pending-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-      const pending: PendingAccount = {
-        tempId,
-        name: trimmedName,
-        currency: transaction.currency,
-        type: "BANK",
-        senderAddress: transaction.senderAddress,
-        cardLast4: transaction.cardLast4 ?? undefined,
-      };
       onCreatePendingAccount(pending);
-
-      // Use the pending account's tempId + name for the edits
-      const edits: Record<string, unknown> = {
-        accountId: tempId,
-        accountName: trimmedName,
-      };
-
-      if (parsedAmount !== transaction.amount) {
-        edits.amount = parsedAmount;
-      }
-      if (counterparty !== (transaction.counterparty || "")) {
-        edits.counterparty = counterparty;
-      }
-      if (txType !== transaction.type) {
-        edits.type = txType;
-      }
-
-      onSave(edits as TransactionEdits);
-      return;
     }
+
+    // It's safe to use the non-null assertion here because we've already
+    // assigned a value to tempId in if the isCreatingNew condition is met
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const accountId = isCreatingNew ? tempId! : selectedAccountId;
 
     // Standard validation for dropdown mode
     const { isValid, errors } = validateTransactionForm(txType, {
       amount,
-      accountId: selectedAccountId,
-      categoryId: transaction.categorySystemName,
+      accountId,
+      categoryId: selectedCategoryId,
     });
 
     if (!isValid) {
-      const firstError = Object.values(errors).find(Boolean);
-      setValidationError(firstError ?? "Please fix the form errors.");
+      setFormErrors(errors);
       return;
     }
 
-    setValidationError(null);
+    setFormErrors({});
 
-    const edits: Record<string, unknown> = {};
+    const edits: TransactionEdits = {
+      accountId,
+      accountName: selectedAccountName,
+      counterparty,
+      type: txType,
+      categoryId: selectedCategoryId,
+      amount: parseFloat(amount),
+    };
 
-    if (parsedAmount !== transaction.amount) {
-      edits.amount = parsedAmount;
-    }
-    if (counterparty !== (transaction.counterparty || "")) {
-      edits.counterparty = counterparty;
-    }
-    if (txType !== transaction.type) {
-      edits.type = txType;
-    }
-    if (selectedAccountId !== currentAccountId) {
-      edits.accountId = selectedAccountId;
-      edits.accountName = selectedAccountName;
-    }
-
-    onSave(edits as TransactionEdits);
+    onSave(edits);
   }, [
     amount,
     counterparty,
@@ -367,21 +345,25 @@ export function SmsTransactionEditModal({
     selectedAccountId,
     selectedAccountName,
     transaction,
-    currentAccountId,
     isCreatingNew,
     hasBankAccounts,
     newAccountName,
     accounts,
     pendingAccounts,
+    selectedCategoryId,
     onSave,
     onCreatePendingAccount,
   ]);
+
+  const onEditCategory = useCallback(() => {
+    setIsCategoryPickerOpen(true);
+  }, []);
 
   const handleSelectAccount = useCallback((opt: AccountOption) => {
     setSelectedAccountId(opt.id);
     setSelectedAccountName(opt.name);
     setIsAccountPickerOpen(false);
-    setValidationError(null);
+    setFormErrors({});
   }, []);
 
   // ── Render ────────────────────────────────────────────────────────
@@ -431,15 +413,6 @@ export function SmsTransactionEditModal({
               </TouchableOpacity>
             </View>
           </View>
-
-          {/* Validation error */}
-          {validationError && (
-            <View className="mx-5 mb-3 p-3 bg-red-500/15 rounded-xl border border-red-500/30">
-              <Text className="text-xs text-red-400 font-medium">
-                {validationError}
-              </Text>
-            </View>
-          )}
 
           <ScrollView
             className="px-5 pb-8"
@@ -534,12 +507,20 @@ export function SmsTransactionEditModal({
                 onChangeText={(text) => {
                   const cleaned = text.replace(/[^0-9.]/g, "");
                   setAmount(cleaned);
+                  if (formErrors.amount) {
+                    setFormErrors((prev) => ({ ...prev, amount: undefined }));
+                  }
                 }}
                 keyboardType="numeric"
-                className="bg-slate-800/60 rounded-xl px-4 py-3 text-white text-base font-semibold border border-slate-700/50"
+                className={`bg-slate-800/60 rounded-xl px-4 py-3 text-white text-base font-semibold border ${formErrors.amount ? "border-red-500/60" : "border-slate-700/50"}`}
                 placeholderTextColor={palette.slate[600]}
                 placeholder="0.00"
               />
+              {formErrors.amount && (
+                <Text className="text-xs text-red-400 mt-1.5 ml-1">
+                  {formErrors.amount}
+                </Text>
+              )}
             </View>
 
             {/* Currency conversion notice (T034-T036) */}
@@ -599,12 +580,20 @@ export function SmsTransactionEditModal({
                 Category
               </Text>
               <TouchableOpacity
-                onPress={onEditCategory}
+                onPress={() => {
+                  if (formErrors.categoryId) {
+                    setFormErrors((prev) => ({
+                      ...prev,
+                      categoryId: undefined,
+                    }));
+                  }
+                  onEditCategory();
+                }}
                 activeOpacity={0.7}
-                className="bg-slate-800/60 rounded-xl px-4 py-3 flex-row items-center justify-between border border-slate-700/50"
+                className={`bg-slate-800/60 rounded-xl px-4 py-3 flex-row items-center justify-between border ${formErrors.categoryId ? "border-red-500/60" : "border-slate-700/50"}`}
               >
                 <Text className="text-base text-white font-semibold">
-                  {formatCategoryName(transaction.categorySystemName)}
+                  {transaction.categoryDisplayName}
                 </Text>
                 <Ionicons
                   name="chevron-forward"
@@ -612,6 +601,11 @@ export function SmsTransactionEditModal({
                   color={palette.slate[500]}
                 />
               </TouchableOpacity>
+              {formErrors.categoryId && (
+                <Text className="text-xs text-red-400 mt-1.5 ml-1">
+                  {formErrors.categoryId}
+                </Text>
+              )}
             </View>
 
             {/* ── Account Section ──────────────────────────────────── */}
@@ -691,9 +685,17 @@ export function SmsTransactionEditModal({
                 /* Mode: Dropdown (accounts exist, not creating) */
                 <View>
                   <TouchableOpacity
-                    onPress={() => setIsAccountPickerOpen(!isAccountPickerOpen)}
+                    onPress={() => {
+                      if (formErrors.accountId) {
+                        setFormErrors((prev) => ({
+                          ...prev,
+                          accountId: undefined,
+                        }));
+                      }
+                      setIsAccountPickerOpen(!isAccountPickerOpen);
+                    }}
                     activeOpacity={0.7}
-                    className="bg-slate-800/60 rounded-xl px-4 py-3 flex-row items-center justify-between border border-slate-700/50"
+                    className={`bg-slate-800/60 rounded-xl px-4 py-3 flex-row items-center justify-between border ${formErrors.accountId ? "border-red-500/60" : "border-slate-700/50"}`}
                   >
                     <Text
                       className="text-base text-white font-semibold flex-1"
@@ -710,6 +712,11 @@ export function SmsTransactionEditModal({
                       color={palette.slate[500]}
                     />
                   </TouchableOpacity>
+                  {formErrors.accountId && (
+                    <Text className="text-xs text-red-400 mt-1.5 ml-1">
+                      {formErrors.accountId}
+                    </Text>
+                  )}
 
                   {/* Inline account picker */}
                   {isAccountPickerOpen && (
@@ -813,6 +820,16 @@ export function SmsTransactionEditModal({
             <View className="h-8" />
           </ScrollView>
         </View>
+
+        {/* ── Category selector modal ─────────────────────────────── */}
+        <CategorySelectorModal
+          visible={isCategoryPickerOpen}
+          rootCategories={rootCategories}
+          selectedId={selectedCategoryId}
+          type={txType}
+          onSelect={(id) => setSelectedCategoryId(id)}
+          onClose={() => setIsCategoryPickerOpen(false)}
+        />
       </KeyboardAvoidingView>
     </Modal>
   );
