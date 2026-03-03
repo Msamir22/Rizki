@@ -22,14 +22,15 @@
  */
 
 import { palette } from "@/constants/colors";
-import type { AccountWithBankDetails } from "@/services/sms-account-matcher";
 import type { PendingAccount } from "@/services/pending-account-service";
+import type { AccountWithBankDetails } from "@/services/sms-account-matcher";
+import { validateTransactionForm } from "@/validation/transaction-validation";
+import type { AccountType, MarketRate, TransactionType } from "@astik/db";
 import {
   convertCurrency,
   formatCurrency,
   type ParsedSmsTransaction,
 } from "@astik/logic";
-import type { TransactionType, MarketRate } from "@astik/db";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -42,7 +43,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { validateTransactionForm } from "@/validation/transaction-validation";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -56,8 +56,6 @@ interface TransactionEdits {
   readonly type?: TransactionType;
   readonly accountId?: string;
   readonly accountName?: string;
-  readonly toAccountId?: string;
-  readonly toAccountName?: string;
 }
 
 interface SmsTransactionEditModalProps {
@@ -91,7 +89,7 @@ interface AccountOption {
   readonly name: string;
   readonly currency: string;
   readonly isPending: boolean;
-  readonly type?: string;
+  readonly type?: AccountType;
 }
 
 // ---------------------------------------------------------------------------
@@ -184,7 +182,7 @@ export function SmsTransactionEditModal({
       name: pa.name,
       currency: pa.currency,
       isPending: true,
-      type: "BANK_ACCOUNT", // pending accounts are always bank accounts in this flow
+      type: "BANK", // pending accounts are always bank accounts in this flow
     }));
     return [...real, ...pending];
   }, [accounts, pendingAccounts]);
@@ -264,6 +262,12 @@ export function SmsTransactionEditModal({
 
     // If creating a new account or no accounts, handle pending account first
     if (isCreatingNew || !hasBankAccounts) {
+      // Validate amount early — this path skips validateTransactionForm
+      if (isNaN(parsedAmount) || !isFinite(parsedAmount) || parsedAmount <= 0) {
+        setValidationError("Please enter a valid amount.");
+        return;
+      }
+
       const trimmedName = (
         isCreatingNew ? newAccountName : newAccountName
       ).trim();
@@ -295,14 +299,14 @@ export function SmsTransactionEditModal({
         currency: transaction.currency,
         type: "BANK",
         senderAddress: transaction.senderAddress,
-        cardLast4: undefined,
+        cardLast4: transaction.cardLast4 ?? undefined,
       };
       onCreatePendingAccount(pending);
 
       // Use the pending account's tempId + name for the edits
       const edits: Record<string, unknown> = {
         accountId: tempId,
-        accountName: `${trimmedName} (${transaction.currency})`,
+        accountName: trimmedName,
       };
 
       if (parsedAmount !== transaction.amount) {
@@ -809,4 +813,4 @@ export function SmsTransactionEditModal({
   );
 }
 
-export type { TransactionEdits, SmsTransactionEditModalProps };
+export type { SmsTransactionEditModalProps, TransactionEdits };

@@ -24,7 +24,13 @@
  * @module sms-account-matcher
  */
 
-import { Account, BankDetails, database, type CurrencyType } from "@astik/db";
+import {
+  Account,
+  AccountType,
+  BankDetails,
+  database,
+  type CurrencyType,
+} from "@astik/db";
 import { ParsedSmsTransaction, isKnownFinancialSender } from "@astik/logic";
 import { Q } from "@nozbe/watermelondb";
 
@@ -54,7 +60,7 @@ interface AccountWithBankDetails {
   readonly currency: CurrencyType;
   readonly isDefault: boolean;
   readonly createdAt: Date;
-  readonly type: string;
+  readonly type: AccountType;
   readonly smsSenderName?: string;
   readonly bankName?: string;
   readonly cardLast4?: string;
@@ -71,13 +77,18 @@ interface MatchInput {
 }
 
 /** Optional filter for `fetchAccountsWithDetails`. */
-type AccountTypeFilter = "BANK" | "CASH" | undefined;
+type AccountTypeFilter = AccountType | undefined;
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
 const DEFAULT_BATCH_SIZE = 20;
+
+/** Escape special regex characters in a string to prevent injection / ReDoS. */
+function escapeRegExp(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 
 /**
  * Regex patterns for extracting card last 4 digits from SMS body.
@@ -145,6 +156,9 @@ function isSenderMatch(
   }
 
   const normalizedSender = smsSenderAddress.toLowerCase().trim();
+  if (!normalizedSender) {
+    return false;
+  }
   const normalizedBankSmsSenderName = bankSmsSenderName?.toLowerCase().trim();
   const normalizedBankName = bankName?.toLowerCase().trim();
   const normalizedAccountName = accountName?.toLowerCase().trim();
@@ -331,8 +345,12 @@ function matchAccountCore(
         if (
           existingName === normalizedBankName ||
           // Word boundary match: "CIB" matches "CIB Egypt" but not "NCIB"
-          new RegExp(`\\b${normalizedBankName}\\b`).test(existingName) ||
-          new RegExp(`\\b${existingName}\\b`).test(normalizedBankName)
+          new RegExp(`\\b${escapeRegExp(normalizedBankName)}\\b`).test(
+            existingName
+          ) ||
+          new RegExp(`\\b${escapeRegExp(existingName)}\\b`).test(
+            normalizedBankName
+          )
         ) {
           return {
             accountId: acc.id,
@@ -355,7 +373,7 @@ function matchAccountCore(
   }
 
   // Step 5: First bank account fallback (NEW — sorted by created_at ASC)
-  const firstBankAccount = accounts.find((a) => a.type === "BANK_ACCOUNT");
+  const firstBankAccount = accounts.find((a) => a.type === "BANK");
   if (firstBankAccount) {
     return {
       accountId: firstBankAccount.id,
@@ -385,7 +403,7 @@ function matchTransaction(
   accounts: readonly AccountWithBankDetails[]
 ): AccountMatch {
   const input: MatchInput = {
-    senderAddress: transaction.senderDisplayName,
+    senderAddress: transaction.senderAddress,
     cardLast4: transaction.cardLast4 ?? undefined,
     currency: transaction.currency ?? undefined,
   };

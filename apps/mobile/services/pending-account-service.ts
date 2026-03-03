@@ -68,9 +68,14 @@ interface PersistResult {
 /**
  * Persist pending accounts to WatermelonDB in a single atomic batch.
  *
+ * Uses `prepareCreate` + `database.batch` to ensure true atomicity —
+ * if any record fails to prepare, no records are committed.
+ * All transactions on the review page must be valid before save,
+ * so partial success is NOT acceptable.
+ *
  * For each `PendingAccount`:
- * 1. Creates an `Account` record (type=BANK, with user's currency)
- * 2. Creates a `BankDetails` record (sms_sender_name + card_last_4)
+ * 1. Prepares an `Account` record (type=BANK, with user's currency)
+ * 2. Prepares a `BankDetails` record (sms_sender_name + card_last_4)
  *
  * Only accounts referenced by at least one transaction should be
  * passed here — the caller filters unreferenced accounts first.
@@ -109,65 +114,73 @@ async function persistPendingAccounts(
       .query(Q.where("user_id", userId))
       .fetch();
 
-    // Track accounts created within this batch to avoid intra-batch duplicates
+    // Track accounts mapped within this batch to avoid intra-batch duplicates
     const createdInBatch = new Map<string, string>(); // "name|currency" → realId
 
-    await database.write(async () => {
-      for (const pending of pendingAccounts) {
-        try {
-          const dedupKey = `${pending.name.trim().toLowerCase()}|${pending.currency}`;
+    // Collect all DB operations to commit atomically
+    const ops: Array<Account | BankDetails> = [];
 
-          // Check: already created earlier in this batch?
-          const batchDuplicate = createdInBatch.get(dedupKey);
-          if (batchDuplicate) {
-            tempToRealIdMap.set(pending.tempId, batchDuplicate);
-            continue;
-          }
+    for (const pending of pendingAccounts) {
+      const dedupKey = `${pending.name.trim().toLowerCase()}|${pending.currency}`;
 
-          // Check: already exists in DB?
-          const existingMatch = existingAccounts.find(
-            (acc) =>
-              acc.name.trim().toLowerCase() ===
-                pending.name.trim().toLowerCase() &&
-              acc.currency === pending.currency
-          );
-
-          if (existingMatch) {
-            tempToRealIdMap.set(pending.tempId, existingMatch.id);
-            createdInBatch.set(dedupKey, existingMatch.id);
-            continue;
-          }
-
-          // Create Account record
-          const account = await database
-            .get<Account>("accounts")
-            .create((record) => {
-              record.userId = userId;
-              record.name = pending.name;
-              record.currency = pending.currency;
-              record.type = pending.type;
-              record.balance = 0;
-              record.isDefault = false;
-            });
-
-          // Create BankDetails record
-          await database.get<BankDetails>("bank_details").create((record) => {
-            record.accountId = account.id;
-            record.smsSenderName = pending.senderAddress;
-            if (pending.cardLast4) {
-              record.cardLast4 = pending.cardLast4;
-            }
-          });
-
-          tempToRealIdMap.set(pending.tempId, account.id);
-          createdInBatch.set(dedupKey, account.id);
-          createdCount++;
-        } catch (err) {
-          const message = err instanceof Error ? err.message : String(err);
-          errors.push(`Failed to create account "${pending.name}": ${message}`);
-        }
+      // Check: already mapped earlier in this batch?
+      const batchDuplicate = createdInBatch.get(dedupKey);
+      if (batchDuplicate) {
+        tempToRealIdMap.set(pending.tempId, batchDuplicate);
+        continue;
       }
-    });
+
+      // Check: already exists in DB?
+      const existingMatch = existingAccounts.find(
+        (acc) =>
+          acc.name.trim().toLowerCase() === pending.name.trim().toLowerCase() &&
+          acc.currency === pending.currency
+      );
+
+      if (existingMatch) {
+        tempToRealIdMap.set(pending.tempId, existingMatch.id);
+        createdInBatch.set(dedupKey, existingMatch.id);
+        continue;
+      }
+
+      // Prepare Account record (id assigned synchronously by prepareCreate)
+      const account = database
+        .get<Account>("accounts")
+        .prepareCreate((record) => {
+          record.userId = userId;
+          record.name = pending.name;
+          record.currency = pending.currency;
+          record.type = pending.type;
+          record.balance = 0;
+          record.isDefault = false;
+          record.deleted = false;
+        });
+      ops.push(account);
+
+      // Prepare BankDetails record
+      const bankDetails = database
+        .get<BankDetails>("bank_details")
+        .prepareCreate((record) => {
+          record.accountId = account.id;
+          record.smsSenderName = pending.senderAddress;
+          if (pending.cardLast4) {
+            record.cardLast4 = pending.cardLast4;
+          }
+          record.deleted = false;
+        });
+      ops.push(bankDetails);
+
+      tempToRealIdMap.set(pending.tempId, account.id);
+      createdInBatch.set(dedupKey, account.id);
+      createdCount++;
+    }
+
+    // Commit all prepared records atomically
+    if (ops.length > 0) {
+      await database.write(async () => {
+        await database.batch(ops);
+      });
+    }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     errors.push(`Batch write failed: ${message}`);
