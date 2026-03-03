@@ -2,12 +2,19 @@
 remote="$1"
 url="$2"
 
+ZERO_OID="0000000000000000000000000000000000000000"
 SYNC_NEEDED=false
 
 while read local_ref local_oid remote_ref remote_oid; do
-  # Handle new branch (remote_oid is all zeros)
-  if [ "$remote_oid" = "0000000000000000000000000000000000000000" ]; then
-    remote_oid="$(git merge-base HEAD origin/main 2>/dev/null || echo HEAD~10)"
+  # Handle new branch (remote_oid is all zeros) — find a safe merge base
+  if [ "$remote_oid" = "$ZERO_OID" ]; then
+    remote_head="$(git symbolic-ref --quiet --short "refs/remotes/${remote}/HEAD" 2>/dev/null || true)"
+    if [ -n "$remote_head" ]; then
+      remote_oid="$(git merge-base "$local_oid" "$remote_head" 2>/dev/null || true)"
+    fi
+    if [ -z "${remote_oid:-}" ]; then
+      remote_oid="$(git rev-list --max-parents=0 "$local_oid" | tail -n 1)"
+    fi
   fi
 
   if git diff --name-only "$remote_oid" "$local_oid" | grep -qE "^(supabase/migrations/|packages/db/src/(schema|migrations)\.ts|scripts/(transform-schema|sql-to-watermelon-migration)\.js)"; then
@@ -18,10 +25,17 @@ done
 
 if [ "$SYNC_NEEDED" = true ]; then
   echo "🔄 Migration-related files changed — running db:sync-local..."
-  npm run db:sync-local
+  status_before="$(git status --porcelain --untracked-files=all)"
+  if ! npm run db:sync-local; then
+    echo ""
+    echo "❌ Push aborted: db:sync-local failed."
+    echo ""
+    exit 1
+  fi
 
-  # Abort push if the sync produced uncommitted changes
-  if ! git diff --quiet; then
+  # Abort push if the sync produced uncommitted or untracked changes
+  status_after="$(git status --porcelain --untracked-files=all)"
+  if [ "$status_before" != "$status_after" ]; then
     echo ""
     echo "❌ Push aborted: db:sync-local modified files."
     echo "   Please review and commit the changes, then push again."

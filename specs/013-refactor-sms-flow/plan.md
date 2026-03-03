@@ -1,8 +1,8 @@
 # Implementation Plan: Refactor SMS Transaction Flow
 
 **Branch**: `013-refactor-sms-flow` | **Date**: 2026-03-02 | **Spec**:
-[spec.md](file:///e:/Work/My%20Projects/Astik/specs/013-refactor-sms-flow/spec.md)
-**Input**: Feature specification from `/specs/013-refactor-sms-flow/spec.md`
+[spec.md](specs/013-refactor-sms-flow/spec.md) **Input**: Feature specification
+from `/specs/013-refactor-sms-flow/spec.md`
 
 ## Summary
 
@@ -98,7 +98,7 @@ in context.
 
 ---
 
-#### [MODIFY] [sms-account-matcher.ts](file:///e:/Work/My%20Projects/Astik/apps/mobile/services/sms-account-matcher.ts)
+#### [MODIFY] [sms-account-matcher.ts](apps/mobile/services/sms-account-matcher.ts)
 
 **This becomes the single source of truth for all account matching logic.**
 
@@ -148,7 +148,7 @@ in context.
 - **Move `extractCardLast4()`** from `sms-account-resolver.ts` to this file
   (shared).
 
-#### [MODIFY] [sms-account-resolver.ts](file:///e:/Work/My%20Projects/Astik/apps/mobile/services/sms-account-resolver.ts)
+#### [MODIFY] [sms-account-resolver.ts](apps/mobile/services/sms-account-resolver.ts)
 
 **Becomes a thin wrapper for the live-detection use case (single SMS, no
 pre-parsed data).**
@@ -171,7 +171,7 @@ pre-parsed data).**
 
 ---
 
-#### [NEW] [pending-account-service.ts](file:///e:/Work/My%20Projects/Astik/apps/mobile/services/pending-account-service.ts)
+#### [NEW] [pending-account-service.ts](apps/mobile/services/pending-account-service.ts)
 
 - `PendingAccount` interface:
   `{ tempId, name, currency, type: 'BANK', senderAddress, cardLast4? }`
@@ -193,7 +193,7 @@ pre-parsed data).**
 
 ---
 
-#### [MODIFY] [batch-sms-transactions.ts](file:///e:/Work/My%20Projects/Astik/apps/mobile/services/batch-sms-transactions.ts)
+#### [MODIFY] [batch-sms-transactions.ts](apps/mobile/services/batch-sms-transactions.ts)
 
 - **Remove**: `createAccountsFromSmsSetup()` function and `AccountSetupResult`
   type (~50 lines).
@@ -214,7 +214,7 @@ pre-parsed data).**
 
 ---
 
-#### [MODIFY] [SmsScanContext.tsx](file:///e:/Work/My%20Projects/Astik/apps/mobile/context/SmsScanContext.tsx)
+#### [MODIFY] [SmsScanContext.tsx](apps/mobile/context/SmsScanContext.tsx)
 
 - Remove `senderAccountMap`, `setSenderAccountMap`, `defaultAccountId`,
   `setDefaultAccountId` (and their `useState` + `useCallback` wrappers)
@@ -231,7 +231,7 @@ pre-parsed data).**
 
 ---
 
-#### [MODIFY] [SmsTransactionReview.tsx](file:///e:/Work/My%20Projects/Astik/apps/mobile/components/sms-sync/SmsTransactionReview.tsx)
+#### [MODIFY] [SmsTransactionReview.tsx](apps/mobile/components/sms-sync/SmsTransactionReview.tsx)
 
 - **Replace `runMatching`**: Use `matchTransactionsBatched()` with
   `BATCH_SIZE = 20`. Update `accountMatches` state progressively as each batch
@@ -255,7 +255,7 @@ pre-parsed data).**
 
 ---
 
-#### [MODIFY] [SmsTransactionItem.tsx](file:///e:/Work/My%20Projects/Astik/apps/mobile/components/sms-sync/SmsTransactionItem.tsx)
+#### [MODIFY] [SmsTransactionItem.tsx](apps/mobile/components/sms-sync/SmsTransactionItem.tsx)
 
 - Add logic: when `transaction.isAtmWithdrawal === true`, show a
   `"Cash Withdrawal"` label text styled in blue (#3B82F6) instead of the account
@@ -272,7 +272,7 @@ pre-parsed data).**
 
 ---
 
-#### [MODIFY] [SmsTransactionEditModal.tsx](file:///e:/Work/My%20Projects/Astik/apps/mobile/components/sms-sync/SmsTransactionEditModal.tsx)
+#### [MODIFY] [SmsTransactionEditModal.tsx](apps/mobile/components/sms-sync/SmsTransactionEditModal.tsx)
 
 **A. Account Field — Dropdown mode (user has bank accounts):**
 
@@ -332,7 +332,7 @@ pre-parsed data).**
 
 ### Component 8: Validation
 
-#### [MODIFY] [transaction-validation.ts](file:///e:/Work/My%20Projects/Astik/apps/mobile/validation/transaction-validation.ts)
+#### [MODIFY] [transaction-validation.ts](apps/mobile/validation/transaction-validation.ts)
 
 - Add zero-amount check: if `amount === 0`, return
   `{ isValid: false, errors: { amount: "Amount cannot be zero" } }`.

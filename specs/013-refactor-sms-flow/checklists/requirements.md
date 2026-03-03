@@ -2,7 +2,7 @@
 
 **Purpose**: Validate specification completeness and quality before proceeding
 to planning **Created**: 2026-03-02 **Feature**:
-[spec.md](file:///e:/Work/My%20Projects/Astik/specs/013-refactor-sms-flow/spec.md)
+[spec.md](specs/013-refactor-sms-flow/spec.md)
 
 ## Content Quality
 

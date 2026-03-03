@@ -409,20 +409,21 @@ export function SmsTransactionReview({
   );
 
   const handleSave = useCallback(async () => {
-    const selected = effectiveTransactions.filter((_, i) =>
-      selectedIndices.has(i)
+    // Collect selected original indices in order
+    const selectedOriginalIndices = Array.from(selectedIndices).sort(
+      (a, b) => a - b
     );
 
-    // Build index → accountId map from resolved matches + user overrides
-    const transactionAccountMap = new Map<number, string>();
+    // Build validation map using original indices
+    const originalIndexToAccountId = new Map<number, string>();
     const missingIndices = new Set<number>();
 
-    for (const [i] of selectedIndices.entries()) {
+    for (const i of selectedOriginalIndices) {
       const override = transactionOverrides.get(i);
       const match = accountMatches.get(i);
       const accountId = override?.accountId ?? match?.accountId;
       if (accountId) {
-        transactionAccountMap.set(i, accountId);
+        originalIndexToAccountId.set(i, accountId);
       } else {
         missingIndices.add(i);
       }
@@ -445,23 +446,54 @@ export function SmsTransactionReview({
 
     // Persist only referenced pending accounts, then remap tempId → realId
     if (pendingAccounts.length > 0) {
-      const referencedTempIds = new Set(transactionAccountMap.values());
+      const referencedTempIds = new Set(originalIndexToAccountId.values());
       const referencedPending = pendingAccounts.filter((pa) =>
         referencedTempIds.has(pa.tempId)
       );
 
       if (referencedPending.length > 0) {
-        const persistResult = await persistPendingAccounts(referencedPending);
+        try {
+          const persistResult = await persistPendingAccounts(referencedPending);
 
-        // Remap tempId → realId in the transactionAccountMap
-        for (const [idx, tempId] of transactionAccountMap) {
-          const realId = persistResult.tempToRealIdMap.get(tempId);
-          if (realId) {
-            transactionAccountMap.set(idx, realId);
+          if (persistResult.errors.length > 0) {
+            showToast({
+              type: "error",
+              title: "Account Creation Failed",
+              message: persistResult.errors.join("; "),
+            });
+            return;
           }
+
+          // Remap tempId → realId
+          for (const [idx, tempId] of originalIndexToAccountId) {
+            const realId = persistResult.tempToRealIdMap.get(tempId);
+            if (realId) {
+              originalIndexToAccountId.set(idx, realId);
+            }
+          }
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          showToast({
+            type: "error",
+            title: "Account Creation Failed",
+            message: `Failed to create accounts: ${message}`,
+          });
+          return;
         }
       }
     }
+
+    // Build the selected transactions array + sequential index map for onSave
+    const selected = selectedOriginalIndices.map(
+      (i) => effectiveTransactions[i]
+    );
+    const transactionAccountMap = new Map<number, string>();
+    selectedOriginalIndices.forEach((origIdx, seqIdx) => {
+      const accountId = originalIndexToAccountId.get(origIdx);
+      if (accountId) {
+        transactionAccountMap.set(seqIdx, accountId);
+      }
+    });
 
     await onSave(selected, transactionAccountMap);
   }, [

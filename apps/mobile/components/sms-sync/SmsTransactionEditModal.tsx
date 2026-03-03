@@ -56,8 +56,6 @@ interface TransactionEdits {
   readonly type?: TransactionType;
   readonly accountId?: string;
   readonly accountName?: string;
-  readonly toAccountId?: string;
-  readonly toAccountName?: string;
 }
 
 interface SmsTransactionEditModalProps {
@@ -184,7 +182,7 @@ export function SmsTransactionEditModal({
       name: pa.name,
       currency: pa.currency,
       isPending: true,
-      type: "BANK_ACCOUNT", // pending accounts are always bank accounts in this flow
+      type: "BANK", // pending accounts are always bank accounts in this flow
     }));
     return [...real, ...pending];
   }, [accounts, pendingAccounts]);
@@ -264,6 +262,12 @@ export function SmsTransactionEditModal({
 
     // If creating a new account or no accounts, handle pending account first
     if (isCreatingNew || !hasBankAccounts) {
+      // Validate amount early — this path skips validateTransactionForm
+      if (isNaN(parsedAmount) || !isFinite(parsedAmount) || parsedAmount <= 0) {
+        setValidationError("Please enter a valid amount.");
+        return;
+      }
+
       const trimmedName = (
         isCreatingNew ? newAccountName : newAccountName
       ).trim();
@@ -295,14 +299,14 @@ export function SmsTransactionEditModal({
         currency: transaction.currency,
         type: "BANK",
         senderAddress: transaction.senderAddress,
-        cardLast4: undefined,
+        cardLast4: transaction.cardLast4 ?? undefined,
       };
       onCreatePendingAccount(pending);
 
       // Use the pending account's tempId + name for the edits
       const edits: Record<string, unknown> = {
         accountId: tempId,
-        accountName: `${trimmedName} (${transaction.currency})`,
+        accountName: trimmedName,
       };
 
       if (parsedAmount !== transaction.amount) {

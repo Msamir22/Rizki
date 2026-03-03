@@ -24,7 +24,7 @@ describe("sms-account-matcher - matchAccountCore", () => {
     currency: "EGP",
     isDefault: false,
     createdAt: baseDate,
-    type: "BANK_ACCOUNT",
+    type: "BANK",
     smsSenderName: "CIB",
     bankName: "Commercial International Bank",
     cardLast4: "1234",
@@ -36,7 +36,7 @@ describe("sms-account-matcher - matchAccountCore", () => {
     currency: "USD",
     isDefault: true, // Used for Step 4
     createdAt: new Date(baseDate.getTime() + 1000), // Created later
-    type: "CREDIT_CARD",
+    type: "BANK",
     smsSenderName: "NBE",
     cardLast4: "5678",
   };
@@ -47,7 +47,7 @@ describe("sms-account-matcher - matchAccountCore", () => {
     currency: "EGP",
     isDefault: false,
     createdAt: new Date(baseDate.getTime() - 1000), // Created first (for Step 5)
-    type: "BANK_ACCOUNT", // "BANK_ACCOUNT" maps to Step 5 fallback
+    type: "BANK", // maps to Step 5 fallback
   };
 
   const accounts: AccountWithBankDetails[] = [accBank1, accBank2, accBank3];
@@ -109,7 +109,7 @@ describe("sms-account-matcher - matchAccountCore", () => {
       senderAddress: "RANDOM_STORE",
     };
     const result = matchAccountCore(input, accountsNoDefault);
-    // accBank1 and accBank3 are both BANK_ACCOUNT, but sorted by createdAt ASC.
+    // accBank1 and accBank3 are both BANK type, but sorted by createdAt ASC.
     // accBank3 was created before accBank1, so it should be picked first.
     expect(result.accountId).toBe("acc_bank3");
     expect(result.matchReason).toBe("first_bank");
@@ -123,7 +123,7 @@ describe("sms-account-matcher - matchAccountCore", () => {
         currency: "EGP",
         isDefault: false,
         createdAt: baseDate,
-        type: "CASH_ACCOUNT",
+        type: "CASH",
       },
     ];
 
@@ -132,5 +132,10 @@ describe("sms-account-matcher - matchAccountCore", () => {
     };
     const result = matchAccountCore(input, fallbackAccounts);
     expect(result.matchReason).toBe("none");
+
+    // Also verify empty account list returns "none"
+    const emptyResult = matchAccountCore(input, []);
+    expect(emptyResult.matchReason).toBe("none");
+    expect(emptyResult.accountId).toBe("");
   });
 });

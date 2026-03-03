@@ -77,13 +77,14 @@ export default function SmsReviewScreen(): React.JSX.Element {
             title: "Save Error",
             message: `${result.savedCount} saved, ${result.failedCount} failed: ${result.errors.join(", ")}`,
           });
-        } else {
-          showToast({
-            type: "success",
-            title: "Saved!",
-            message: `Saved ${result.savedCount} transaction${result.savedCount !== 1 ? "s" : ""} from SMS!`,
-          });
+          return;
         }
+
+        showToast({
+          type: "success",
+          title: "Saved!",
+          message: `Saved ${result.savedCount} transaction${result.savedCount !== 1 ? "s" : ""} from SMS!`,
+        });
 
         markSyncComplete().catch(console.error);
         clearTransactions();
