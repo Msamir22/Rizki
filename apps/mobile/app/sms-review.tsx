@@ -21,19 +21,18 @@ import { SmsTransactionReview } from "@/components/sms-sync/SmsTransactionReview
 import { useToast } from "@/components/ui/Toast";
 import { palette } from "@/constants/colors";
 import { useSmsScanContext } from "@/context/SmsScanContext";
+import { useSmsSync } from "@/hooks/useSmsSync";
 import { batchCreateSmsTransactions } from "@/services/batch-sms-transactions";
 import {
   flushQueuedTransactions,
   setReviewingActive,
 } from "@/services/sms-live-detection-handler";
-import { database } from "@astik/db";
 import type { ParsedSmsTransaction } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import { Alert, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useSmsSync } from "@/hooks/useSmsSync";
 
 // ---------------------------------------------------------------------------
 // Component
@@ -53,7 +52,7 @@ export default function SmsReviewScreen(): React.JSX.Element {
 
     return () => {
       setReviewingActive(false);
-      flushQueuedTransactions(database).catch(() => {});
+      flushQueuedTransactions().catch(() => {});
     };
   }, []);
 

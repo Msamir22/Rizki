@@ -22,21 +22,20 @@ import { ToastProvider } from "../components/ui/Toast";
 import { AuthProvider } from "../context/AuthContext";
 import { CategoriesProvider } from "../context/CategoriesContext";
 
+import { SmsScanProvider } from "../context/SmsScanContext";
 import { DatabaseProvider } from "../providers/DatabaseProvider";
 import { QueryProvider } from "../providers/QueryProvider";
 import { SyncProvider } from "../providers/SyncProvider";
-import { SmsScanProvider } from "../context/SmsScanContext";
-import { database } from "@astik/db";
 import { initializeNotifications } from "../services/notification-service";
 import {
+  handleDetectedSms,
   initializeDetectionActionHandler,
   isLiveDetectionEnabled,
-  handleDetectedSms,
 } from "../services/sms-live-detection-handler";
 import {
+  onTransactionDetected,
   startSmsListener,
   stopSmsListener,
-  onTransactionDetected,
 } from "../services/sms-live-listener-service";
 
 // Prevent splash screen from auto-hiding until fonts are loaded
@@ -73,11 +72,11 @@ export default function RootLayout(): React.ReactNode {
   useEffect(() => {
     // Initialize notifications channel and action handler
     initializeNotifications().catch(console.error);
-    const cleanupActions = initializeDetectionActionHandler(database);
+    const cleanupActions = initializeDetectionActionHandler();
 
     // Subscribe to detected transactions from Tier 1 listener
     const cleanupDetection = onTransactionDetected((parsed) => {
-      handleDetectedSms(parsed, database).catch(console.error);
+      handleDetectedSms(parsed).catch(console.error);
     });
 
     // Start listener if preference enabled
