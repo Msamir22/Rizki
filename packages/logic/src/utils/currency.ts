@@ -43,8 +43,8 @@ export function formatExchangeRate(
   currencyB: CurrencyType,
   rates: MarketRate | null
 ): string {
-  if (!rates || currencyA === currencyB)
-    return EXCHANGE_RATE_UNAVAILABLE_MESSAGE;
+  if (!rates) return EXCHANGE_RATE_UNAVAILABLE_MESSAGE;
+  if (currencyA === currencyB) return `1 ${currencyA} = 1 ${currencyA}`;
 
   const rateAToB = rates.getRate(currencyA, currencyB);
 
@@ -85,8 +85,8 @@ export function formatConversionPreview(
       return formatCurrency({
         amount: safeAmount,
         currency: toCurrency,
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
+        minimumFractionDigits: PRIMARY_RATE_FRACTION_DIGITS,
+        maximumFractionDigits: PRIMARY_RATE_FRACTION_DIGITS,
       });
     }
 
@@ -100,8 +100,8 @@ export function formatConversionPreview(
     return `≈ ${formatCurrency({
       amount: converted,
       currency: toCurrency,
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
+      minimumFractionDigits: PRIMARY_RATE_FRACTION_DIGITS,
+      maximumFractionDigits: PRIMARY_RATE_FRACTION_DIGITS,
     })} at rate ${rateDisplay}`;
   } catch {
     return CONVERSION_UNAVAILABLE_MESSAGE;

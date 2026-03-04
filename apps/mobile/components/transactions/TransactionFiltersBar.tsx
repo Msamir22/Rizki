@@ -40,7 +40,15 @@ export function TransactionFiltersBar({
         {/* Period Filter Pill */}
         <TouchableOpacity
           testID="filter-period"
-          className="flex-row items-center bg-white dark:bg-slate-800 py-2.5 px-4 rounded-3xl border border-slate-200 dark:border-slate-700 gap-2 flex-1 shadow-sm"
+          className="flex-row items-center bg-white dark:bg-slate-800 py-2.5 px-4 rounded-3xl border border-slate-200 dark:border-slate-700 gap-2 flex-1"
+          // eslint-disable-next-line react-native/no-inline-styles
+          style={{
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.05,
+            shadowRadius: 2,
+            elevation: 1,
+          }}
           onPress={onPeriodPress}
           activeOpacity={0.7}
         >

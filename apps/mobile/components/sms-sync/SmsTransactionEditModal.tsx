@@ -462,7 +462,11 @@ export function SmsTransactionEditModal({
               <View className="mb-2">
                 <TypeTabs
                   selectedType={txType}
-                  onSelect={(t) => setTxType(t as TransactionType)}
+                  onSelect={(type) => {
+                    if (type === "EXPENSE" || type === "INCOME") {
+                      setTxType(type);
+                    }
+                  }}
                   hideTransfer={true}
                   containerClassName="mx-0"
                 />
