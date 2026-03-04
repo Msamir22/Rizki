@@ -155,13 +155,9 @@ export default function SmsReviewScreen(): React.JSX.Element {
     <SafeAreaView className="flex-1 bg-background dark:bg-background-dark">
       {/* Header */}
       <PageHeader
-        title="Review"
+        title="Review Transactions"
         showDrawer={false}
         showBackButton={true}
-        secondaryAction={{
-          icon: "close",
-          onPress: handleDiscard,
-        }}
       />
 
       {/* Transaction review list */}

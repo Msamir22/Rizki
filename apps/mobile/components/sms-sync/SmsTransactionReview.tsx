@@ -494,7 +494,7 @@ export function SmsTransactionReview({
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         searchPlaceholder="Search counterparty, sender..."
-        containerClassName="px-5 pt-3 pb-2"
+        containerClassName="px-5 pb-2"
       />
 
       {/* ── Summary bar ─────────────────────────────────────────── */}
@@ -558,14 +558,14 @@ export function SmsTransactionReview({
       {/* ── Bottom action bar ───────────────────────────────────── */}
       <Animated.View
         entering={FadeInDown.delay(200)}
-        className="absolute bottom-0 left-0 right-0 px-5 pb-8 pt-4 bg-white/95 dark:bg-slate-950/95 border-t border-slate-200 dark:border-slate-800 flex-row gap-4 items-center"
+        className="px-5 pb-8 pt-4 bg-white/95 dark:bg-background-dark border-t border-slate-200 dark:border-slate-800 flex-row gap-4 items-center"
       >
         {/* Discard All */}
         <TouchableOpacity
           onPress={onDiscard}
           disabled={isSaving}
           activeOpacity={0.85}
-          className="flex-1 py-4 rounded-xl items-center bg-slate-100 dark:bg-slate-800"
+          className=" w-[50%] flex-1 py-4 rounded-xl items-center bg-slate-100 dark:bg-slate-800"
         >
           <Text className="text-slate-500 dark:text-slate-400 text-sm font-semibold">
             Discard All
@@ -586,7 +586,7 @@ export function SmsTransactionReview({
           }}
           disabled={selectedCount === 0 || isSaving}
           activeOpacity={0.85}
-          className={`flex-[2] py-4 rounded-xl items-center justify-center ${
+          className={`w-[50%] flex-1 py-4 rounded-xl items-center justify-center ${
             selectedCount === 0 || isSaving
               ? "bg-slate-300 dark:bg-slate-700"
               : "bg-nileGreen-600"
