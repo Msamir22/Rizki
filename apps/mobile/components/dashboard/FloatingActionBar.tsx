@@ -21,6 +21,10 @@ import { useTheme } from "@/context/ThemeContext";
 export function FloatingActionBar(): React.JSX.Element {
   const { mode } = useTheme();
   const isDark = mode === "dark";
+  const SHADOW_OPACITY_BY_MODE: Readonly<Record<string, number>> = {
+    dark: 0.5,
+    light: 0.15,
+  };
 
   const onVoicePress = (): void => {
     router.push("/voice-input");
@@ -38,8 +42,7 @@ export function FloatingActionBar(): React.JSX.Element {
         style={{
           shadowColor: "#000",
           shadowOffset: { width: 0, height: 8 },
-          // eslint-disable-next-line no-restricted-syntax
-          shadowOpacity: isDark ? 0.5 : 0.15,
+          shadowOpacity: SHADOW_OPACITY_BY_MODE[mode ?? "light"] ?? 0.15,
           shadowRadius: 20,
           elevation: 10,
         }}

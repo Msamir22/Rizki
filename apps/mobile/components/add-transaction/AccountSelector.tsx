@@ -52,7 +52,8 @@ export function AccountSelector({
               }`}
               style={
                 isSelected
-                  ? // eslint-disable-next-line react-native/no-inline-styles
+                  ? // TODO(nativewind-v4): Remove this eslint override after NativeWind fixes shadow/opacity class handling for TouchableOpacity.
+                    // eslint-disable-next-line react-native/no-inline-styles
                     {
                       borderColor: mainColor,
                       borderWidth: 2,

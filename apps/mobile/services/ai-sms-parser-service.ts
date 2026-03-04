@@ -376,7 +376,7 @@ export async function parseSmsWithAi(
   if (candidates.length === 0) return emptyResult;
 
   if (USE_MOCK_DATA) {
-    console.log(
+    console.info(
       "[ai-sms-parser] 🟡 Using MOCK parsed transactions to save AI tokens."
     );
     return { transactions: [...MOCK_PARSED_TRANSACTIONS] };

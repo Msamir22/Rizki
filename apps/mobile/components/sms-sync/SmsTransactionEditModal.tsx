@@ -206,10 +206,16 @@ export function SmsTransactionEditModal({
   // Cash withdrawal mode
   const isAtmWithdrawal = transaction.isAtmWithdrawal === true;
 
-  // Reset local state when transaction changes
+  // Use a ref to prevent re-initialization when accountOptions recalculates
+  // (e.g. after creating a pending account)
+  const hasInitializedRef = useRef(false);
+
   // Reset local state when a DIFFERENT transaction is opened or the external
   // account match changes.
   useEffect(() => {
+    if (hasInitializedRef.current) return;
+    hasInitializedRef.current = true;
+
     setAmount(transaction.amount.toString());
     setCounterparty(transaction.counterparty || "");
     setTxType(transaction.type);
@@ -231,14 +237,15 @@ export function SmsTransactionEditModal({
     setNewAccountName(transaction.senderDisplayName);
     setNewAccountError(null);
     setFormErrors({});
-    // accountOptions intentionally excluded — it recalculates when
-    // pendingAccounts changes, which would wipe in-progress edits after
-    // creating a "+ New" account. Refactor to split init vs auto-select effects.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [transaction, currentAccountId, currentAccountName]);
+  }, [transaction, currentAccountId, currentAccountName, accountOptions]);
 
-  // TODO: This is a duplicated code pasted from the add-transaction.tsx file
-  // TODO: Refactor to a shared hook/function
+  // Reset flag when transaction changes
+  useEffect(() => {
+    hasInitializedRef.current = false;
+  }, [transaction.smsBodyHash]);
+
+  // TODO(tech-debt): Extract to useAutoCategorySelection hook shared with add-transaction.tsx
+  // Issue: #TODO
 
   // Track the previous type to only auto-reset category on type change.
   // Without this, selecting L2/L3 categories resets to L1 because
@@ -455,7 +462,7 @@ export function SmsTransactionEditModal({
               <View className="mb-2">
                 <TypeTabs
                   selectedType={txType}
-                  onSelect={setTxType}
+                  onSelect={(t) => setTxType(t as TransactionType)}
                   hideTransfer={true}
                   containerClassName="mx-0"
                 />
