@@ -1,4 +1,7 @@
 import type { ParsedSmsTransaction } from "@astik/logic";
+const ONE_HOUR_MS = 3_600_000;
+const ONE_DAY_MS = 86_400_000;
+const TWO_DAYS_MS = 172_800_000;
 
 export const MOCK_PARSED_TRANSACTIONS: ParsedSmsTransaction[] = [
   {
@@ -20,7 +23,7 @@ export const MOCK_PARSED_TRANSACTIONS: ParsedSmsTransaction[] = [
     currency: "EGP",
     type: "EXPENSE",
     counterparty: "Carrefour",
-    date: new Date(Date.now() - 3600000), // 1 hour ago
+    date: new Date(Date.now() - ONE_HOUR_MS), // 1 hour ago
     smsBodyHash: "mock-hash-2",
     senderDisplayName: "NBE",
     categoryId: "f915b9f5-cc8e-45f4-91ff-c34ef8583807",
@@ -33,7 +36,7 @@ export const MOCK_PARSED_TRANSACTIONS: ParsedSmsTransaction[] = [
     currency: "USD",
     type: "INCOME",
     counterparty: "Upwork Global",
-    date: new Date(Date.now() - 86400000), // 1 day ago
+    date: new Date(Date.now() - ONE_DAY_MS), // 1 day ago
     smsBodyHash: "mock-hash-3",
     senderDisplayName: "QNB",
     categoryId: "00000000-0000-0000-0001-000000000011",
@@ -47,7 +50,7 @@ export const MOCK_PARSED_TRANSACTIONS: ParsedSmsTransaction[] = [
     type: "EXPENSE",
     isAtmWithdrawal: true,
     counterparty: "ATM Withdrawal",
-    date: new Date(Date.now() - 172800000), // 2 days ago
+    date: new Date(Date.now() - TWO_DAYS_MS), // 2 days ago
     smsBodyHash: "mock-hash-4",
     senderDisplayName: "Banque Misr",
     categoryId: "cash-id",

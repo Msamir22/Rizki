@@ -1,25 +1,25 @@
-import { TransactionType } from "@astik/db";
+import type { TransactionType } from "@astik/db";
 import * as Haptics from "expo-haptics";
 import { Text, TouchableOpacity, View } from "react-native";
 import { palette } from "@/constants/colors";
 
 type TabType = TransactionType | "TRANSFER";
 
-interface TypeTabsProps<T extends TabType> {
-  selectedType: T;
-  onSelect: (type: T) => void;
+interface TypeTabsProps {
+  selectedType: TabType;
+  onSelect: (type: TabType) => void;
   hideTransfer?: boolean;
   containerClassName?: string;
   tabClassName?: string;
 }
 
-export function TypeTabs<T extends TabType>({
+export function TypeTabs({
   selectedType,
   onSelect,
   hideTransfer = false,
   containerClassName,
   tabClassName,
-}: TypeTabsProps<T>): JSX.Element {
+}: TypeTabsProps): JSX.Element {
   const allTabs: Array<{
     label: string;
     value: TabType;
@@ -36,7 +36,7 @@ export function TypeTabs<T extends TabType>({
 
   return (
     <View
-      className={`flex-row bg-slate-100 dark:bg-slate-800/80 p-1.5 rounded-full mx-6 mb-4 border border-slate-200 dark:border-slate-700 ${containerClassName}`}
+      className={`flex-row bg-slate-100 dark:bg-slate-800/80 p-1.5 rounded-full mx-6 mb-4 border border-slate-200 dark:border-slate-700 ${containerClassName ?? ""}`}
     >
       {tabs.map((tab) => {
         const isSelected = selectedType === tab.value;
@@ -48,12 +48,12 @@ export function TypeTabs<T extends TabType>({
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(
                 console.error
               );
-              onSelect(tab.value as T);
+              onSelect(tab.value);
             }}
             activeOpacity={0.8}
             className={`flex-1 items-center justify-center py-2.5 rounded-full ${
               isSelected ? "" : "bg-transparent"
-            } ${tabClassName}`}
+            } ${tabClassName ?? ""}`}
             style={{
               backgroundColor: isSelected ? tab.color : undefined,
             }}

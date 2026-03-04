@@ -1,5 +1,10 @@
 import type { CurrencyType, MarketRate } from "@astik/db";
 
+const EXCHANGE_RATE_UNAVAILABLE_MESSAGE = "Exchange rate unavailable";
+const CONVERSION_UNAVAILABLE_MESSAGE = "Conversion unavailable";
+const PRIMARY_RATE_FRACTION_DIGITS = 2;
+const SECONDARY_RATE_MAX_FRACTION_DIGITS = 4;
+
 /**
  * Converts an amount from one currency to another.
  *
@@ -38,23 +43,24 @@ export function formatExchangeRate(
   currencyB: CurrencyType,
   rates: MarketRate | null
 ): string {
-  if (!rates || currencyA === currencyB) return "Exchange rate unavailable";
+  if (!rates || currencyA === currencyB)
+    return EXCHANGE_RATE_UNAVAILABLE_MESSAGE;
 
   const rateAToB = rates.getRate(currencyA, currencyB);
 
   if (rateAToB >= 1) {
     // 1 currencyA = rateAToB currencyB
     const formatted = new Intl.NumberFormat("en-US", {
-      maximumFractionDigits: 2,
-      minimumFractionDigits: 2,
+      maximumFractionDigits: PRIMARY_RATE_FRACTION_DIGITS,
+      minimumFractionDigits: PRIMARY_RATE_FRACTION_DIGITS,
     }).format(rateAToB);
     return `1 ${currencyA} = ${formatted} ${currencyB}`;
   } else {
     // 1 currencyB = rateBToA currencyA
     const rateBToA = rates.getRate(currencyB, currencyA);
     const formatted = new Intl.NumberFormat("en-US", {
-      maximumFractionDigits: 4,
-      minimumFractionDigits: 2,
+      maximumFractionDigits: SECONDARY_RATE_MAX_FRACTION_DIGITS,
+      minimumFractionDigits: PRIMARY_RATE_FRACTION_DIGITS,
     }).format(rateBToA);
     return `1 ${currencyB} = ${formatted} ${currencyA}`;
   }
@@ -70,19 +76,35 @@ export function formatConversionPreview(
   toCurrency: CurrencyType,
   rates: MarketRate | null
 ): string {
-  if (!rates) return "Exchange rate unavailable";
+  if (!rates) return EXCHANGE_RATE_UNAVAILABLE_MESSAGE;
   try {
     const rawVal = typeof amount === "string" ? parseFloat(amount) : amount;
+    const safeAmount = Number.isFinite(rawVal) ? rawVal : 0;
+
+    if (fromCurrency === toCurrency) {
+      return formatCurrency({
+        amount: safeAmount,
+        currency: toCurrency,
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
+    }
+
     const converted = convertCurrency(
-      rawVal || 0,
+      safeAmount,
       fromCurrency,
       toCurrency,
       rates
     );
     const rateDisplay = formatExchangeRate(fromCurrency, toCurrency, rates);
-    return `≈ ${formatCurrency({ amount: converted, currency: toCurrency })} at rate ${rateDisplay}`;
+    return `≈ ${formatCurrency({
+      amount: converted,
+      currency: toCurrency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })} at rate ${rateDisplay}`;
   } catch {
-    return "Conversion unavailable";
+    return CONVERSION_UNAVAILABLE_MESSAGE;
   }
 }
 
