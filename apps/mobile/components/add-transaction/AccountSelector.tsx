@@ -52,7 +52,8 @@ export function AccountSelector({
               }`}
               style={
                 isSelected
-                  ? {
+                  ? // eslint-disable-next-line react-native/no-inline-styles
+                    {
                       borderColor: mainColor,
                       borderWidth: 2,
                       shadowColor: mainColor,

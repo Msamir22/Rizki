@@ -64,6 +64,7 @@ import {
   type TransactionEdits,
 } from "./SmsTransactionEditModal";
 import { SmsTransactionItem } from "./SmsTransactionItem";
+import { useCategoryLookup } from "@/context/CategoriesContext";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -248,7 +249,9 @@ export function SmsTransactionReview({
   // ── Inline edit modal state ──────────────────────────────────────
   const [editModalIndex, setEditModalIndex] = useState<number | null>(null);
 
-  const { categories: rootCategories } = useCategories();
+  const { expenseCategories, incomeCategories } = useCategories();
+
+  const categoryMap = useCategoryLookup();
 
   const batchSize = 20;
 
@@ -450,19 +453,17 @@ export function SmsTransactionReview({
       const tx = item.tx;
       if (!tx) return null;
 
+      const accountName =
+        transactionOverrides.get(item.originalIndex)?.accountName ??
+        accountMatches.get(item.originalIndex)?.accountName ??
+        null;
+
       return (
         <SmsTransactionItem
           transaction={tx}
           index={item.originalIndex}
           isSelected={selectedIndicesRef.current.has(item.originalIndex)}
-          accountName={
-            transactionOverrides.get(item.originalIndex)?.accountName ??
-            accountMatches.get(item.originalIndex)?.accountName ??
-            ""
-          }
-          matchReason={
-            accountMatches.get(item.originalIndex)?.matchReason ?? "none"
-          }
+          accountName={accountName}
           senderDisplayName={tx.senderDisplayName}
           onToggleSelect={handleToggleItem}
           onPress={handleOpenEditModal}
@@ -693,17 +694,19 @@ export function SmsTransactionReview({
           currentAccountName={
             transactionOverrides.get(editModalIndex)?.accountName ??
             accountMatches.get(editModalIndex)?.accountName ??
-            ""
+            null
           }
           currentAccountId={
             transactionOverrides.get(editModalIndex)?.accountId ??
             accountMatches.get(editModalIndex)?.accountId ??
-            ""
+            null
           }
           accounts={userAccounts}
-          rootCategories={rootCategories}
+          categoryMap={categoryMap}
           pendingAccounts={pendingAccounts}
           latestRates={latestRates}
+          expenseCategories={expenseCategories}
+          incomeCategories={incomeCategories}
           onSave={handleEditModalSave}
           onCreatePendingAccount={handleCreatePendingAccount}
           onClose={() => setEditModalIndex(null)}

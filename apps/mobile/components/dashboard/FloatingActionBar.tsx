@@ -34,9 +34,11 @@ export function FloatingActionBar(): React.JSX.Element {
     <View className="absolute bottom-8 self-center">
       <View
         className="rounded-[40px] shadow-lg"
+        // eslint-disable-next-line react-native/no-inline-styles
         style={{
           shadowColor: "#000",
           shadowOffset: { width: 0, height: 8 },
+          // eslint-disable-next-line no-restricted-syntax
           shadowOpacity: isDark ? 0.5 : 0.15,
           shadowRadius: 20,
           elevation: 10,

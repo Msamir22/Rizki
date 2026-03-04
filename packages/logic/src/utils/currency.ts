@@ -24,6 +24,68 @@ export function convertCurrency(
   return amount * marketRates.getRate(fromCurrency, toCurrency);
 }
 
+/**
+ * Formats a given exchange rate between two currencies.
+ * To avoid showing very small decimals (like 1 EGP = 0.020 USD),
+ * it treats the "stronger" currency as the base (the "1") by checking
+ * which direction yields a rate >= 1.
+ * For example, if from=EGP and to=USD, it returns "1 USD = 49.70 EGP",
+ * rather than "1 EGP = 0.02 USD" as doing so reflects the conventional way
+ * rates are displayed (like in LiveRates).
+ */
+export function formatExchangeRate(
+  currencyA: CurrencyType,
+  currencyB: CurrencyType,
+  rates: MarketRate | null
+): string {
+  if (!rates || currencyA === currencyB) return "Exchange rate unavailable";
+
+  const rateAToB = rates.getRate(currencyA, currencyB);
+
+  if (rateAToB >= 1) {
+    // 1 currencyA = rateAToB currencyB
+    const formatted = new Intl.NumberFormat("en-US", {
+      maximumFractionDigits: 2,
+      minimumFractionDigits: 2,
+    }).format(rateAToB);
+    return `1 ${currencyA} = ${formatted} ${currencyB}`;
+  } else {
+    // 1 currencyB = rateBToA currencyA
+    const rateBToA = rates.getRate(currencyB, currencyA);
+    const formatted = new Intl.NumberFormat("en-US", {
+      maximumFractionDigits: 4,
+      minimumFractionDigits: 2,
+    }).format(rateBToA);
+    return `1 ${currencyB} = ${formatted} ${currencyA}`;
+  }
+}
+
+/**
+ * Builds the "≈ X.XX EGP at rate 1 USD = 49.70 EGP" preview string
+ * for cross-currency transactions dynamically.
+ */
+export function formatConversionPreview(
+  amount: number | string,
+  fromCurrency: CurrencyType,
+  toCurrency: CurrencyType,
+  rates: MarketRate | null
+): string {
+  if (!rates) return "Exchange rate unavailable";
+  try {
+    const rawVal = typeof amount === "string" ? parseFloat(amount) : amount;
+    const converted = convertCurrency(
+      rawVal || 0,
+      fromCurrency,
+      toCurrency,
+      rates
+    );
+    const rateDisplay = formatExchangeRate(fromCurrency, toCurrency, rates);
+    return `≈ ${formatCurrency({ amount: converted, currency: toCurrency })} at rate ${rateDisplay}`;
+  } catch {
+    return "Conversion unavailable";
+  }
+}
+
 const CURRENCY_SYMBOLS: Partial<Record<CurrencyType, string>> = {
   // Major currencies with symbols
   USD: "$",
