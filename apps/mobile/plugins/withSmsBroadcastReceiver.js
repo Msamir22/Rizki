@@ -359,14 +359,24 @@ function withSmsEventPackageRegistration(config) {
       }
 
       // Find the getPackages() method and add SmsEventPackage to the list
-      // The Expo-generated MainApplication uses PackageList(this).packages
-      // We need to add our package to the returned list
-      const packagesPattern =
+      // Expo SDK 52+ uses: val packages = PackageList(this).packages ... return packages
+      // Older Expo used: return PackageList(this).packages
+      const newStylePattern = /val packages = PackageList\(this\)\.packages\n/;
+      const oldStylePattern =
         /override fun getPackages\(\): List<ReactPackage> \{[^}]*?return PackageList\(this\)\.packages/;
 
-      if (packagesPattern.test(content)) {
+      if (newStylePattern.test(content)) {
+        // Expo SDK 52+ style: insert add() after the val declaration
         content = content.replace(
-          packagesPattern,
+          newStylePattern,
+          (match) =>
+            `${match}            packages.add(${packageName}.SmsEventPackage())\n`
+        );
+        fs.writeFileSync(mainApplicationPath, content, "utf-8");
+      } else if (oldStylePattern.test(content)) {
+        // Older Expo style: inline return
+        content = content.replace(
+          oldStylePattern,
           (match) =>
             `${match}.apply {\n              add(${packageName}.SmsEventPackage())\n            }`
         );

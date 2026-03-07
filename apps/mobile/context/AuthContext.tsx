@@ -18,11 +18,12 @@ import { supabase } from "@/services/supabase";
 // =============================================================================
 
 interface AuthContextValue {
-  user: User | null;
-  session: Session | null;
-  isLoading: boolean;
-  isAuthenticated: boolean;
-  signOut: () => Promise<void>;
+  readonly user: User | null;
+  readonly session: Session | null;
+  readonly isLoading: boolean;
+  readonly isAuthenticated: boolean;
+  readonly isAnonymous: boolean;
+  readonly signOut: () => Promise<void>;
 }
 
 // =============================================================================
@@ -60,18 +61,36 @@ export function AuthProvider({
 
   useEffect(() => {
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
-      setSession(initialSession);
-      setUser(initialSession?.user ?? null);
-      setIsLoading(false);
-    });
+    supabase.auth
+      .getSession()
+      .then(({ data: { session: initialSession } }) => {
+        debugger;
+        setSession(initialSession);
+        setUser(initialSession?.user ?? null);
+        setIsLoading(false);
+      })
+      .catch(() => setIsLoading(false));
 
     // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
+      debugger;
       setSession(newSession);
-      setUser(newSession?.user ?? null);
+      const sessionUser = newSession?.user ?? null;
+
+      // After linkIdentity(), the session JWT may still carry is_anonymous=true
+      // until the token is fully refreshed. Explicitly refetch from the server
+      // to get the ground-truth value whenever the session says anonymous.
+      if (sessionUser?.is_anonymous) {
+        const { data } = await supabase.auth.getUser();
+        if (data.user && !data.user.is_anonymous) {
+          setUser(data.user);
+          return;
+        }
+      }
+
+      setUser(sessionUser);
     });
 
     return () => subscription.unsubscribe();
@@ -81,11 +100,14 @@ export function AuthProvider({
     await supabase.auth.signOut();
   }, []);
 
+  const isAnonymous = user?.is_anonymous ?? false;
+
   const value: AuthContextValue = {
     user,
     session,
     isLoading,
     isAuthenticated: !!session,
+    isAnonymous,
     signOut,
   };
 

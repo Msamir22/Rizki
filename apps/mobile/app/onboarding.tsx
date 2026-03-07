@@ -16,6 +16,7 @@
 
 import { palette } from "@/constants/colors";
 import { HAS_ONBOARDED_KEY } from "@/constants/storage-keys";
+import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import { getCurrentUserId } from "@/services/supabase";
 import type { CurrencyType } from "@astik/db";
@@ -120,6 +121,7 @@ export default function OnboardingScreen(): React.JSX.Element | null {
     null
   );
   const [userId, setUserId] = useState<string | null>(null);
+  const { isAnonymous } = useAuth();
 
   /**
    * Called when the carousel finishes (user taps "Get Started" or "Skip").
@@ -154,13 +156,21 @@ export default function OnboardingScreen(): React.JSX.Element | null {
 
   /** Called when user skips the currency picker — no wallet created. */
   const handleCurrencyPickerSkip = useCallback((): void => {
-    router.replace("/(tabs)");
-  }, [router]);
+    if (isAnonymous) {
+      router.replace("/sign-up?source=onboarding");
+    } else {
+      router.replace("/(tabs)");
+    }
+  }, [router, isAnonymous]);
 
-  /** Navigate to main app (used by both success and error paths). */
+  /** Navigate to main app or sign-up (used by both success and error paths). */
   const handleGoToApp = useCallback((): void => {
-    router.replace("/(tabs)");
-  }, [router]);
+    if (isAnonymous) {
+      router.replace("/sign-up?source=onboarding");
+    } else {
+      router.replace("/(tabs)");
+    }
+  }, [router, isAnonymous]);
 
   const handleNext = useCallback((): void => {
     if (currentIndex === ONBOARDING_DATA.length - 1) {
