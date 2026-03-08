@@ -14,8 +14,7 @@
  */
 
 import * as WebBrowser from "expo-web-browser";
-import { WebBrowserResultType } from "expo-web-browser";
-import type { WebBrowserAuthSessionResult } from "expo-web-browser";
+import { WebBrowserResultType, type WebBrowserAuthSessionResult } from "expo-web-browser";
 
 import {
   linkIdentityWithProvider,

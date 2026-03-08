@@ -21,8 +21,8 @@ import {
   checkShouldShowPrompt,
   saveCooldownDismissal,
   savePermanentDismissal,
+  type UserStats,
 } from "@/services/signup-prompt-service";
-import type { UserStats } from "@/services/signup-prompt-service";
 import { useCallback, useEffect, useState } from "react";
 
 // =============================================================================
