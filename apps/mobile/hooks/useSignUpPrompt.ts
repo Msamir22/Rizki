@@ -59,21 +59,37 @@ export function useSignUpPrompt(): SignUpPromptState {
   });
 
   useEffect(() => {
+    // Abort guard: prevents stale async results from overwriting
+    // state when isAnonymous changes while checkShouldShowPrompt()
+    // is still resolving.
+    let isActive = true;
+
     if (!isAnonymous) {
       setShouldShowPrompt(false);
       setStats((prev) => ({ ...prev, isLoading: false }));
-      return;
+      return () => {
+        isActive = false;
+      };
     }
+
+    // Set loading before async call
+    setStats((prev) => ({ ...prev, isLoading: true }));
 
     checkShouldShowPrompt()
       .then((result) => {
+        if (!isActive) return;
         setShouldShowPrompt(result.shouldShow);
         setStats({ ...result.stats, isLoading: false });
       })
       .catch(() => {
+        if (!isActive) return;
         setShouldShowPrompt(false);
         setStats((prev) => ({ ...prev, isLoading: false }));
       });
+
+    return () => {
+      isActive = false;
+    };
   }, [isAnonymous]);
 
   // ---------------------------------------------------------------------------

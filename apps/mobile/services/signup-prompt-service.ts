@@ -11,6 +11,10 @@
  *   Extracting it makes the logic independently testable and reusable.
  * - SOLID: SRP — this service only handles prompt data operations.
  *
+ * Performance: checkShouldShowPrompt() runs cheap AsyncStorage +
+ * fetchCount() checks first. The expensive totalAmount computation
+ * (full table scan) only runs when the prompt will actually show.
+ *
  * @module signup-prompt-service
  */
 
@@ -54,21 +58,21 @@ const MS_PER_DAY = 86_400_000;
 /**
  * Check whether the sign-up urgency prompt should be displayed.
  *
- * Steps:
- * 1. If permanently dismissed → return false
- * 2. Query user stats from WatermelonDB
- * 3. If previously dismissed → check cooldown thresholds
- * 4. Otherwise → check initial thresholds (50 txns or 10 days)
+ * Performance strategy:
+ * 1. Cheap: AsyncStorage permanent-dismiss check
+ * 2. Cheap: fetchCount() for transaction/account counts
+ * 3. Cheap: AsyncStorage cooldown/threshold checks
+ * 4. Expensive (only if shouldShow=true): full-scan for totalAmount
  */
 export async function checkShouldShowPrompt(): Promise<PromptCheckResult> {
-  // 1. Check permanent dismiss
+  // 1. Check permanent dismiss (cheapest check)
   const neverShow = await AsyncStorage.getItem(SIGNUP_PROMPT_NEVER_SHOW_KEY);
   if (neverShow === "true") {
     return { shouldShow: false, stats: emptyStats() };
   }
 
-  // 2. Get stats from WatermelonDB
-  const stats = await getUserStats();
+  // 2. Get cheap counts from WatermelonDB (no full scan)
+  const counts = await getCheapCounts();
 
   // 3. Get dismissal state
   const dismissedAt = await AsyncStorage.getItem(
@@ -81,7 +85,9 @@ export async function checkShouldShowPrompt(): Promise<PromptCheckResult> {
   // 4. Get first-use date
   const firstUseDate = await getFirstUseDate();
 
-  // 5. Calculate thresholds
+  // 5. Determine shouldShow based on cheap data
+  let shouldShow = false;
+
   if (dismissedAt && dismissedTxCount) {
     // User previously dismissed — check cooldown
     const daysSinceDismiss = getDaysBetween(
@@ -89,22 +95,30 @@ export async function checkShouldShowPrompt(): Promise<PromptCheckResult> {
       new Date()
     );
     const txSinceDismiss =
-      stats.transactionCount - parseInt(dismissedTxCount, 10);
+      counts.transactionCount - parseInt(dismissedTxCount, 10);
 
-    const cooldownMet =
+    shouldShow =
       txSinceDismiss >= SIGNUP_COOLDOWN_TX ||
       daysSinceDismiss >= SIGNUP_COOLDOWN_DAYS;
-
-    return { shouldShow: cooldownMet, stats };
+  } else {
+    // Never dismissed — check initial thresholds
+    const daysSinceFirstUse = getDaysBetween(firstUseDate, new Date());
+    shouldShow =
+      counts.transactionCount >= SIGNUP_TX_THRESHOLD ||
+      daysSinceFirstUse >= SIGNUP_DAYS_THRESHOLD;
   }
 
-  // Never dismissed — check initial thresholds
-  const daysSinceFirstUse = getDaysBetween(firstUseDate, new Date());
-  const thresholdMet =
-    stats.transactionCount >= SIGNUP_TX_THRESHOLD ||
-    daysSinceFirstUse >= SIGNUP_DAYS_THRESHOLD;
+  // 6. Only compute totalAmount (expensive) when prompt will show
+  const totalAmount = shouldShow ? await computeTotalAmount() : 0;
 
-  return { shouldShow: thresholdMet, stats };
+  return {
+    shouldShow,
+    stats: {
+      transactionCount: counts.transactionCount,
+      accountCount: counts.accountCount,
+      totalAmount,
+    },
+  };
 }
 
 /**
@@ -132,11 +146,27 @@ export async function savePermanentDismissal(): Promise<void> {
 }
 
 /**
- * Get user stats from WatermelonDB.
+ * Compute totalAmount lazily. Exported for cases where the caller
+ * needs to refresh totalAmount independently (e.g., after the sheet
+ * is already shown and stats change).
  */
-export async function getUserStats(): Promise<UserStats> {
+export async function getUserTotalAmount(): Promise<number> {
+  return computeTotalAmount();
+}
+
+// =============================================================================
+// Internal Helpers
+// =============================================================================
+
+/**
+ * Get cheap aggregate counts (no full table scan).
+ * Uses WatermelonDB's fetchCount() which translates to SQL COUNT(*).
+ */
+async function getCheapCounts(): Promise<{
+  transactionCount: number;
+  accountCount: number;
+}> {
   try {
-    // Lazy import to avoid circular deps and keep the service testable
     const { database } = await import("@astik/db");
 
     const transactionCount = await database
@@ -145,9 +175,20 @@ export async function getUserStats(): Promise<UserStats> {
       .fetchCount();
     const accountCount = await database.get("accounts").query().fetchCount();
 
-    // Query total amount from transactions.
-    // WatermelonDB doesn't support SUM aggregation directly,
-    // so we fetch all records and sum the amounts via _raw.
+    return { transactionCount, accountCount };
+  } catch {
+    return { transactionCount: 0, accountCount: 0 };
+  }
+}
+
+/**
+ * Compute total tracked amount by full-scanning all transactions.
+ * This is expensive and should only be called when the prompt will show.
+ */
+async function computeTotalAmount(): Promise<number> {
+  try {
+    const { database } = await import("@astik/db");
+
     const allTransactions = await database
       .get("transactions")
       .query()
@@ -163,15 +204,11 @@ export async function getUserStats(): Promise<UserStats> {
       }
     }
 
-    return { transactionCount, accountCount, totalAmount };
+    return totalAmount;
   } catch {
-    return emptyStats();
+    return 0;
   }
 }
-
-// =============================================================================
-// Internal Helpers
-// =============================================================================
 
 /** Get the first use date, recording it if not yet set. */
 async function getFirstUseDate(): Promise<Date> {

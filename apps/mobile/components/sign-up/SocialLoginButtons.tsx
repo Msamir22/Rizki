@@ -22,10 +22,10 @@ import {
   Platform,
   Text,
   TouchableOpacity,
-  useColorScheme,
   View,
 } from "react-native";
 
+import { palette } from "@/constants/colors";
 import { useOAuthLink } from "@/hooks/useOAuthLink";
 import type { OAuthProvider } from "@/services/supabase";
 
@@ -49,6 +49,10 @@ interface ProviderConfig {
   readonly label: string;
   readonly iconName: keyof typeof Ionicons.glyphMap;
   readonly bgClass: string;
+  /** Icon color (used for ActivityIndicator + Ionicons) */
+  readonly iconColor: string;
+  /** Text className — uses Tailwind dark: for theme-aware text */
+  readonly textClass: string;
   readonly platformFilter?: typeof Platform.OS;
 }
 
@@ -59,18 +63,26 @@ const PROVIDER_CONFIGS: readonly ProviderConfig[] = [
     iconName: "logo-google",
     bgClass:
       "bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600",
+    iconColor: palette.brand.google,
+    textClass: "text-slate-900 dark:text-slate-50",
   },
   {
     provider: "facebook",
     label: "Continue with Facebook",
     iconName: "logo-facebook",
-    bgClass: "bg-[#1877F2]",
+    bgClass: `bg-[${palette.brand.facebook}]`,
+    iconColor: palette.slate[25],
+    textClass: "text-white",
   },
   {
     provider: "apple",
     label: "Continue with Apple",
     iconName: "logo-apple",
     bgClass: "bg-black dark:bg-white",
+    // Apple: black bg + white icon in light, white bg + black icon in dark
+    // Using light-mode color here; dark mode handled via Tailwind dark: on text
+    iconColor: palette.slate[25],
+    textClass: "text-white dark:text-black",
     platformFilter: "ios",
   },
 ];
@@ -125,47 +137,29 @@ function SocialButton({
   isDisabled,
   onPress,
 }: SocialButtonProps): React.JSX.Element {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-
-  const isApple = config.provider === "apple";
-  const isFacebook = config.provider === "facebook";
-
-  // Apple button: dark bg + white text in light mode, white bg + black text in dark mode
-  const appleTextColor = isDark ? "text-black" : "text-white";
-  const appleIconColor = isDark ? "#000000" : "#FFFFFF";
-
-  const textColor = isApple
-    ? appleTextColor
-    : isFacebook
-      ? "text-white"
-      : "text-slate-900 dark:text-slate-50";
-  const iconColor = isApple
-    ? appleIconColor
-    : isFacebook
-      ? "#FFFFFF"
-      : "#4285F4";
-
   return (
     <TouchableOpacity
       onPress={() => {
         onPress(config.provider).catch(() => {});
       }}
       disabled={isDisabled}
-      className={`flex-row items-center justify-center py-4 px-6 rounded-2xl ${config.bgClass} ${isDisabled ? "opacity-60" : ""}`}
+      className={`flex-row items-center justify-center py-4 px-6 rounded-2xl ${config.bgClass}`}
       activeOpacity={0.8}
+      // NativeWind v4 bug: opacity classes on TouchableOpacity cause race
+      // condition crash. Use inline style instead.
+      style={{ opacity: isDisabled ? 0.6 : 1 }}
     >
       {isLoading ? (
-        <ActivityIndicator size="small" color={iconColor} />
+        <ActivityIndicator size="small" color={config.iconColor} />
       ) : (
         <>
           <Ionicons
             name={config.iconName}
             size={22}
-            color={iconColor}
+            color={config.iconColor}
             style={{ marginRight: 12 }}
           />
-          <Text className={`text-base font-semibold ${textColor}`}>
+          <Text className={`text-base font-semibold ${config.textClass}`}>
             {config.label}
           </Text>
         </>
