@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/Button";
 import { Dropdown } from "@/components/ui/Dropdown";
 import { TextField } from "@/components/ui/TextField";
 import { ACCOUNT_TYPES, CURRENCIES } from "@/constants/accounts";
-import { palette } from "@/constants/colors";
+import { colors, palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
 import {
   useAccountForm,
@@ -128,7 +128,7 @@ export default function AddAccount(): React.ReactNode {
                     size={18}
                     color={
                       isSelected
-                        ? "#FFF"
+                        ? colors.white
                         : isDark
                           ? palette.slate[400]
                           : palette.slate[600]
@@ -204,7 +204,7 @@ export default function AddAccount(): React.ReactNode {
               smsSenderName={formData.smsSenderName || ""}
               onBankNameChange={(val) => updateField("bankName", val)}
               onCardLast4Change={(val) => {
-                const cleaned = val.replace(/\\D/g, "").slice(0, 4);
+                const cleaned = val.replace(/\\\\D/g, "").slice(0, 4);
                 updateField("cardLast4", cleaned);
               }}
               onSmsSenderNameChange={(val) => updateField("smsSenderName", val)}
