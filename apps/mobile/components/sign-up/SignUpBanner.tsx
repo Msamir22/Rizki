@@ -19,6 +19,13 @@ import React from "react";
 import { Text, TouchableOpacity, View } from "react-native";
 
 // =============================================================================
+// Constants
+// =============================================================================
+
+/** 70% opacity white for decorative arrow icon */
+const CHEVRON_COLOR = `${colors.white}B3`;
+
+// =============================================================================
 // Types
 // =============================================================================
 
@@ -65,7 +72,7 @@ export function SignUpBanner({
         <MaterialCommunityIcons
           name="chevron-right"
           size={24}
-          color="rgba(255,255,255,0.7)"
+          color={CHEVRON_COLOR}
         />
       </LinearGradient>
     </TouchableOpacity>
