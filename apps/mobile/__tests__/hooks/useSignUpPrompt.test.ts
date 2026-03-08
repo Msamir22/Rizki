@@ -1,16 +1,36 @@
 /**
  * Unit tests for useSignUpPrompt hook
  *
- * Uses @testing-library/react-native's renderHook to properly exercise
- * the hook lifecycle. Tests T022–T026 from tasks.md.
+ * Uses the project's lightweight renderHook utility (same pattern as
+ * useSmsPermission.test.ts) to properly exercise the hook lifecycle.
+ * Tests T022–T026 from tasks.md.
  *
  * Architecture & Design Rationale:
  * - Pattern: renderHook + act for async state assertions
- * - Why: Previous tests only exercised mock calls without running the hook.
- *   renderHook ensures useEffect/useState actually execute.
+ * - Why: Tests must execute the hook's useEffect/useState lifecycle.
+ *   Mocks the service layer instead of AsyncStorage/DB directly.
  */
 
-import { renderHook, act, waitFor } from "@testing-library/react-native";
+import React from "react";
+
+// ---------------------------------------------------------------------------
+// react-test-renderer — manual types & import
+// ---------------------------------------------------------------------------
+
+interface ReactTestRendererInstance {
+  unmount: () => void;
+}
+
+interface ReactTestRendererModule {
+  act: (...args: unknown[]) => unknown;
+  create: (element: React.ReactElement) => ReactTestRendererInstance;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-assignment
+const RTR: ReactTestRendererModule = require("react-test-renderer");
+
+const actSync = RTR.act as (fn: () => void) => void;
+const actAsync = RTR.act as (fn: () => Promise<void>) => Promise<void>;
 
 // ---------------------------------------------------------------------------
 // Mocks — must be set up before imports
@@ -37,6 +57,63 @@ jest.mock("@/context/AuthContext", () => ({
 }));
 
 import { useSignUpPrompt } from "../../hooks/useSignUpPrompt";
+
+// ---------------------------------------------------------------------------
+// Lightweight renderHook utility
+// ---------------------------------------------------------------------------
+
+interface HookRef<T> {
+  current: T | null;
+}
+
+function unwrap<T>(ref: HookRef<T>): T {
+  if (ref.current === null) {
+    throw new Error("Hook ref is null — did the component render?");
+  }
+  return ref.current;
+}
+
+function renderHook<T>(hookFn: () => T): {
+  result: HookRef<T>;
+  rerender: () => void;
+  unmount: () => void;
+} {
+  const result: HookRef<T> = { current: null };
+  let forceUpdate: (() => void) | null = null;
+
+  function TestComponent(): null {
+    result.current = hookFn();
+    const [, setState] = React.useState(0);
+    forceUpdate = () => setState((n) => n + 1);
+    return null;
+  }
+
+  let renderer: ReactTestRendererInstance;
+
+  actSync(() => {
+    renderer = RTR.create(React.createElement(TestComponent));
+  });
+
+  return {
+    result,
+    rerender: () => {
+      actSync(() => {
+        forceUpdate?.();
+      });
+    },
+    unmount: () => {
+      actSync(() => {
+        renderer.unmount();
+      });
+    },
+  };
+}
+
+async function flushPromises(): Promise<void> {
+  await actAsync(async () => {
+    await new Promise<void>((r) => setTimeout(r, 0));
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -82,15 +159,13 @@ describe("useSignUpPrompt", () => {
       });
 
       const { result } = renderHook(() => useSignUpPrompt());
+      await flushPromises();
 
-      await waitFor(() => {
-        expect(result.current.stats.isLoading).toBe(false);
-      });
-
-      expect(result.current.shouldShowPrompt).toBe(false);
-      expect(result.current.stats.transactionCount).toBe(5);
-      expect(result.current.stats.accountCount).toBe(2);
-      expect(result.current.stats.totalAmount).toBe(150);
+      expect(unwrap(result).stats.isLoading).toBe(false);
+      expect(unwrap(result).shouldShowPrompt).toBe(false);
+      expect(unwrap(result).stats.transactionCount).toBe(5);
+      expect(unwrap(result).stats.accountCount).toBe(2);
+      expect(unwrap(result).stats.totalAmount).toBe(150);
     });
   });
 
@@ -108,13 +183,11 @@ describe("useSignUpPrompt", () => {
       });
 
       const { result } = renderHook(() => useSignUpPrompt());
+      await flushPromises();
 
-      await waitFor(() => {
-        expect(result.current.stats.isLoading).toBe(false);
-      });
-
-      expect(result.current.shouldShowPrompt).toBe(true);
-      expect(result.current.stats.transactionCount).toBe(55);
+      expect(unwrap(result).stats.isLoading).toBe(false);
+      expect(unwrap(result).shouldShowPrompt).toBe(true);
+      expect(unwrap(result).stats.transactionCount).toBe(55);
     });
 
     it("shows prompt at exactly 50 transactions (boundary)", async () => {
@@ -126,12 +199,10 @@ describe("useSignUpPrompt", () => {
       });
 
       const { result } = renderHook(() => useSignUpPrompt());
+      await flushPromises();
 
-      await waitFor(() => {
-        expect(result.current.stats.isLoading).toBe(false);
-      });
-
-      expect(result.current.shouldShowPrompt).toBe(true);
+      expect(unwrap(result).stats.isLoading).toBe(false);
+      expect(unwrap(result).shouldShowPrompt).toBe(true);
     });
   });
 
@@ -149,16 +220,15 @@ describe("useSignUpPrompt", () => {
       });
 
       const { result } = renderHook(() => useSignUpPrompt());
+      await flushPromises();
 
-      await waitFor(() => {
-        expect(result.current.shouldShowPrompt).toBe(true);
+      expect(unwrap(result).shouldShowPrompt).toBe(true);
+
+      await actAsync(async () => {
+        await unwrap(result).dismissWithCooldown();
       });
 
-      await act(async () => {
-        await result.current.dismissWithCooldown();
-      });
-
-      expect(result.current.shouldShowPrompt).toBe(false);
+      expect(unwrap(result).shouldShowPrompt).toBe(false);
       expect(mockSaveCooldownDismissal).toHaveBeenCalledWith(55);
     });
   });
@@ -177,16 +247,15 @@ describe("useSignUpPrompt", () => {
       });
 
       const { result } = renderHook(() => useSignUpPrompt());
+      await flushPromises();
 
-      await waitFor(() => {
-        expect(result.current.shouldShowPrompt).toBe(true);
+      expect(unwrap(result).shouldShowPrompt).toBe(true);
+
+      await actAsync(async () => {
+        await unwrap(result).dismissPermanently();
       });
 
-      await act(async () => {
-        await result.current.dismissPermanently();
-      });
-
-      expect(result.current.shouldShowPrompt).toBe(false);
+      expect(unwrap(result).shouldShowPrompt).toBe(false);
       expect(mockSavePermanentDismissal).toHaveBeenCalled();
     });
   });
@@ -200,12 +269,10 @@ describe("useSignUpPrompt", () => {
       setupAuthenticatedUser();
 
       const { result } = renderHook(() => useSignUpPrompt());
+      await flushPromises();
 
-      await waitFor(() => {
-        expect(result.current.stats.isLoading).toBe(false);
-      });
-
-      expect(result.current.shouldShowPrompt).toBe(false);
+      expect(unwrap(result).stats.isLoading).toBe(false);
+      expect(unwrap(result).shouldShowPrompt).toBe(false);
       expect(mockCheckShouldShowPrompt).not.toHaveBeenCalled();
     });
   });
@@ -220,12 +287,10 @@ describe("useSignUpPrompt", () => {
       mockCheckShouldShowPrompt.mockRejectedValue(new Error("DB error"));
 
       const { result } = renderHook(() => useSignUpPrompt());
+      await flushPromises();
 
-      await waitFor(() => {
-        expect(result.current.stats.isLoading).toBe(false);
-      });
-
-      expect(result.current.shouldShowPrompt).toBe(false);
+      expect(unwrap(result).stats.isLoading).toBe(false);
+      expect(unwrap(result).shouldShowPrompt).toBe(false);
     });
   });
 });
