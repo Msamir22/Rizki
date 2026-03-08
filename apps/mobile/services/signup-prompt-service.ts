@@ -139,34 +139,31 @@ export async function getUserStats(): Promise<UserStats> {
     // Lazy import to avoid circular deps and keep the service testable
     const { database } = await import("@astik/db");
 
-    const transactions = await database
+    const transactionCount = await database
       .get("transactions")
       .query()
       .fetchCount();
-    const accounts = await database.get("accounts").query().fetchCount();
+    const accountCount = await database.get("accounts").query().fetchCount();
 
-    // Query total amount from transactions
+    // Query total amount from transactions.
     // WatermelonDB doesn't support SUM aggregation directly,
-    // so we fetch all transaction amounts and sum them.
+    // so we fetch all records and sum the amounts via _raw.
     const allTransactions = await database
       .get("transactions")
       .query()
       .fetch();
 
-    const totalAmount = allTransactions.reduce(
-      (sum: number, tx: Record<string, unknown>) => {
-        const amount =
-          typeof tx._raw === "object" &&
-          tx._raw !== null &&
-          "amount" in (tx._raw as Record<string, unknown>)
-            ? Number((tx._raw as Record<string, unknown>).amount)
-            : 0;
-        return sum + (Number.isFinite(amount) ? Math.abs(amount) : 0);
-      },
-      0
-    );
+    let totalAmount = 0;
+    for (const tx of allTransactions) {
+      // WatermelonDB Model exposes _raw as a DirtyRaw (Record<string, unknown>)
+      const raw = (tx as unknown as { _raw: Record<string, unknown> })._raw;
+      const amount = Number(raw.amount);
+      if (Number.isFinite(amount)) {
+        totalAmount += Math.abs(amount);
+      }
+    }
 
-    return { transactionCount: transactions, accountCount: accounts, totalAmount };
+    return { transactionCount, accountCount, totalAmount };
   } catch {
     return emptyStats();
   }

@@ -15,6 +15,7 @@
 
 import * as WebBrowser from "expo-web-browser";
 import { WebBrowserResultType } from "expo-web-browser";
+import type { WebBrowserAuthSessionResult } from "expo-web-browser";
 
 import {
   linkIdentityWithProvider,
@@ -50,7 +51,7 @@ interface TimeoutSentinel {
   readonly type: "TIMEOUT";
 }
 
-type BrowserOrTimeout = WebBrowser.WebBrowserResult | TimeoutSentinel;
+type BrowserOrTimeout = WebBrowserAuthSessionResult | TimeoutSentinel;
 
 // =============================================================================
 // Constants
