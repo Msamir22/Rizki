@@ -121,19 +121,31 @@ export default function OnboardingScreen(): React.JSX.Element | null {
     null
   );
   const [userId, setUserId] = useState<string | null>(null);
-  const { isAnonymous } = useAuth();
+  const { isAnonymous, isLoading: isAuthLoading } = useAuth();
 
   /**
    * Navigate to the main app or sign-up screen based on auth status.
    * DRY extraction: used by both handleCurrencyPickerSkip and handleGoToApp.
+   *
+   * Waits for auth hydration to complete before reading isAnonymous,
+   * otherwise the default `false` value could cause premature navigation
+   * to /(tabs) instead of /sign-up.
    */
   const navigateAfterOnboarding = useCallback((): void => {
+    if (isAuthLoading) return;
+
     if (isAnonymous) {
       router.replace("/sign-up?source=onboarding");
     } else {
       router.replace("/(tabs)");
     }
-  }, [router, isAnonymous]);
+  }, [router, isAnonymous, isAuthLoading]);
+
+  /**
+   * When auth finishes loading after onboarding phases that deferred
+   * navigation due to isAuthLoading, trigger the deferred navigation.
+   */
+  const pendingNavigationRef = useRef(false);
 
   /**
    * Called when the carousel finishes (user taps "Get Started" or "Skip").
@@ -168,13 +180,29 @@ export default function OnboardingScreen(): React.JSX.Element | null {
 
   /** Called when user skips the currency picker — no wallet created. */
   const handleCurrencyPickerSkip = useCallback((): void => {
+    if (isAuthLoading) {
+      pendingNavigationRef.current = true;
+      return;
+    }
     navigateAfterOnboarding();
-  }, [navigateAfterOnboarding]);
+  }, [navigateAfterOnboarding, isAuthLoading]);
 
   /** Navigate to main app or sign-up (used by both success and error paths). */
   const handleGoToApp = useCallback((): void => {
+    if (isAuthLoading) {
+      pendingNavigationRef.current = true;
+      return;
+    }
     navigateAfterOnboarding();
-  }, [navigateAfterOnboarding]);
+  }, [navigateAfterOnboarding, isAuthLoading]);
+
+  // When auth finishes loading, fire any pending navigation
+  useEffect(() => {
+    if (!isAuthLoading && pendingNavigationRef.current) {
+      pendingNavigationRef.current = false;
+      navigateAfterOnboarding();
+    }
+  }, [isAuthLoading, navigateAfterOnboarding]);
 
   const handleNext = useCallback((): void => {
     if (currentIndex === ONBOARDING_DATA.length - 1) {

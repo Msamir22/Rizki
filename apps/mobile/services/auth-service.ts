@@ -48,6 +48,85 @@ type OAuthResult = OAuthSuccessResult | OAuthErrorResult;
 
 const OAUTH_TIMEOUT_MS = 30_000;
 
+const UNEXPECTED_RESPONSE_ERROR =
+  "Unexpected response from server. Please try again.";
+
+// =============================================================================
+// Response Validators
+// =============================================================================
+
+/**
+ * Validates the response from `linkIdentityWithProvider()`.
+ * Ensures the result is an object with either { url: string } or { error }.
+ *
+ * Architecture & Design Rationale:
+ * - Pattern: Fail-Fast Validation at Service Boundary
+ * - Why: External SDK responses can change between versions. Validating
+ *   the shape at the boundary prevents silent data corruption downstream.
+ * - SOLID: SRP — validation is isolated from orchestration logic.
+ */
+function validateLinkIdentityResult(
+  result: unknown
+): { valid: true; data: { url: string } | { error: unknown } } | { valid: false; message: string } {
+  if (result === null || result === undefined || typeof result !== "object") {
+    return { valid: false, message: UNEXPECTED_RESPONSE_ERROR };
+  }
+
+  const record = result as Record<string, unknown>;
+
+  // Error path: { error: ... }
+  if ("error" in record && record.error !== null && record.error !== undefined) {
+    return { valid: true, data: { error: record.error } };
+  }
+
+  // Success path: { url: string }
+  if ("url" in record && typeof record.url === "string" && record.url.length > 0) {
+    return { valid: true, data: { url: record.url } };
+  }
+
+  return { valid: false, message: UNEXPECTED_RESPONSE_ERROR };
+}
+
+/**
+ * Validates the response from `supabase.auth.getUser()`.
+ * Ensures the user object has the expected shape with identities array
+ * and is_anonymous flag.
+ */
+function validateGetUserData(
+  userData: unknown
+): { valid: true; user: { identities: ReadonlyArray<{ id: string }>; is_anonymous: boolean } } | { valid: false; message: string } {
+  if (userData === null || userData === undefined || typeof userData !== "object") {
+    return { valid: false, message: UNEXPECTED_RESPONSE_ERROR };
+  }
+
+  const data = userData as Record<string, unknown>;
+  const user = data.user;
+
+  if (user === null || user === undefined || typeof user !== "object") {
+    return { valid: false, message: UNEXPECTED_RESPONSE_ERROR };
+  }
+
+  const userRecord = user as Record<string, unknown>;
+
+  // identities must be an array
+  if (!Array.isArray(userRecord.identities)) {
+    return { valid: false, message: UNEXPECTED_RESPONSE_ERROR };
+  }
+
+  // is_anonymous must be a boolean
+  if (typeof userRecord.is_anonymous !== "boolean") {
+    return { valid: false, message: UNEXPECTED_RESPONSE_ERROR };
+  }
+
+  return {
+    valid: true,
+    user: {
+      identities: userRecord.identities as ReadonlyArray<{ id: string }>,
+      is_anonymous: userRecord.is_anonymous,
+    },
+  };
+}
+
 // =============================================================================
 // Public API
 // =============================================================================
@@ -69,7 +148,15 @@ export async function initiateOAuthLink(
   provider: OAuthProvider
 ): Promise<OAuthResult> {
   try {
-    const result = await linkIdentityWithProvider(provider);
+    const rawResult = await linkIdentityWithProvider(provider);
+
+    // Validate linkIdentity response shape
+    const linkValidation = validateLinkIdentityResult(rawResult);
+    if (!linkValidation.valid) {
+      return { success: false, error: linkValidation.message };
+    }
+
+    const result = linkValidation.data;
 
     if ("error" in result) {
       // TODO: Replace with structured logging (e.g., Sentry)
@@ -109,15 +196,21 @@ export async function initiateOAuthLink(
     // even when linkIdentity fails with 422 (e.g. "Identity is already linked
     // to another user"), so the browser reports success. We must check the
     // user's identities to confirm the link actually happened.
-    const { data: userData, error: getUserError } =
+    const { data: rawUserData, error: getUserError } =
       await supabase.auth.getUser();
     if (getUserError) {
       // TODO: Replace with structured logging (e.g., Sentry)
       return { success: false, error: getHumanReadableError(getUserError) };
     }
 
-    const identities = userData.user?.identities ?? [];
-    if (identities.length === 0 || userData.user?.is_anonymous) {
+    // Validate getUser response shape
+    const userValidation = validateGetUserData(rawUserData);
+    if (!userValidation.valid) {
+      return { success: false, error: userValidation.message };
+    }
+
+    const { user } = userValidation;
+    if (user.identities.length === 0 || user.is_anonymous) {
       return {
         success: false,
         error:
