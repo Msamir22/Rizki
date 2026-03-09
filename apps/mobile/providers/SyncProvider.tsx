@@ -53,7 +53,7 @@ export function SyncProvider({ children }: SyncProviderProps): JSX.Element {
     // Check if authenticated before syncing
     const authenticated = await checkIsAuthenticated();
     if (!authenticated) {
-      console.log("Sync skipped: Not authenticated");
+      // TODO: Replace with structured logging (e.g., Sentry)
       return;
     }
 
@@ -64,9 +64,9 @@ export function SyncProvider({ children }: SyncProviderProps): JSX.Element {
       // Concurrency guard is handled inside syncDatabase (module-level lock in sync.ts)
       await syncDatabase(database, forceFullSync);
       setLastSyncedAt(new Date());
-      console.log("✅ Sync completed successfully");
+      // TODO: Replace with structured logging (e.g., Sentry)
     } catch (error) {
-      console.error("Sync failed:", error);
+      // TODO: Replace with structured logging (e.g., Sentry)
       setSyncError(error instanceof Error ? error : new Error("Sync failed"));
     } finally {
       setIsSyncing(false);
@@ -74,7 +74,10 @@ export function SyncProvider({ children }: SyncProviderProps): JSX.Element {
   }, []);
 
   /**
-   * Set up the sync interval based on app state
+   * Set up the sync interval based on app state.
+   *
+   * The interval callback checks authentication via an async call
+   * to avoid closing over the potentially stale `isAuthenticated` prop.
    */
   const setupSyncInterval = useCallback(
     (isActive: boolean) => {
@@ -86,22 +89,25 @@ export function SyncProvider({ children }: SyncProviderProps): JSX.Element {
       const interval = isActive
         ? SYNC_INTERVAL_ACTIVE
         : SYNC_INTERVAL_BACKGROUND;
-      const intervalName = isActive
-        ? "15 minutes (active)"
-        : "30 minutes (background)";
 
-      console.log(`⏰ Sync interval set to ${intervalName}`);
+      // TODO: Replace with structured logging (e.g., Sentry)
 
       syncIntervalRef.current = setInterval(() => {
-        if (isAuthenticated) {
-          checkIsAuthenticated()
-            .then((authenticated) => {
-              if (authenticated) {
-                sync().catch(console.error);
-              }
-            })
-            .catch(console.error);
-        }
+        // Use async auth check instead of closed-over isAuthenticated
+        // to avoid stale closure issues
+        const runSync = async (): Promise<void> => {
+          try {
+            const authenticated = await checkIsAuthenticated();
+            if (authenticated) {
+              await sync();
+            }
+          } catch {
+            // TODO: Replace with structured logging (e.g., Sentry)
+          }
+        };
+        runSync().catch(() => {
+          // TODO: Replace with structured logging (e.g., Sentry)
+        });
       }, interval);
     },
     [sync]
@@ -115,15 +121,17 @@ export function SyncProvider({ children }: SyncProviderProps): JSX.Element {
 
       // App came to foreground from background
       if (wasBackground && isNowActive) {
-        console.log("📱 App returned to foreground");
+        // TODO: Replace with structured logging (e.g., Sentry)
         // Sync immediately when returning to foreground
-        sync().catch(console.error);
+        sync().catch(() => {
+          // TODO: Replace with structured logging (e.g., Sentry)
+        });
         setupSyncInterval(true);
       }
 
       // App went to background
       if (appState === "active" && nextAppState.match(/inactive|background/)) {
-        console.log("📱 App went to background");
+        // TODO: Replace with structured logging (e.g., Sentry)
         setupSyncInterval(false);
       }
 
@@ -146,7 +154,7 @@ export function SyncProvider({ children }: SyncProviderProps): JSX.Element {
 
       // Check user is authenticated before syncing
       if (!isAuthenticated) {
-        console.log("⚠️ Not authenticated - sync will not run");
+        // TODO: Replace with structured logging (e.g., Sentry)
         setupSyncInterval(true); // Still set up interval for retry
         return;
       }
@@ -158,7 +166,7 @@ export function SyncProvider({ children }: SyncProviderProps): JSX.Element {
       const count = await accountsCollection.query().fetchCount();
 
       if (count === 0) {
-        console.log("📱 Local DB empty - triggering full sync from server");
+        // TODO: Replace with structured logging (e.g., Sentry)
         setIsInitialSync(true);
         await sync(true);
         setIsInitialSync(false);
@@ -170,7 +178,9 @@ export function SyncProvider({ children }: SyncProviderProps): JSX.Element {
       setupSyncInterval(true);
     };
 
-    initialSync().catch(console.error);
+    initialSync().catch(() => {
+      // TODO: Replace with structured logging (e.g., Sentry)
+    });
 
     // Cleanup interval on unmount
     return () => {

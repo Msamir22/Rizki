@@ -1,5 +1,5 @@
 /**
- * Authentication Screen — Unified Sign In / Sign Up
+ * Authentication Screen \u2014 Unified Sign In / Sign Up
  *
  * Full-screen authentication page shown when user has no valid session.
  * Handles:
@@ -8,12 +8,12 @@
  * - Email verification pending state
  * - Forgot password flow
  *
- * No "Skip" option — authentication is mandatory for this fintech app.
+ * No "Skip" option \u2014 authentication is mandatory for this fintech app.
  *
  * Architecture & Design Rationale:
- * - Pattern: Composition — delegates to SocialLoginButtons and EmailPasswordForm
+ * - Pattern: Composition \u2014 delegates to SocialLoginButtons and EmailPasswordForm
  * - Why: Screen orchestrates auth flows, delegates rendering to subcomponents (SRP)
- * - SOLID: DIP — depends on auth-service abstractions, not Supabase directly
+ * - SOLID: DIP \u2014 depends on auth-service abstractions, not Supabase directly
  *
  * @module AuthScreen
  */
@@ -113,7 +113,7 @@ export default function AuthScreen(): React.JSX.Element {
     }
   }, [isAuthenticated, isAuthLoading, router]);
 
-  // ─── OAuth Handler ──────────────────────────────────────────────────────
+  // \u2500\u2500\u2500 OAuth Handler \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 
   const handleOAuth = useCallback(
     async (provider: OAuthProvider): Promise<void> => {
@@ -125,7 +125,7 @@ export default function AuthScreen(): React.JSX.Element {
 
         if (!result.success) {
           if (result.errorCode === "cancelled") {
-            // User cancelled — silent, no error shown
+            // User cancelled \u2014 silent, no error shown
           } else if (result.errorCode === "network") {
             setNetworkError(result.error);
           } else {
@@ -139,7 +139,7 @@ export default function AuthScreen(): React.JSX.Element {
     [showToast]
   );
 
-  // ─── Email/Password Handler ─────────────────────────────────────────────
+  // \u2500\u2500\u2500 Email/Password Handler \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 
   const handleEmailSubmit = useCallback(
     async (email: string, password: string, mode: AuthMode): Promise<void> => {
@@ -183,7 +183,7 @@ export default function AuthScreen(): React.JSX.Element {
     [showToast]
   );
 
-  // ─── Forgot Password Handler ───────────────────────────────────────────
+  // \u2500\u2500\u2500 Forgot Password Handler \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 
   const handleForgotPassword = useCallback(
     (email: string): void => {
@@ -214,7 +214,7 @@ export default function AuthScreen(): React.JSX.Element {
     [showToast]
   );
 
-  // ─── Resend Verification ───────────────────────────────────────────────
+  // \u2500\u2500\u2500 Resend Verification \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 
   const handleResendVerification = useCallback(async (): Promise<void> => {
     try {
@@ -232,7 +232,7 @@ export default function AuthScreen(): React.JSX.Element {
     }
   }, [pendingEmail, showToast]);
 
-  // ─── Back to Form ─────────────────────────────────────────────────────
+  // \u2500\u2500\u2500 Back to Form \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 
   const handleBackToForm = useCallback((): void => {
     setScreenState("form");
@@ -240,7 +240,7 @@ export default function AuthScreen(): React.JSX.Element {
     setNetworkError(null);
   }, []);
 
-  // ─── Render ───────────────────────────────────────────────────────────
+  // \u2500\u2500\u2500 Render \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 
   return (
     <View className="flex-1">
@@ -280,6 +280,7 @@ export default function AuthScreen(): React.JSX.Element {
               onOAuth={handleOAuth}
               onEmailSubmit={handleEmailSubmit}
               onForgotPassword={handleForgotPassword}
+              onClearError={() => setEmailError(null)}
               onRetry={() => setNetworkError(null)}
             />
           ) : screenState === "verificationPending" ? (
@@ -319,6 +320,7 @@ interface FormViewProps {
     mode: AuthMode
   ) => Promise<void>;
   readonly onForgotPassword: (email: string) => void;
+  readonly onClearError: () => void;
   readonly onRetry: () => void;
 }
 
@@ -331,6 +333,7 @@ function FormView({
   onOAuth,
   onEmailSubmit,
   onForgotPassword,
+  onClearError,
   onRetry,
 }: FormViewProps): React.JSX.Element {
   return (
@@ -415,6 +418,7 @@ function FormView({
           onForgotPassword={onForgotPassword}
           isLoading={emailLoading}
           errorMessage={emailError}
+          onClearError={onClearError}
         />
       </View>
     </>
