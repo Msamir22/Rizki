@@ -31,6 +31,10 @@ interface TransactionEdits {
   readonly type: TransactionType;
   readonly accountId: string | null;
   readonly accountName: string | null;
+  /** Cash account ID for ATM withdrawal destination (optional) */
+  readonly toAccountId?: string | null;
+  /** Cash account name for ATM withdrawal destination (optional) */
+  readonly toAccountName?: string | null;
 }
 
 interface BuildPendingAccountInput {
@@ -47,6 +51,10 @@ interface BuildTransactionEditsInput {
   readonly type: TransactionType;
   readonly categoryId: string;
   readonly amount: number;
+  /** Cash account ID for ATM withdrawal destination (optional) */
+  readonly toAccountId?: string | null;
+  /** Cash account name for ATM withdrawal destination (optional) */
+  readonly toAccountName?: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -114,6 +122,8 @@ function buildTransactionEdits(
     type: input.type,
     categoryId: input.categoryId,
     amount: input.amount,
+    toAccountId: input.toAccountId,
+    toAccountName: input.toAccountName,
   };
 }
 
