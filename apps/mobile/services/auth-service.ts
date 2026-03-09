@@ -21,16 +21,17 @@ import {
   type WebBrowserAuthSessionResult,
 } from "expo-web-browser";
 
-import {
-  signInWithOAuthProvider,
-  signUpWithEmail as supabaseSignUp,
-  signInWithEmail as supabaseSignIn,
-  resetPasswordForEmail as supabaseResetPassword,
-  supabase,
-} from "@/services/supabase";
-import type { OAuthProvider, EmailAuthResult } from "@/services/supabase";
-import { isAuthError, isAuthRetryableFetchError } from "@supabase/supabase-js";
 import { AUTH_REDIRECT_URL } from "@/constants/auth-constants";
+import {
+  type EmailAuthResult,
+  type OAuthProvider,
+  signInWithOAuthProvider,
+  supabase,
+  resetPasswordForEmail as supabaseResetPassword,
+  signInWithEmail as supabaseSignIn,
+  signUpWithEmail as supabaseSignUp,
+} from "@/services/supabase";
+import { isAuthError, isAuthRetryableFetchError } from "@supabase/supabase-js";
 
 // Ensure the browser auth session can complete on warm start
 WebBrowser.maybeCompleteAuthSession();
