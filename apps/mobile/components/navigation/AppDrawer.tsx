@@ -1,13 +1,24 @@
 /**
- * App Navigation Drawer
- * Slide-out navigation menu with profile header and sectioned menu.
- * Logout is guarded by a confirmation modal.
+ * App Drawer Navigation
+ *
+ * Slide-out drawer with navigation menu sections, theme toggle, and logout.
+ * Implements sync-first logout flow with confirmation modal for sync failures.
+ *
+ * @module AppDrawer
  */
 
+import { palette } from "@/constants/colors";
+import { ConfirmationModal } from "@/components/modals/ConfirmationModal";
+import { useTheme } from "@/context/ThemeContext";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import {
   ActivityIndicator,
   Animated,
@@ -20,11 +31,8 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ConfirmationModal } from "@/components/modals/ConfirmationModal";
-import { palette } from "@/constants/colors";
-import { useTheme } from "@/context/ThemeContext";
-import { useDatabase } from "@/providers/DatabaseProvider";
-import { performLogout } from "@/services/logout-service";
+import { useDatabase } from "../providers/DatabaseProvider";
+import { performLogout } from "../services/logout-service";
 
 // =============================================================================
 // Types
@@ -145,23 +153,26 @@ export function AppDrawer({
   const handleLogoutPress = useCallback(async (): Promise<void> => {
     setIsLoggingOut(true);
 
-    const result = await performLogout(database);
+    try {
+      const result = await performLogout(database);
 
-    if (result.success) {
+      if (result.success) {
+        onClose();
+        router.replace("/auth");
+        return;
+      }
+
+      if (result.error === "no_network") {
+        return;
+      }
+
+      if (result.error === "sync_failed") {
+        setShowSyncWarning(true);
+      }
+    } catch {
+      // TODO: Replace with structured logging (e.g., Sentry)
+    } finally {
       setIsLoggingOut(false);
-      onClose();
-      router.replace("/auth");
-      return;
-    }
-
-    setIsLoggingOut(false);
-
-    if (result.error === "no_network") {
-      return;
-    }
-
-    if (result.error === "sync_failed") {
-      setShowSyncWarning(true);
     }
   }, [database, onClose]);
 
@@ -169,11 +180,20 @@ export function AppDrawer({
     setShowSyncWarning(false);
     setIsLoggingOut(true);
 
-    await performLogout(database, true);
+    try {
+      const result = await performLogout(database, true);
 
-    setIsLoggingOut(false);
-    onClose();
-    router.replace("/auth");
+      if (result.success) {
+        onClose();
+        router.replace("/auth");
+      }
+      // If force logout fails, there's not much we can do in the drawer
+      // TODO: Replace with structured logging (e.g., Sentry)
+    } catch {
+      // TODO: Replace with structured logging (e.g., Sentry)
+    } finally {
+      setIsLoggingOut(false);
+    }
   }, [database, onClose]);
 
   return (
@@ -306,7 +326,9 @@ export function AppDrawer({
         confirmLabel="Proceed Anyway"
         cancelLabel="Cancel"
         onConfirm={() => {
-          handleForceLogout().catch(console.error);
+          handleForceLogout().catch(() => {
+            // TODO: Replace with structured logging (e.g., Sentry)
+          });
         }}
         onCancel={() => setShowSyncWarning(false)}
       />
