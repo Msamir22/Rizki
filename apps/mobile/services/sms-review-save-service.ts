@@ -23,7 +23,9 @@ import {
 } from "@/services/pending-account-service";
 import type { AccountMatch } from "@/services/sms-account-matcher";
 import type { TransactionEdits } from "@/services/sms-edit-modal-service";
+import { ensureCashAccount } from "@/services/account-service";
 import type { ParsedSmsTransaction } from "@astik/logic";
+import type { CurrencyType } from "@astik/db";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -40,14 +42,18 @@ interface PrepareSaveInput {
   readonly pendingAccounts: readonly PendingAccount[];
   /** The full effective (post-dedup) transactions array */
   readonly effectiveTransactions: readonly ParsedSmsTransaction[];
+  /** The authenticated user's ID (needed for cash account creation) */
+  readonly userId: string;
 }
 
 interface PrepareSaveSuccess {
   readonly success: true;
   /** The selected transactions in order */
   readonly selected: readonly ParsedSmsTransaction[];
-  /** Sequential index → real account ID */
+  /** Sequential index → real account ID (FROM account) */
   readonly transactionAccountMap: Map<number, string>;
+  /** Sequential index → real cash account ID (TO account, ATM only) */
+  readonly toAccountMap: Map<number, string>;
 }
 
 interface PrepareSaveValidationError {
@@ -95,6 +101,7 @@ async function prepareSavePayload(
     accountMatches,
     pendingAccounts,
     effectiveTransactions,
+    userId,
   } = input;
 
   // Step 1: Collect selected original indices in order
@@ -196,17 +203,85 @@ async function prepareSavePayload(
     selected.push(transaction);
   }
   const transactionAccountMap = new Map<number, string>();
-  selectedOriginalIndices.forEach((origIdx, seqIdx) => {
+  const toAccountMap = new Map<number, string>();
+
+  for (let seqIdx = 0; seqIdx < selectedOriginalIndices.length; seqIdx++) {
+    const origIdx = selectedOriginalIndices[seqIdx];
     const accountId = originalIndexToAccountId.get(origIdx);
     if (accountId) {
       transactionAccountMap.set(seqIdx, accountId);
     }
-  });
+  }
+
+  // ── Resolve TO accounts for ATM withdrawals (deduplicated) ──────────
+
+  // Pass 1: Collect unique (name, currency) pairs that need creation
+  const pendingCashKeys = new Map<
+    string,
+    { readonly name: string; readonly currency: CurrencyType }
+  >();
+  /** seqIdx → either an existing cash account ID or a dedup key for creation */
+  const atmToResolution = new Map<
+    number,
+    { kind: "existing"; id: string } | { kind: "pending"; key: string }
+  >();
+
+  for (let seqIdx = 0; seqIdx < selectedOriginalIndices.length; seqIdx++) {
+    const origIdx = selectedOriginalIndices[seqIdx];
+    const tx = effectiveTransactions[origIdx];
+    if (!tx?.isAtmWithdrawal) continue;
+
+    const override = transactionOverrides.get(origIdx);
+    const toId = override?.toAccountId;
+    const toName = override?.toAccountName;
+
+    if (toId) {
+      // User selected an existing cash account
+      atmToResolution.set(seqIdx, { kind: "existing", id: toId });
+    } else if (toName) {
+      // User typed a new name — deduplicate by (name, currency)
+      const key = `${toName.trim().toLowerCase()}|${tx.currency}`;
+      if (!pendingCashKeys.has(key)) {
+        pendingCashKeys.set(key, {
+          name: toName.trim(),
+          currency: tx.currency,
+        });
+      }
+      atmToResolution.set(seqIdx, { kind: "pending", key });
+    }
+    // If neither set, batchCreateSmsTransactions auto-creates via ensureCashAccount
+  }
+
+  // Pass 2: Create each unique cash account once
+  const resolvedCashIds = new Map<string, string>();
+  for (const [key, { name, currency }] of pendingCashKeys) {
+    try {
+      const result = await ensureCashAccount(userId, currency, name);
+      if (result.accountId) {
+        resolvedCashIds.set(key, result.accountId);
+      }
+    } catch {
+      // Non-fatal: batchCreateSmsTransactions will fall back to ensureCashAccount
+    }
+  }
+
+  // Pass 3: Map all ATM transactions to their resolved TO account IDs
+  for (const [seqIdx, resolution] of atmToResolution) {
+    if (resolution.kind === "existing") {
+      toAccountMap.set(seqIdx, resolution.id);
+    } else {
+      const resolvedId = resolvedCashIds.get(resolution.key);
+      if (resolvedId) {
+        toAccountMap.set(seqIdx, resolvedId);
+      }
+    }
+  }
 
   return {
     success: true,
     selected,
     transactionAccountMap,
+    toAccountMap,
   };
 }
 

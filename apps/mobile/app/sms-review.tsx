@@ -65,13 +65,15 @@ export default function SmsReviewScreen(): React.JSX.Element {
   const handleSave = useCallback(
     async (
       selected: readonly ParsedSmsTransaction[],
-      transactionAccountMap: ReadonlyMap<number, string>
+      transactionAccountMap: ReadonlyMap<number, string>,
+      toAccountMap: ReadonlyMap<number, string>
     ) => {
       setIsSaving(true);
       try {
         const result = await batchCreateSmsTransactions(
           selected,
-          transactionAccountMap
+          transactionAccountMap,
+          toAccountMap
         );
 
         if (result.failedCount > 0) {

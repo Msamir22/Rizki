@@ -57,11 +57,14 @@ export const CURRENCY_UNKNOWN_ERROR = "CURRENCY_UNKNOWN";
  * @param userId - The authenticated user's ID
  * @param currency - Optional explicit currency. Falls back to timezone detection.
  *                   Returns CURRENCY_UNKNOWN error if both are null.
+ * @param name - Optional custom name for the cash account (defaults to 'Cash').
+ *               Only used during creation — existing accounts are returned as-is.
  * @returns Result with created flag and account ID
  */
 export async function ensureCashAccount(
   userId: string,
-  currency?: CurrencyType | null
+  currency?: CurrencyType | null,
+  name?: string
 ): Promise<EnsureCashAccountResult> {
   try {
     const normalizedUserId = userId.trim();
@@ -103,7 +106,7 @@ export async function ensureCashAccount(
 
       const record = await accountsCollection.create((acc) => {
         acc.userId = normalizedUserId;
-        acc.name = CASH_ACCOUNT_NAME;
+        acc.name = name?.trim() || CASH_ACCOUNT_NAME;
         acc.type = CASH_ACCOUNT_TYPE;
         acc.currency = resolvedCurrency;
         acc.balance = 0;
