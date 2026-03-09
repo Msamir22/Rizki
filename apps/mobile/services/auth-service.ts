@@ -18,8 +18,8 @@
 import * as WebBrowser from "expo-web-browser";
 import {
   WebBrowserResultType,
+  type WebBrowserAuthSessionResult,
 } from "expo-web-browser";
-import type { WebBrowserAuthSessionResult } from "expo-web-browser";
 
 import { AUTH_REDIRECT_URL } from "@/constants/auth-constants";
 import {
@@ -28,8 +28,9 @@ import {
   resetPasswordForEmail as supabaseResetPassword,
   signInWithEmail as supabaseSignIn,
   signUpWithEmail as supabaseSignUp,
+  type EmailAuthResult,
+  type OAuthProvider,
 } from "@/services/supabase";
-import type { EmailAuthResult, OAuthProvider } from "@/services/supabase";
 import { isAuthError, isAuthRetryableFetchError } from "@supabase/supabase-js";
 
 // Ensure the browser auth session can complete on warm start
@@ -103,7 +104,7 @@ export async function signInWithOAuth(
       WebBrowser.openAuthSessionAsync(
         oauthResponse.url,
         AUTH_REDIRECT_URL
-      ) as Promise<WebBrowserAuthSessionResult>,
+      ),
       timeout.promise,
     ]);
 

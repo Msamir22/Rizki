@@ -233,6 +233,7 @@ describe("useOAuthFlow", () => {
 
     // Fire first call (stays pending)
     let firstCallPromise: Promise<void> | undefined;
+    // eslint-disable-next-line @typescript-eslint/require-await
     await actAsync(async () => {
       firstCallPromise = unwrap(result).handleOAuth("google");
     });

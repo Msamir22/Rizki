@@ -1,8 +1,8 @@
 /**
  * Logout Service
  *
- * Orchestrates the full logout sequence: sync \u2192 reset DB \u2192 clear preferences \u2192 destroy session.
- * Implements the Facade pattern \u2014 components call a single function, not five subsystems.
+ * Orchestrates the full logout sequence: sync → reset DB → clear preferences → destroy session.
+ * Implements the Facade pattern — components call a single function, not five subsystems.
  *
  * @module logout-service
  */
@@ -75,27 +75,26 @@ export async function performLogout(
       // Step 3: Await any in-flight sync, then run a fresh sync
       const syncSucceeded = await attemptSync(database);
       if (!syncSucceeded) {
-        // Don't proceed \u2014 caller should show warning modal
+        // Don't proceed — caller should show warning modal
         // Keep the logout_in_progress flag so if user decides to proceed,
         // we can skip right to cleanup
         return { success: false, error: "sync_failed" };
       }
     }
 
-    // Steps 4\u20137: Perform the actual cleanup
+    // Steps 4–7: Perform the actual cleanup
     await executeLogoutCleanup(database);
 
     return { success: true };
-  } catch (error) {
+  } catch {
     // FR-008: If DB reset fails, still try to clear the session
     try {
       await destroySession();
       await AsyncStorage.removeItem(LOGOUT_IN_PROGRESS_KEY);
     } catch {
-      // Best-effort cleanup \u2014 nothing more we can do
+      // Best-effort cleanup — nothing more we can do
     }
     // TODO: Replace with structured logging (e.g., Sentry)
-    void error;
     return { success: false, error: "unknown" };
   }
 }
@@ -121,9 +120,8 @@ export async function completeInterruptedLogout(
     // TODO: Replace with structured logging (e.g., Sentry)
     await executeLogoutCleanup(database);
     // TODO: Replace with structured logging (e.g., Sentry)
-  } catch (error) {
+  } catch {
     // TODO: Replace with structured logging (e.g., Sentry)
-    void error;
     // Remove the flag to prevent infinite loops
     try {
       await AsyncStorage.removeItem(LOGOUT_IN_PROGRESS_KEY);
@@ -150,7 +148,7 @@ async function attemptSync(database: Database): Promise<boolean> {
     try {
       await activeSync;
     } catch {
-      // Active sync failed \u2014 we'll try a fresh one below
+      // Active sync failed — we'll try a fresh one below
     }
   }
 
@@ -158,15 +156,13 @@ async function attemptSync(database: Database): Promise<boolean> {
     try {
       await syncDatabase(database);
       return true;
-    } catch (error) {
+    } catch {
       const isLastAttempt = attempt === MAX_SYNC_RETRIES;
       if (isLastAttempt) {
         // TODO: Replace with structured logging (e.g., Sentry)
-        void error;
         return false;
       }
       // TODO: Replace with structured logging (e.g., Sentry)
-      void error;
     }
   }
 
@@ -177,7 +173,7 @@ async function attemptSync(database: Database): Promise<boolean> {
 }
 
 /**
- * Execute the logout cleanup steps: reset DB \u2192 clear keys \u2192 destroy session \u2192 remove flag.
+ * Execute the logout cleanup steps: reset DB → clear keys → destroy session → remove flag.
  *
  * @param database - The WatermelonDB database instance
  */
@@ -201,10 +197,9 @@ async function executeLogoutCleanup(database: Database): Promise<void> {
 async function clearUserPreferences(): Promise<void> {
   try {
     await AsyncStorage.multiRemove([...CLEARABLE_USER_KEYS]);
-  } catch (error) {
+  } catch {
     // TODO: Replace with structured logging (e.g., Sentry)
-    void error;
-    // Non-fatal \u2014 continue with logout
+    // Non-fatal — continue with logout
   }
 }
 

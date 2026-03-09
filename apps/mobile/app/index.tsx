@@ -29,10 +29,9 @@ export default function Index(): React.ReactNode {
         if (value === "true") {
           setHasOnboarded(true);
         }
-      } catch (error: unknown) {
+      } catch {
         // TODO: Replace with structured logging (e.g., Sentry)
         // Failed to read onboarding status — default to not onboarded
-        void error;
       } finally {
         setIsReady(true);
       }
