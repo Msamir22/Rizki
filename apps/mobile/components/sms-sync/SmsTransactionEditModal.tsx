@@ -228,9 +228,6 @@ export function SmsTransactionEditModal({
     if (matchedOption) {
       setSelectedAccountId(matchedOption.id);
       setSelectedAccountName(matchedOption.name);
-    } else if (accountOptions.length > 0) {
-      setSelectedAccountId(accountOptions[0].id);
-      setSelectedAccountName(accountOptions[0].name);
     } else {
       setSelectedAccountId("");
       setSelectedAccountName("");

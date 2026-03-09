@@ -388,16 +388,6 @@ function matchAccountCore(
     };
   }
 
-  // Step 5: First bank account fallback (NEW — sorted by created_at ASC)
-  const firstBankAccount = accounts.find((a) => a.type === "BANK");
-  if (firstBankAccount) {
-    return {
-      accountId: firstBankAccount.id,
-      accountName: firstBankAccount.name,
-      matchReason: "first_bank",
-    };
-  }
-
   // No match at all
   return { accountId: null, accountName: null, matchReason: "none" };
 }
