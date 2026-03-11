@@ -14,9 +14,10 @@
 
 import { palette } from "@/constants/colors";
 import { useSync } from "@/providers/SyncProvider";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import Animated, {
+  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
@@ -25,16 +26,28 @@ import Animated, {
 export function InitialSyncOverlay(): React.ReactNode {
   const { isInitialSync } = useSync();
   const opacity = useSharedValue(0);
+  const [visible, setVisible] = useState(isInitialSync);
 
   useEffect(() => {
-    opacity.value = withTiming(isInitialSync ? 1 : 0, { duration: 300 });
+    if (isInitialSync) {
+      // Sync started — mount overlay, then fade in
+      setVisible(true);
+      opacity.value = withTiming(1, { duration: 300 });
+    } else {
+      // Sync ended — fade out, then unmount via callback
+      opacity.value = withTiming(0, { duration: 300 }, (finished) => {
+        if (finished) {
+          runOnJS(setVisible)(false);
+        }
+      });
+    }
   }, [isInitialSync, opacity]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
   }));
 
-  if (!isInitialSync) {
+  if (!visible) {
     return null;
   }
 
