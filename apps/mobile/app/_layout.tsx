@@ -6,7 +6,7 @@ import {
   Inter_700Bold,
 } from "@expo-google-fonts/inter";
 import { useFonts } from "expo-font";
-import { Stack } from "expo-router";
+import { router, Stack, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useRef } from "react";
@@ -19,7 +19,8 @@ import { ThemeProvider, useTheme } from "../context/ThemeContext";
 import "../global.css";
 
 import { ToastProvider } from "../components/ui/Toast";
-import { AuthProvider } from "../context/AuthContext";
+import { InitialSyncOverlay } from "../components/ui/InitialSyncOverlay";
+import { AuthProvider, useAuth } from "../context/AuthContext";
 import { CategoriesProvider } from "../context/CategoriesContext";
 
 import { SmsScanProvider } from "../context/SmsScanContext";
@@ -39,6 +40,7 @@ import {
 } from "../services/sms-live-listener-service";
 
 // Prevent splash screen from auto-hiding until fonts are loaded
+// TODO: Replace with structured logging (e.g., Sentry)
 SplashScreen.preventAutoHideAsync().catch(console.error);
 
 export default function RootLayout(): React.ReactNode {
@@ -52,6 +54,7 @@ export default function RootLayout(): React.ReactNode {
   // Hide splash screen once fonts are loaded
   useEffect(() => {
     if (fontsLoaded || fontError) {
+      // TODO: Replace with structured logging (e.g., Sentry)
       SplashScreen.hideAsync().catch(console.error);
     }
   }, [fontsLoaded, fontError]);
@@ -71,15 +74,18 @@ export default function RootLayout(): React.ReactNode {
 
   useEffect(() => {
     // Initialize notifications channel and action handler
+    // TODO: Replace with structured logging (e.g., Sentry)
     initializeNotifications().catch(console.error);
     const cleanupActions = initializeDetectionActionHandler();
 
     // Subscribe to detected transactions from Tier 1 listener
     const cleanupDetection = onTransactionDetected((parsed) => {
+      // TODO: Replace with structured logging (e.g., Sentry)
       handleDetectedSms(parsed).catch(console.error);
     });
 
     // Start listener if preference enabled
+    // TODO: Replace with structured logging (e.g., Sentry)
     startDetectionIfEnabled().catch(console.error);
 
     // Listen for app state changes to restart listener
@@ -87,6 +93,7 @@ export default function RootLayout(): React.ReactNode {
       "change",
       (nextState: AppStateStatus) => {
         if (nextState === "active") {
+          // TODO: Replace with structured logging (e.g., Sentry)
           startDetectionIfEnabled().catch(console.error);
         }
       }
@@ -121,7 +128,10 @@ export default function RootLayout(): React.ReactNode {
                     <ThemeProvider>
                       <SafeAreaProvider>
                         <ToastProvider>
-                          <RootLayoutNav />
+                          <AuthGuard>
+                            <RootLayoutNav />
+                            <InitialSyncOverlay />
+                          </AuthGuard>
                         </ToastProvider>
                       </SafeAreaProvider>
                     </ThemeProvider>
@@ -134,6 +144,47 @@ export default function RootLayout(): React.ReactNode {
       </GestureHandlerRootView>
     </ErrorBoundary>
   );
+}
+
+/**
+ * Auth Guard — blocks access to all app routes when not authenticated.
+ * Uses useEffect + router.replace for reliable redirection even when
+ * the navigation stack already has active screens.
+ *
+ * Public routes that don't require authentication:
+ * - "auth" — the main authentication screen
+ * - "auth-callback" — deep link handler for OAuth/email verification redirects
+ */
+const PUBLIC_ROUTES = new Set(["auth", "auth-callback"]);
+
+function AuthGuard({
+  children,
+}: {
+  children: React.ReactNode;
+}): React.ReactNode {
+  const { isAuthenticated, isLoading } = useAuth();
+  const segments = useSegments();
+  const isPublicRoute = PUBLIC_ROUTES.has(segments[0] ?? "");
+
+  useEffect(() => {
+    if (isLoading) {
+      return;
+    }
+
+    if (!isAuthenticated && !isPublicRoute) {
+      router.replace("/auth");
+    }
+  }, [isAuthenticated, isLoading, isPublicRoute]);
+
+  if (isLoading) {
+    return null;
+  }
+
+  if (!isAuthenticated && !isPublicRoute) {
+    return null;
+  }
+
+  return <>{children}</>;
 }
 
 function RootLayoutNav(): React.ReactNode {
@@ -197,7 +248,8 @@ function RootLayoutNav(): React.ReactNode {
         />
         <Stack.Screen name="sms-scan" />
         <Stack.Screen name="sms-review" />
-        <Stack.Screen name="sign-up" />
+        <Stack.Screen name="auth" />
+        <Stack.Screen name="auth-callback" />
       </Stack>
     </>
   );

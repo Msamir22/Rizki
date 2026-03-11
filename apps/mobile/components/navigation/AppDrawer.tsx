@@ -1,13 +1,26 @@
 /**
- * App Navigation Drawer
- * Slide-out navigation menu with profile header and sectioned menu
+ * App Drawer Navigation
+ *
+ * Slide-out drawer with navigation menu sections, theme toggle, and logout.
+ * Implements sync-first logout flow with confirmation modal for sync failures.
+ *
+ * @module AppDrawer
  */
 
+import { palette } from "@/constants/colors";
+import { ConfirmationModal } from "@/components/modals/ConfirmationModal";
+import { useTheme } from "@/context/ThemeContext";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import React from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import {
+  ActivityIndicator,
   Animated,
   Dimensions,
   Modal,
@@ -18,9 +31,8 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { palette } from "@/constants/colors";
-import { useAuth } from "@/context/AuthContext";
-import { useTheme } from "@/context/ThemeContext";
+import { useDatabase } from "@/providers/DatabaseProvider";
+import { performLogout } from "@/services/logout-service";
 
 // =============================================================================
 // Types
@@ -114,11 +126,16 @@ export function AppDrawer({
   onClose,
 }: AppDrawerProps): React.JSX.Element {
   const { isDark, toggleTheme } = useTheme();
-  const { signOut } = useAuth();
-  const insets = useSafeAreaInsets();
-  const slideAnim = React.useRef(new Animated.Value(-DRAWER_WIDTH)).current;
 
-  React.useEffect(() => {
+  const database = useDatabase();
+  const insets = useSafeAreaInsets();
+  const slideAnim = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
+
+  // Logout UI state
+  const [showSyncWarning, setShowSyncWarning] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  useEffect(() => {
     Animated.timing(slideAnim, {
       toValue: visible ? 0 : -DRAWER_WIDTH,
       duration: 250,
@@ -133,10 +150,51 @@ export function AppDrawer({
     }, 100);
   };
 
-  const handleLogout = async (): Promise<void> => {
-    onClose();
-    await signOut();
-  };
+  const handleLogoutPress = useCallback(async (): Promise<void> => {
+    setIsLoggingOut(true);
+
+    try {
+      const result = await performLogout(database);
+
+      if (result.success) {
+        onClose();
+        router.replace("/auth");
+        return;
+      }
+
+      if (result.error === "no_network") {
+        return;
+      }
+
+      if (result.error === "sync_failed") {
+        setShowSyncWarning(true);
+      }
+    } catch {
+      // TODO: Replace with structured logging (e.g., Sentry)
+    } finally {
+      setIsLoggingOut(false);
+    }
+  }, [database, onClose]);
+
+  const handleForceLogout = useCallback(async (): Promise<void> => {
+    setShowSyncWarning(false);
+    setIsLoggingOut(true);
+
+    try {
+      const result = await performLogout(database, true);
+
+      if (result.success) {
+        onClose();
+        router.replace("/auth");
+      }
+      // If force logout fails, there's not much we can do in the drawer
+      // TODO: Replace with structured logging (e.g., Sentry)
+    } catch {
+      // TODO: Replace with structured logging (e.g., Sentry)
+    } finally {
+      setIsLoggingOut(false);
+    }
+  }, [database, onClose]);
 
   return (
     <Modal
@@ -236,20 +294,44 @@ export function AppDrawer({
 
               {/* Logout */}
               <TouchableOpacity
-                onPress={handleLogout}
+                onPress={handleLogoutPress}
+                disabled={isLoggingOut}
                 className="flex-row items-center py-3"
               >
-                <Ionicons
-                  name="log-out-outline"
-                  size={22}
-                  color={palette.red[400]}
-                />
-                <Text className="ml-4 text-base text-red-400">Logout</Text>
+                {isLoggingOut ? (
+                  <ActivityIndicator size={22} color={palette.red[400]} />
+                ) : (
+                  <Ionicons
+                    name="log-out-outline"
+                    size={22}
+                    color={palette.red[400]}
+                  />
+                )}
+                <Text className="ml-4 text-base text-red-400">
+                  {isLoggingOut ? "Logging out..." : "Logout"}
+                </Text>
               </TouchableOpacity>
             </View>
           </Pressable>
         </Animated.View>
       </Pressable>
+
+      {/* Sync failure warning modal (FR-013) */}
+      <ConfirmationModal
+        visible={showSyncWarning}
+        variant="warning"
+        icon="cloud-offline-outline"
+        title="Sync Failed"
+        message="Some data may not have been saved to the cloud. If you proceed, any unsynced data will be lost."
+        confirmLabel="Proceed Anyway"
+        cancelLabel="Cancel"
+        onConfirm={() => {
+          handleForceLogout().catch(() => {
+            // TODO: Replace with structured logging (e.g., Sentry)
+          });
+        }}
+        onCancel={() => setShowSyncWarning(false)}
+      />
     </Modal>
   );
 }

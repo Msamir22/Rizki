@@ -5,19 +5,21 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  Alert,
+  ActivityIndicator,
   ScrollView,
   Switch,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-import { SignUpBanner } from "../components/sign-up/SignUpBanner";
+
 import { CurrencyPicker } from "../components/currency/CurrencyPicker";
 import { GradientBackground } from "../components/ui/GradientBackground";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import { usePreferredCurrency } from "../hooks/usePreferredCurrency";
+import { useDatabase } from "../providers/DatabaseProvider";
+import { performLogout } from "../services/logout-service";
 import { useSmsPermission } from "../hooks/useSmsPermission";
 import { useSmsSync } from "../hooks/useSmsSync";
 import { useSmsScanContext } from "../context/SmsScanContext";
@@ -32,6 +34,7 @@ import {
   stopSmsListener,
 } from "../services/sms-live-listener-service";
 import { ConfirmationModal } from "@/components/modals/ConfirmationModal";
+import { useToast } from "@/components/ui/Toast";
 
 /**
  * Render the Settings screen for managing appearance, currency, and general preferences.
@@ -42,7 +45,7 @@ import { ConfirmationModal } from "@/components/modals/ConfirmationModal";
  */
 export default function SettingsScreen(): React.JSX.Element {
   const { theme, isDark, toggleTheme } = useTheme();
-  const { isAnonymous, user } = useAuth();
+  const { user } = useAuth();
   const { preferredCurrency, setPreferredCurrency } = usePreferredCurrency();
   const [isCurrencyPickerVisible, setIsCurrencyPickerVisible] = useState(false);
   const {
@@ -53,6 +56,13 @@ export default function SettingsScreen(): React.JSX.Element {
   const { hasSynced, lastSyncTimestamp } = useSmsSync();
   const { setScanMode } = useSmsScanContext();
   const [isFullRescanModalOpen, setIsFullRescanModalOpen] = useState(false);
+  const database = useDatabase();
+  const { showToast } = useToast();
+
+  // Logout UI state
+  const [showSyncWarning, setShowSyncWarning] = useState(false);
+  const [showForceLogoutError, setShowForceLogoutError] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   // Live detection preferences
   const [liveDetection, setLiveDetection] = useState(false);
@@ -62,6 +72,7 @@ export default function SettingsScreen(): React.JSX.Element {
     if (!isAndroid) {
       return;
     }
+    // TODO: Replace with structured logging (e.g., Sentry)
     isLiveDetectionEnabled().then(setLiveDetection).catch(console.error);
     isAutoConfirmEnabled().then(setAutoConfirmSms).catch(console.error);
   }, [isAndroid]);
@@ -96,11 +107,10 @@ export default function SettingsScreen(): React.JSX.Element {
   const navigateToScan = useCallback(
     async (mode: "incremental" | "full"): Promise<void> => {
       if (!isAndroid) {
-        Alert.alert(
-          "SMS Sync",
-          "SMS transaction sync is only available on Android devices.",
-          [{ text: "OK" }]
-        );
+        showToast({
+          type: "info",
+          title: "SMS transaction sync is only available on Android devices.",
+        });
         return;
       }
 
@@ -116,7 +126,7 @@ export default function SettingsScreen(): React.JSX.Element {
         router.push("/sms-scan");
       }
     },
-    [isAndroid, smsPermissionStatus, requestPermission, setScanMode]
+    [isAndroid, smsPermissionStatus, requestPermission, setScanMode, showToast]
   );
 
   const handleIncrementalSync = useCallback(async (): Promise<void> => {
@@ -125,10 +135,62 @@ export default function SettingsScreen(): React.JSX.Element {
 
   const handleCurrencySelect = useCallback(
     (currency: CurrencyType) => {
+      // TODO: Replace with structured logging (e.g., Sentry)
       setPreferredCurrency(currency).catch(console.error);
     },
     [setPreferredCurrency]
   );
+
+  const handleLogoutPress = useCallback(async (): Promise<void> => {
+    setIsLoggingOut(true);
+
+    const result = await performLogout(database);
+
+    if (result.success) {
+      setIsLoggingOut(false);
+      router.replace("/auth");
+      return;
+    }
+
+    setIsLoggingOut(false);
+
+    if (result.error === "no_network") {
+      showToast({
+        type: "error",
+        title:
+          "No internet connection. Please check your network and try again.",
+      });
+      return;
+    }
+
+    if (result.error === "sync_failed") {
+      setShowSyncWarning(true);
+      return;
+    }
+
+    // "unknown" or any other unhandled error
+    showToast({
+      type: "error",
+      title: "Something went wrong while logging out. Please try again.",
+    });
+  }, [database, showToast]);
+
+  const handleForceLogout = useCallback(async (): Promise<void> => {
+    setShowSyncWarning(false);
+    setIsLoggingOut(true);
+
+    const result = await performLogout(database, true);
+
+    setIsLoggingOut(false);
+
+    if (result.success) {
+      router.replace("/auth");
+      return;
+    }
+
+    // Force logout failed — show retry modal
+    setShowForceLogoutError(true);
+  }, [database]);
 
   return (
     <GradientBackground className="flex-1">
@@ -143,13 +205,6 @@ export default function SettingsScreen(): React.JSX.Element {
         <View className="w-6" />
       </View>
       <ScrollView contentContainerClassName="px-5">
-        {/* Sign-Up Banner (anonymous users only) */}
-        {isAnonymous && (
-          <SignUpBanner
-            onPress={() => router.push("/sign-up?source=settings")}
-          />
-        )}
-
         {/* Appearance Section */}
         <View className="mb-8">
           <Text className="text-[13px] font-semibold mb-3 ml-1 uppercase text-slate-500 dark:text-slate-400">
@@ -317,6 +372,7 @@ export default function SettingsScreen(): React.JSX.Element {
               <Switch
                 value={liveDetection}
                 onValueChange={(v) => {
+                  // TODO: Replace with structured logging (e.g., Sentry)
                   handleToggleLiveDetection(v).catch(console.error);
                 }}
                 trackColor={{ false: "#767577", true: palette.nileGreen[500] }}
@@ -349,6 +405,7 @@ export default function SettingsScreen(): React.JSX.Element {
                 <Switch
                   value={autoConfirmSms}
                   onValueChange={(v) => {
+                    // TODO: Replace with structured logging (e.g., Sentry)
                     handleToggleAutoConfirm(v).catch(console.error);
                   }}
                   trackColor={{
@@ -377,7 +434,7 @@ export default function SettingsScreen(): React.JSX.Element {
                 <Text className="text-base font-medium text-slate-900 dark:text-slate-50">
                   Profile
                 </Text>
-                {!isAnonymous && user?.email && (
+                {user?.email && (
                   <Text
                     className="text-xs text-slate-500 dark:text-slate-400"
                     numberOfLines={1}
@@ -410,12 +467,38 @@ export default function SettingsScreen(): React.JSX.Element {
               color={theme.text.secondary}
             />
           </TouchableOpacity>
+
+          {/* Logout */}
+          <TouchableOpacity
+            onPress={handleLogoutPress}
+            disabled={isLoggingOut}
+            className="flex-row items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-800 mt-0.5"
+          >
+            <View className="flex-row items-center gap-3">
+              <View className="w-8 bg-red-600 dark:bg-red-500 h-8 rounded-lg justify-center items-center">
+                {isLoggingOut ? (
+                  <ActivityIndicator size={16} color="#FFF" />
+                ) : (
+                  <Ionicons name="log-out-outline" size={20} color="#FFF" />
+                )}
+              </View>
+              <Text className="text-base font-medium text-red-600 dark:text-red-400">
+                {isLoggingOut ? "Logging out..." : "Logout"}
+              </Text>
+            </View>
+            <Ionicons
+              name="chevron-forward"
+              size={20}
+              color={theme.text.secondary}
+            />
+          </TouchableOpacity>
         </View>
       </ScrollView>
       {/* Full Rescan Confirmation Modal */}
       <ConfirmationModal
         visible={isFullRescanModalOpen}
         onConfirm={() => {
+          // TODO: Replace with structured logging (e.g., Sentry)
           navigateToScan("full").catch(console.error);
         }}
         onCancel={() => setIsFullRescanModalOpen(false)}
@@ -423,6 +506,37 @@ export default function SettingsScreen(): React.JSX.Element {
         message="This will scan all SMS messages from scratch. Previously scanned messages will be automatically skipped."
         confirmLabel="Re-scan"
         variant="warning"
+      />
+
+      {/* Sync Failure Warning Modal */}
+      <ConfirmationModal
+        visible={showSyncWarning}
+        variant="warning"
+        icon="cloud-offline-outline"
+        title="Sync Failed"
+        message="Some data may not have been saved to the cloud. If you proceed, any unsynced data will be lost."
+        confirmLabel="Proceed Anyway"
+        cancelLabel="Cancel"
+        onConfirm={() => {
+          // TODO: Replace with structured logging (e.g., Sentry)
+          handleForceLogout().catch(console.error);
+        }}
+        onCancel={() => setShowSyncWarning(false)}
+      />
+      {/* Force Logout Error Modal */}
+      <ConfirmationModal
+        visible={showForceLogoutError}
+        variant="warning"
+        icon="alert-circle-outline"
+        title="Logout Failed"
+        message="Could not complete logout. Your data may still be on this device."
+        confirmLabel="Retry"
+        cancelLabel="Cancel"
+        onConfirm={() => {
+          setShowForceLogoutError(false);
+          handleForceLogout().catch(console.error);
+        }}
+        onCancel={() => setShowForceLogoutError(false)}
       />
       {/* Currency Picker Modal */}
       <CurrencyPicker
