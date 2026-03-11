@@ -101,10 +101,7 @@ export async function signInWithOAuth(
     const timeout = createCancellableTimeout(OAUTH_TIMEOUT_MS);
 
     const browserResult: BrowserOrTimeout = await Promise.race([
-      WebBrowser.openAuthSessionAsync(
-        oauthResponse.url,
-        AUTH_REDIRECT_URL
-      ),
+      WebBrowser.openAuthSessionAsync(oauthResponse.url, AUTH_REDIRECT_URL),
       timeout.promise,
     ]);
 
@@ -142,7 +139,7 @@ export async function signInWithOAuth(
       return {
         success: false,
         error: sessionResult.error,
-        errorCode: "unknown",
+        errorCode: sessionResult.errorCode ?? "unknown",
       };
     }
 
@@ -263,7 +260,10 @@ function isTimeoutSentinel(
  */
 async function extractSessionFromRedirectUrl(
   url: string | undefined
-): Promise<{ success: true } | { success: false; error: string }> {
+): Promise<
+  | { success: true }
+  | { success: false; error: string; errorCode?: OAuthErrorCode }
+> {
   if (!url) {
     return {
       success: false,
@@ -290,6 +290,7 @@ async function extractSessionFromRedirectUrl(
         return {
           success: false,
           error: getHumanReadableError(error),
+          errorCode: getErrorCode(error),
         };
       }
 
@@ -312,6 +313,7 @@ async function extractSessionFromRedirectUrl(
         return {
           success: false,
           error: getHumanReadableError(error),
+          errorCode: getErrorCode(error),
         };
       }
 

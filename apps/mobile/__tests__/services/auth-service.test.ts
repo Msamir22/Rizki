@@ -171,9 +171,50 @@ describe("auth-service - signInWithOAuth", () => {
         errorCode: "unknown",
       });
     });
+
+    it("propagates errorCode from setSession failure (e.g. network error)", async () => {
+      mockSignInWithOAuthProvider.mockResolvedValue({
+        url: "https://accounts.google.com/o/oauth2/auth?...",
+      });
+      mockOpenAuthSession.mockResolvedValue({
+        type: "success",
+        url: "astik://auth-callback#access_token=test-token&refresh_token=test-refresh",
+      });
+      mockSetSession.mockResolvedValue({
+        data: { session: null },
+        error: createRetryableFetchError("Network failed"),
+      });
+
+      const result = await signInWithOAuth("google");
+
+      expect(result).toEqual({
+        success: false,
+        error:
+          "No internet connection. Please check your network and try again.",
+        errorCode: "network",
+      });
+    });
   });
 
   describe("error handling", () => {
+    it("returns error result when credentials are invalid", async () => {
+      const mockError = {
+        message: "Invalid login credentials",
+        status: 400,
+        name: "AuthApiError",
+      };
+
+      mockSignInWithEmailFn.mockResolvedValue({
+        success: false,
+        error: mockError,
+      });
+
+      const result = await signInWithEmail("test@example.com", "wrongpassword");
+
+      expect(result.success).toBe(false);
+      expect(result.error).toEqual(mockError);
+    });
+
     it("returns network error when signInWithOAuthProvider fails", async () => {
       mockSignInWithOAuthProvider.mockResolvedValue({
         error: createRetryableFetchError("Network error"),
