@@ -29,7 +29,9 @@ import { View } from "react-native";
  * Supabase password reset deep links typically include `type=recovery`
  * in either the URL fragment or the query parameters.
  */
-function isPasswordRecoveryLink(params: Record<string, string | string[]>): boolean {
+function isPasswordRecoveryLink(
+  params: Record<string, string | string[]>
+): boolean {
   // Check query params provided by Expo Router
   if (params.type === "recovery" || params.action === "reset") {
     return true;
@@ -40,37 +42,38 @@ function isPasswordRecoveryLink(params: Record<string, string | string[]>): bool
 export default function AuthCallbackScreen(): React.JSX.Element {
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
-  const params = useLocalSearchParams<Record<string, string>>();
+  const params = useLocalSearchParams();
 
   useEffect(() => {
-    if (isLoading) return;
+    const handleRedirect = async (): Promise<void> => {
+      if (isLoading) return;
 
-    if (!isAuthenticated) {
-      // Email verification completed but no session yet \u2014 go to auth
-      router.replace("/auth");
-      return;
-    }
+      if (!isAuthenticated) {
+        router.replace("/auth");
+        return;
+      }
 
-    // Check for password-recovery deep link before normal routing
-    if (isPasswordRecoveryLink(params)) {
-      // TODO: Create dedicated /reset-password route. For now, send to settings
-      // where the user can change their password.
-      router.replace("/settings" as never);
-      return;
-    }
+      // Check for password-recovery deep link before normal routing
+      if (isPasswordRecoveryLink(params)) {
+        // TODO: Create dedicated /reset-password route. For now, send to settings
+        // where the user can change their password.
+        router.replace("/settings");
+        return;
+      }
 
-    // Authenticated \u2014 check onboarding status and redirect
-    AsyncStorage.getItem(HAS_ONBOARDED_KEY)
-      .then((value) => {
+      try {
+        const value = await AsyncStorage.getItem(HAS_ONBOARDED_KEY);
         if (value === "true") {
           router.replace("/(tabs)");
         } else {
           router.replace("/onboarding");
         }
-      })
-      .catch(() => {
+      } catch {
         router.replace("/(tabs)");
-      });
+      }
+    };
+
+    void handleRedirect();
   }, [router, isAuthenticated, isLoading, params]);
 
   // Render nothing while redirecting

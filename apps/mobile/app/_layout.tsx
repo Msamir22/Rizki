@@ -164,21 +164,23 @@ function AuthGuard({
 }): React.ReactNode {
   const { isAuthenticated, isLoading } = useAuth();
   const segments = useSegments();
+  const isPublicRoute = PUBLIC_ROUTES.has(segments[0] ?? "");
 
   useEffect(() => {
     if (isLoading) {
       return;
     }
 
-    // Allow public routes through without authentication
-    const isPublicRoute = PUBLIC_ROUTES.has(segments[0] as string);
-
     if (!isAuthenticated && !isPublicRoute) {
       router.replace("/auth");
     }
-  }, [isAuthenticated, isLoading, segments]);
+  }, [isAuthenticated, isLoading, isPublicRoute]);
 
   if (isLoading) {
+    return null;
+  }
+
+  if (!isAuthenticated && !isPublicRoute) {
     return null;
   }
 

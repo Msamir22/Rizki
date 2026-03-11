@@ -77,8 +77,6 @@
     "no-new-wrappers": ["error"],
     // Restricts what can be thrown as an exception.
     "no-throw-literal": ["error"],
-    // Disallow void operators.
-    "no-void": ["error"],
     // Requires or disallows method and property shorthand syntax for object
     // literals.
     "object-shorthand": ["error"],

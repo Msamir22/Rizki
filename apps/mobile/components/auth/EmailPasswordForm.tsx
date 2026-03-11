@@ -216,6 +216,7 @@ export function EmailPasswordForm({
       {/* Submit Button */}
       <TouchableOpacity
         onPress={() => {
+          // Errors are handled internally via setLocalError; catch prevents unhandled rejection
           validateAndSubmit().catch(() => {});
         }}
         disabled={isLoading}
