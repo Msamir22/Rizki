@@ -102,17 +102,16 @@ describe("sms-account-matcher - matchAccountCore", () => {
     expect(result.matchReason).toBe("default");
   });
 
-  it("Step 5: Falls back to the very first BANK account if no default exists", () => {
+  it("Step 5: Returns 'none' if no default and no match (first_bank fallback removed)", () => {
     // Remove the default account and ensure they are sorted by createdAt ASC like fetchAccountsWithDetails does
     const accountsNoDefault = [accBank3, accBank1];
     const input: MatchInput = {
       senderDisplayName: "RANDOM_STORE",
     };
     const result = matchAccountCore(input, accountsNoDefault);
-    // accBank1 and accBank3 are both BANK type, but sorted by createdAt ASC.
-    // accBank3 was created before accBank1, so it should be picked first.
-    expect(result.accountId).toBe("acc_bank3");
-    expect(result.matchReason).toBe("first_bank");
+    // first_bank fallback was removed — user must explicitly select
+    expect(result.accountId).toBe(null);
+    expect(result.matchReason).toBe("none");
   });
 
   it("Returns 'none' if empty account list, or no rules apply", () => {

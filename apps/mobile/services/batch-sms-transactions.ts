@@ -82,12 +82,14 @@ function accumulateBalanceDelta(
  * the operation from O(n) write actions to O(1).
  *
  * @param transactions          - Selected, potentially edited transactions
- * @param transactionAccountMap - Mapping from transaction index → account ID
+ * @param transactionAccountMap - Mapping from transaction index → account ID (FROM)
+ * @param toAccountMap         - Optional mapping from transaction index → cash account ID (TO, ATM only)
  * @returns Summary of saved/failed counts
  */
 export async function batchCreateSmsTransactions(
   transactions: readonly ParsedSmsTransaction[],
-  transactionAccountMap: ReadonlyMap<number, string>
+  transactionAccountMap: ReadonlyMap<number, string>,
+  toAccountMap?: ReadonlyMap<number, string>
 ): Promise<BatchSaveResult> {
   if (transactions.length === 0) {
     return { savedCount: 0, failedCount: 0, errors: [] };
@@ -107,11 +109,13 @@ export async function batchCreateSmsTransactions(
   const errors: string[] = [];
 
   // Ensure Cash accounts exist for ATM withdrawal routing
+  // Only needed for ATM transactions NOT already resolved via toAccountMap
   const cashAccountIdByCurrency = new Map<CurrencyType, string>();
   const atmCurrencies = new Set<CurrencyType>();
 
-  for (const tx of transactions) {
-    if (tx.isAtmWithdrawal) {
+  for (let i = 0; i < transactions.length; i++) {
+    const tx = transactions[i];
+    if (tx.isAtmWithdrawal && !toAccountMap?.has(i)) {
       atmCurrencies.add(tx.currency);
     }
   }
@@ -152,7 +156,9 @@ export async function batchCreateSmsTransactions(
 
     // ── ATM Withdrawal: prepare as Transfer (bank → cash) ──
     if (tx.isAtmWithdrawal) {
-      const cashAccountId = cashAccountIdByCurrency.get(tx.currency);
+      // Prefer user-selected TO account, fall back to auto-resolved by currency
+      const cashAccountId =
+        toAccountMap?.get(i) ?? cashAccountIdByCurrency.get(tx.currency);
 
       if (!cashAccountId) {
         errors.push(

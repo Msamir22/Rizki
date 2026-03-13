@@ -143,6 +143,12 @@ export function SmsTransactionEditModal({
     transaction.senderDisplayName
   );
 
+  // ATM withdrawal TO account state
+  const [selectedToAccountId, setSelectedToAccountId] = useState("");
+  const [selectedToAccountName, setSelectedToAccountName] = useState("");
+  const [newToAccountName, setNewToAccountName] = useState("Cash");
+  const [isToAccountPickerOpen, setIsToAccountPickerOpen] = useState(false);
+
   const [isCategoryPickerOpen, setIsCategoryPickerOpen] = useState(false);
 
   const [selectedCategoryId, setSelectedCategoryId] = useState(
@@ -185,12 +191,20 @@ export function SmsTransactionEditModal({
   // Determine if we should show text input (no bank accounts exist)
   const hasBankAccounts = accountOptions.length > 0;
 
-  const existingCashAccountName = useMemo(() => {
-    const cashAccounts = accounts.find(
-      (a) => a.type === "CASH" && a.currency === transaction.currency
-    );
-    return cashAccounts?.name;
-  }, [accounts, transaction.currency]);
+  // Cash accounts for ATM withdrawal TO dropdown
+  const cashAccountOptions = useMemo<readonly AccountOption[]>(() => {
+    return accounts
+      .filter((acc) => acc.type === "CASH")
+      .map((acc) => ({
+        id: acc.id,
+        name: acc.name,
+        currency: acc.currency,
+        isPending: false,
+        type: acc.type,
+      }));
+  }, [accounts]);
+
+  const hasCashAccounts = cashAccountOptions.length > 0;
 
   // Determine selected account's currency for conversion notice
   const selectedAccountCurrency = useMemo(() => {
@@ -239,12 +253,34 @@ export function SmsTransactionEditModal({
     setNewAccountName(transaction.senderDisplayName);
     setNewAccountError(null);
     setFormErrors({});
+
+    // ATM TO account initialization
+    if (isAtmWithdrawal) {
+      setIsToAccountPickerOpen(false);
+      if (cashAccountOptions.length > 0) {
+        // Prefer cash account matching the transaction currency
+        const currencyMatch = cashAccountOptions.find(
+          (o) => o.currency === transaction.currency
+        );
+        const fallback = cashAccountOptions[0];
+        const selected = currencyMatch ?? fallback;
+        setSelectedToAccountId(selected.id);
+        setSelectedToAccountName(selected.name);
+      } else {
+        // No cash accounts — text input mode with "Cash" pre-populated
+        setSelectedToAccountId("");
+        setSelectedToAccountName("");
+        setNewToAccountName("Cash");
+      }
+    }
   }, [
     transaction,
     currentAccountId,
     currentAccountName,
     accountOptions,
     hasBankAccounts,
+    isAtmWithdrawal,
+    cashAccountOptions,
   ]);
 
   // Reset flag when transaction changes
@@ -357,6 +393,17 @@ export function SmsTransactionEditModal({
       type: txType,
       categoryId: selectedCategoryId,
       amount: parseFloat(amount),
+      // ATM withdrawal TO account
+      toAccountId: isAtmWithdrawal
+        ? hasCashAccounts
+          ? selectedToAccountId
+          : null
+        : undefined,
+      toAccountName: isAtmWithdrawal
+        ? hasCashAccounts
+          ? selectedToAccountName
+          : newToAccountName.trim() || "Cash"
+        : undefined,
     });
 
     onSave(edits);
@@ -375,6 +422,11 @@ export function SmsTransactionEditModal({
     selectedCategoryId,
     onSave,
     onCreatePendingAccount,
+    isAtmWithdrawal,
+    hasCashAccounts,
+    selectedToAccountId,
+    selectedToAccountName,
+    newToAccountName,
   ]);
 
   const onEditCategory = useCallback<() => void>(() => {
@@ -768,7 +820,7 @@ export function SmsTransactionEditModal({
                 </View>
               )}
 
-              {/* Cash Withdrawal TO field (read-only) */}
+              {/* Cash Withdrawal TO field */}
               {isAtmWithdrawal && (
                 <View className={`${hasBankAccounts ? "mt-4" : "mt-5"}`}>
                   {/* Down arrow indicator */}
@@ -782,34 +834,122 @@ export function SmsTransactionEditModal({
                     </View>
                   </View>
 
-                  {/* To Account block */}
+                  {/* To Account label */}
                   <Text className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-2 mt-2">
                     To Account
                   </Text>
 
-                  <View className="bg-slate-800/60 rounded-xl px-4 py-3 border border-slate-700/50 flex-row items-center">
-                    <View className="w-6 h-6 rounded-full bg-amber-500/20 items-center justify-center mr-2">
-                      <Ionicons
-                        name="cash"
-                        size={12}
-                        color={palette.gold[400]}
-                      />
-                    </View>
-                    <Text className="text-white text-base font-semibold">
-                      {existingCashAccountName || "Cash"}
-                    </Text>
-                  </View>
+                  {hasCashAccounts ? (
+                    /* Mode: Cash account dropdown */
+                    <View>
+                      <TouchableOpacity
+                        onPress={() =>
+                          setIsToAccountPickerOpen(!isToAccountPickerOpen)
+                        }
+                        activeOpacity={0.7}
+                        className="bg-slate-800/60 rounded-xl px-4 py-3 flex-row items-center justify-between border border-slate-700/50"
+                      >
+                        <View className="flex-row items-center flex-1">
+                          <View className="w-6 h-6 rounded-full bg-amber-500/20 items-center justify-center mr-2">
+                            <Ionicons
+                              name="cash"
+                              size={12}
+                              color={palette.gold[400]}
+                            />
+                          </View>
+                          <Text
+                            className="text-base text-white font-semibold flex-1"
+                            numberOfLines={1}
+                          >
+                            {selectedToAccountName || "Select cash account"}
+                          </Text>
+                        </View>
+                        <Ionicons
+                          name={
+                            isToAccountPickerOpen
+                              ? "chevron-up"
+                              : "chevron-down"
+                          }
+                          size={18}
+                          color={palette.slate[500]}
+                        />
+                      </TouchableOpacity>
 
-                  {!existingCashAccountName && (
-                    <View className="flex-row items-start bg-amber-500/10 p-3 rounded-xl mt-3 border border-amber-500/20">
-                      <Ionicons
-                        name="information-circle"
-                        size={16}
-                        color={palette.gold[400]}
-                      />
-                      <Text className="text-[10px] text-amber-500 font-bold uppercase ml-2 flex-1 leading-4 pt-0.5">
-                        {`A new cash account will be created automatically in ${transaction.currency}.`}
-                      </Text>
+                      {/* Cash account picker list */}
+                      {isToAccountPickerOpen && (
+                        <View className="bg-slate-800/80 rounded-xl mt-1 border border-slate-700/50 overflow-hidden">
+                          {cashAccountOptions.map((opt) => (
+                            <TouchableOpacity
+                              key={opt.id}
+                              onPress={() => {
+                                setSelectedToAccountId(opt.id);
+                                setSelectedToAccountName(opt.name);
+                                setIsToAccountPickerOpen(false);
+                              }}
+                              activeOpacity={0.7}
+                              className={`px-4 py-3 flex-row items-center justify-between border-b border-slate-700/30 ${
+                                opt.id === selectedToAccountId
+                                  ? "bg-amber-500/10"
+                                  : ""
+                              }`}
+                            >
+                              <View className="flex-row items-center">
+                                <View className="w-5 h-5 rounded-full bg-amber-500/20 items-center justify-center mr-2">
+                                  <Ionicons
+                                    name="cash"
+                                    size={10}
+                                    color={palette.gold[400]}
+                                  />
+                                </View>
+                                <Text className="text-white text-sm font-medium">
+                                  {opt.name}
+                                </Text>
+                                <Text className="text-slate-500 text-xs ml-1.5">
+                                  ({opt.currency})
+                                </Text>
+                              </View>
+                              {opt.id === selectedToAccountId && (
+                                <Ionicons
+                                  name="checkmark-circle"
+                                  size={18}
+                                  color={palette.nileGreen[400]}
+                                />
+                              )}
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      )}
+                    </View>
+                  ) : (
+                    /* Mode: Text input (no cash accounts) */
+                    <View>
+                      <View className="bg-slate-800/60 rounded-xl px-4 py-3 border border-amber-500/40 flex-row items-center">
+                        <View className="w-6 h-6 rounded-full bg-amber-500/20 items-center justify-center mr-2">
+                          <Ionicons
+                            name="cash"
+                            size={12}
+                            color={palette.gold[400]}
+                          />
+                        </View>
+                        <TextInput
+                          value={newToAccountName}
+                          onChangeText={setNewToAccountName}
+                          className="text-white text-base font-semibold flex-1"
+                          placeholderTextColor={palette.slate[600]}
+                          placeholder="Cash account name"
+                        />
+                      </View>
+
+                      <View className="flex-row items-start bg-amber-500/10 p-3 rounded-xl mt-3 border border-amber-500/20">
+                        <Ionicons
+                          name="information-circle"
+                          size={16}
+                          color={palette.gold[400]}
+                        />
+                        <Text className="text-[10px] text-amber-500 font-bold uppercase ml-2 flex-1 leading-4 pt-0.5">
+                          {`A cash account named "${newToAccountName.trim() || "Cash"}" will be created in ${transaction.currency}.`}
+                        </Text>
+                      </View>
                     </View>
                   )}
                 </View>

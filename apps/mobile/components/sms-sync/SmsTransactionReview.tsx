@@ -76,7 +76,8 @@ interface SmsTransactionReviewProps {
   /** Called when user saves selected transactions with their account mappings */
   readonly onSave: (
     selected: readonly ParsedSmsTransaction[],
-    transactionAccountMap: ReadonlyMap<number, string>
+    transactionAccountMap: ReadonlyMap<number, string>,
+    toAccountMap: ReadonlyMap<number, string>
   ) => Promise<void>;
   /** Called when user discards all */
   readonly onDiscard: () => void;
@@ -389,12 +390,23 @@ export function SmsTransactionReview({
   );
 
   const handleSave = useCallback(async (): Promise<void> => {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      showToast({
+        type: "error",
+        title: "Save Error",
+        message: "User not authenticated.",
+      });
+      return;
+    }
+
     const result = await prepareSavePayload({
       selectedIndices,
       transactionOverrides,
       accountMatches,
       pendingAccounts,
       effectiveTransactions,
+      userId,
     });
 
     if (!result.success) {
@@ -419,7 +431,11 @@ export function SmsTransactionReview({
     // Clear any previous flags
     setInvalidIndices(new Set());
 
-    await onSave(result.selected, result.transactionAccountMap);
+    await onSave(
+      result.selected,
+      result.transactionAccountMap,
+      result.toAccountMap
+    );
   }, [
     effectiveTransactions,
     selectedIndices,
