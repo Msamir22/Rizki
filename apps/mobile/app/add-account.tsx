@@ -111,9 +111,7 @@ export default function AddAccount(): React.ReactNode {
                   accessibilityRole="radio"
                   accessibilityState={{ selected: isSelected }}
                   accessibilityLabel={
-                    isSelected
-                      ? `${type.label}, selected`
-                      : type.label
+                    isSelected ? `${type.label}, selected` : type.label
                   }
                   className={`flex-row items-center rounded-2xl px-3 py-3 border ${
                     isSelected
