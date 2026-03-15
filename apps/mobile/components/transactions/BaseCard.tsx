@@ -221,7 +221,7 @@ export const BaseCard = React.memo(function BaseCard({
             <View className="items-end">
               <View className="flex-row items-center">
                 <Text className="text-[11px] text-slate-400 dark:text-slate-500">
-                  NW:{" "}
+                  Net Worth:{" "}
                 </Text>
                 <Text className="text-[11px] text-slate-400 dark:text-slate-500 font-medium">
                   {formatCurrency({

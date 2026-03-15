@@ -117,7 +117,7 @@ export function QuickActionFab(): React.JSX.Element {
         {/* Action Buttons - Stacked vertically above FAB */}
         {isExpanded && (
           <Animated.View
-            entering={SlideInDown.duration(250).springify()}
+            entering={SlideInDown.duration(250)}
             exiting={SlideOutDown.duration(150)}
             className="mb-3"
           >
@@ -132,7 +132,7 @@ export function QuickActionFab(): React.JSX.Element {
                 accessibilityRole="button"
               >
                 <Text
-                  className="mr-2.5 text-sm font-semibold text-slate-800 dark:text-white"
+                  className="mr-2.5 text-sm font-semibold text-white"
                   // eslint-disable-next-line react-native/no-inline-styles
                   style={{
                     textShadowColor: "rgba(0,0,0,0.3)",

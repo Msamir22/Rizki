@@ -32,6 +32,7 @@ export function QuickEditModal({
   transactionType,
   initialCategoryId,
   initialAmount,
+  // TODO: get currency from user prefered currency
   currency = "EGP",
   amountColor,
   onClose,
@@ -144,7 +145,10 @@ export function QuickEditModal({
                     {currency} {formatAmountInput(amount, "0")}
                   </Text>
                 </View>
-                <CalculatorKeypad onKeyPress={handleKeyPress} />
+                <CalculatorKeypad
+                  onKeyPress={handleKeyPress}
+                  actionLabel="Save"
+                />
               </View>
             ) : (
               <View className="px-4 pt-4 pb-2">

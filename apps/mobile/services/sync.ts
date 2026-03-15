@@ -432,49 +432,32 @@ async function pushChanges(
   }
 }
 
-// TODO: Refactor this function to be more simple
-
 /**
  * Transform Supabase record to WatermelonDB format
  */
 function transformFromSupabase(
   record: Record<string, unknown>
 ): Record<string, unknown> {
+  const DATE_COLUMNS = [
+    "created_at",
+    "updated_at",
+    "date",
+    "due_date",
+    "start_date",
+    "end_date",
+    "next_due_date",
+    "purchase_date",
+    "period_start",
+    "period_end",
+    "snapshot_date",
+  ];
+
   const transformed: Record<string, unknown> = { ...record };
 
-  // Convert timestamps to numbers for WatermelonDB
-  if (typeof record.created_at === "string") {
-    transformed.created_at = new Date(record.created_at).getTime();
-  }
-  if (typeof record.updated_at === "string") {
-    transformed.updated_at = new Date(record.updated_at).getTime();
-  }
-  if (typeof record.date === "string") {
-    transformed.date = new Date(record.date).getTime();
-  }
-  if (typeof record.due_date === "string") {
-    transformed.due_date = new Date(record.due_date).getTime();
-  }
-  if (typeof record.start_date === "string") {
-    transformed.start_date = new Date(record.start_date).getTime();
-  }
-  if (typeof record.end_date === "string") {
-    transformed.end_date = new Date(record.end_date).getTime();
-  }
-  if (typeof record.next_due_date === "string") {
-    transformed.next_due_date = new Date(record.next_due_date).getTime();
-  }
-  if (typeof record.purchase_date === "string") {
-    transformed.purchase_date = new Date(record.purchase_date).getTime();
-  }
-  if (typeof record.period_start === "string") {
-    transformed.period_start = new Date(record.period_start).getTime();
-  }
-  if (typeof record.period_end === "string") {
-    transformed.period_end = new Date(record.period_end).getTime();
-  }
-  if (typeof record.snapshot_date === "string") {
-    transformed.snapshot_date = new Date(record.snapshot_date).getTime();
+  for (const col of DATE_COLUMNS) {
+    if (typeof record[col] === "string") {
+      transformed[col] = new Date(record[col]).getTime();
+    }
   }
 
   return transformed;
@@ -508,50 +491,29 @@ function transformToSupabase<T extends WritableSupabaseTablesNames>(
     transformed.user_id = userId;
   }
 
-  // Convert number timestamps to ISO strings for Supabase
-  if (typeof wmRecord.created_at === "number") {
-    transformed.created_at = new Date(wmRecord.created_at).toISOString();
+  const DATE_ONLY_COLUMNS = [
+    "date",
+    "due_date",
+    "start_date",
+    "end_date",
+    "next_due_date",
+    "purchase_date",
+    "period_start",
+    "period_end",
+    "snapshot_date",
+  ];
+  const TIMESTAMP_COLUMNS = ["created_at", "updated_at"];
+
+  for (const col of TIMESTAMP_COLUMNS) {
+    if (typeof wmRecord[col] === "number") {
+      transformed[col] = new Date(wmRecord[col]).toISOString();
+    }
   }
-  if (typeof wmRecord.updated_at === "number") {
-    transformed.updated_at = new Date(wmRecord.updated_at).toISOString();
-  }
-  if (typeof wmRecord.date === "number") {
-    transformed.date = new Date(wmRecord.date).toISOString().split("T")[0]; // DATE only
-  }
-  if (typeof wmRecord.due_date === "number") {
-    transformed.due_date = new Date(wmRecord.due_date)
-      .toISOString()
-      .split("T")[0];
-  }
-  if (typeof wmRecord.start_date === "number") {
-    transformed.start_date = new Date(wmRecord.start_date)
-      .toISOString()
-      .split("T")[0];
-  }
-  if (typeof wmRecord.end_date === "number") {
-    transformed.end_date = new Date(wmRecord.end_date)
-      .toISOString()
-      .split("T")[0];
-  }
-  if (typeof wmRecord.next_due_date === "number") {
-    transformed.next_due_date = new Date(wmRecord.next_due_date)
-      .toISOString()
-      .split("T")[0];
-  }
-  if (typeof wmRecord.purchase_date === "number") {
-    transformed.purchase_date = new Date(wmRecord.purchase_date)
-      .toISOString()
-      .split("T")[0];
-  }
-  if (typeof wmRecord.period_start === "number") {
-    transformed.period_start = new Date(wmRecord.period_start)
-      .toISOString()
-      .split("T")[0];
-  }
-  if (typeof wmRecord.period_end === "number") {
-    transformed.period_end = new Date(wmRecord.period_end)
-      .toISOString()
-      .split("T")[0];
+
+  for (const col of DATE_ONLY_COLUMNS) {
+    if (typeof wmRecord[col] === "number") {
+      transformed[col] = new Date(wmRecord[col]).toISOString().split("T")[0];
+    }
   }
 
   return transformed as SupabaseInsert<T>;
