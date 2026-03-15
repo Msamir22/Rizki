@@ -1,4 +1,5 @@
 import { AccountType } from "@astik/db";
+import { SUPPORTED_CURRENCIES } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
 
 export const ACCOUNT_TYPES = [
@@ -19,25 +20,9 @@ export const ACCOUNT_TYPES = [
   },
 ] as const;
 
-export const CURRENCIES = [
-  {
-    value: "EGP",
-    label: "EGP - Egyptian Pound",
-    icon: "🇪🇬",
-    iconType: "emoji",
-  },
-  {
-    value: "USD",
-    label: "USD - US Dollar",
-    icon: "🇺🇸",
-    iconType: "emoji",
-  },
-  {
-    value: "EUR",
-    label: "EUR - Euro",
-    icon: "🇪🇺",
-    iconType: "emoji",
-  },
-] as const;
-
-export type CurrencyCode = (typeof CURRENCIES)[number]["value"];
+export const CURRENCIES = SUPPORTED_CURRENCIES.map((c) => ({
+  value: c.code,
+  label: `${c.code} - ${c.name}`,
+  icon: c.flag,
+  iconType: "emoji" as const,
+}));
