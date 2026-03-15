@@ -16,6 +16,24 @@ import {
 } from "@nozbe/watermelondb/sync";
 import { getCurrentUserId, supabase } from "./supabase";
 
+// Date columns that need conversion between WatermelonDB (timestamps) and Supabase (ISO strings)
+const DATE_ONLY_COLUMNS = [
+  "date",
+  "due_date",
+  "start_date",
+  "end_date",
+  "next_due_date",
+  "purchase_date",
+  "period_start",
+  "period_end",
+  "snapshot_date",
+] as const;
+
+const TIMESTAMP_COLUMNS = ["created_at", "updated_at"] as const;
+
+// Combined for transformFromSupabase (all date-like columns)
+const ALL_DATE_COLUMNS = [...DATE_ONLY_COLUMNS, ...TIMESTAMP_COLUMNS] as const;
+
 export const EXCLUDED_TABLES = ["__InternalSupabase"] as const;
 
 /**
@@ -438,23 +456,9 @@ async function pushChanges(
 function transformFromSupabase(
   record: Record<string, unknown>
 ): Record<string, unknown> {
-  const DATE_COLUMNS = [
-    "created_at",
-    "updated_at",
-    "date",
-    "due_date",
-    "start_date",
-    "end_date",
-    "next_due_date",
-    "purchase_date",
-    "period_start",
-    "period_end",
-    "snapshot_date",
-  ];
-
   const transformed: Record<string, unknown> = { ...record };
 
-  for (const col of DATE_COLUMNS) {
+  for (const col of ALL_DATE_COLUMNS) {
     if (typeof record[col] === "string") {
       transformed[col] = new Date(record[col]).getTime();
     }
@@ -466,8 +470,6 @@ function transformFromSupabase(
 // Type helper for Supabase insert types
 type SupabaseInsert<T extends WritableSupabaseTablesNames> =
   SupabaseDatabase["public"]["Tables"][T]["Insert"];
-
-// TODO: Refactor this function to be more simple
 
 /**
  * Transform WatermelonDB record to Supabase format
@@ -490,19 +492,6 @@ function transformToSupabase<T extends WritableSupabaseTablesNames>(
   if (!isChildTable) {
     transformed.user_id = userId;
   }
-
-  const DATE_ONLY_COLUMNS = [
-    "date",
-    "due_date",
-    "start_date",
-    "end_date",
-    "next_due_date",
-    "purchase_date",
-    "period_start",
-    "period_end",
-    "snapshot_date",
-  ];
-  const TIMESTAMP_COLUMNS = ["created_at", "updated_at"];
 
   for (const col of TIMESTAMP_COLUMNS) {
     if (typeof wmRecord[col] === "number") {
