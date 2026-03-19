@@ -24,6 +24,10 @@ import { formatCurrency } from "@astik/logic";
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
 import { Tooltip } from "@/components/ui/Tooltip";
+import {
+  getProfitLossColor,
+  getProfitLossIcon,
+} from "@/utils/profit-loss-helpers";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -44,36 +48,18 @@ interface MetalsHeroCardProps {
 // Constants
 // ---------------------------------------------------------------------------
 
-const DARK_GRADIENT_COLORS = [
+const DARK_GRADIENT_COLORS: readonly [string, string] = [
   "rgba(217, 119, 6, 0.08)",
   "rgba(15, 23, 42, 0)",
-] as const;
+];
 
-const LIGHT_GRADIENT_COLORS = [
+const LIGHT_GRADIENT_COLORS: readonly [string, string] = [
   "rgba(217, 119, 6, 0.06)",
   "rgba(255, 255, 255, 0)",
-] as const;
+];
 
 const TOOLTIP_TEXT =
   "Based on current market rates vs. your purchase prices. Updates whenever rates change.";
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function getProfitLossIcon(
-  amount: number
-): "arrow-up" | "arrow-down" | "remove" {
-  if (amount > 0) return "arrow-up";
-  if (amount < 0) return "arrow-down";
-  return "remove";
-}
-
-function getProfitLossColor(amount: number, isDark: boolean): string {
-  if (amount > 0) return palette.nileGreen[500];
-  if (amount < 0) return palette.red[500];
-  return isDark ? palette.slate[400] : palette.slate[500];
-}
 
 // ---------------------------------------------------------------------------
 // Component
@@ -119,8 +105,8 @@ export function MetalsHeroCard({
   const plIcon = getProfitLossIcon(profitLossAmount);
 
   const gradientColors = isDark
-    ? (DARK_GRADIENT_COLORS as unknown as [string, string])
-    : (LIGHT_GRADIENT_COLORS as unknown as [string, string]);
+    ? DARK_GRADIENT_COLORS
+    : LIGHT_GRADIENT_COLORS;
 
   return (
     <View className="mb-6 rounded-3xl overflow-hidden bg-white dark:bg-slate-800 border border-amber-200/30 dark:border-amber-500/10">
