@@ -16,7 +16,7 @@
 
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -28,6 +28,7 @@ import {
   TouchableOpacity,
   TouchableWithoutFeedback,
   View,
+  type ViewStyle,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -72,6 +73,15 @@ const ITEM_FORMS: ReadonlyArray<{ value: ItemForm; label: string }> = [
 
 const ERROR_DISPLAY_DURATION_MS = 5000;
 
+/** Shadow style for the save/add button (ViewStyle for type safety). */
+const ADD_BUTTON_SHADOW: ViewStyle = {
+  shadowColor: palette.gold[600],
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.3,
+  shadowRadius: 8,
+  elevation: 6,
+};
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -103,6 +113,23 @@ export function AddHoldingModal({
   // UI state
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Synchronous ref guard to prevent race condition on rapid double-taps.
+  // State updates (setIsSaving) are async and can be outrun by fast taps.
+  const inFlightRef = useRef(false);
+
+  // Clean up error auto-dismiss timeout on unmount or when errorMessage changes
+  useEffect(() => {
+    if (!errorMessage) return undefined;
+
+    const timerId = setTimeout(() => {
+      setErrorMessage(null);
+    }, ERROR_DISPLAY_DURATION_MS);
+
+    return (): void => {
+      clearTimeout(timerId);
+    };
+  }, [errorMessage]);
 
   // Derived
   const purityOptions = useMemo(
@@ -153,8 +180,11 @@ export function AddHoldingModal({
   );
 
   const handleSaveAsync = useCallback(async (): Promise<void> => {
+    // Synchronous guard — blocks rapid taps immediately
+    if (inFlightRef.current) return;
     if (!isFormValid || isSaving) return;
 
+    inFlightRef.current = true;
     setIsSaving(true);
     setErrorMessage(null);
 
@@ -178,12 +208,9 @@ export function AddHoldingModal({
           ? err.message
           : "Failed to save. Please try again.";
       setErrorMessage(message);
-
-      // Auto-dismiss error after timeout
-      setTimeout(() => {
-        setErrorMessage(null);
-      }, ERROR_DISPLAY_DURATION_MS);
+      // Auto-dismiss is handled by the useEffect above
     } finally {
+      inFlightRef.current = false;
       setIsSaving(false);
     }
   }, [
