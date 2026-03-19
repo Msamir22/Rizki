@@ -12,10 +12,21 @@ import { ConfirmationModal } from "@/components/modals/ConfirmationModal";
 import { useTheme } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
+import {
+  getProfileDisplayName,
+  getProfileAvatarUrl,
+  getProfileInitials,
+} from "@/utils/profile-helpers";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   ActivityIndicator,
   Animated,
@@ -125,12 +136,18 @@ export function AppDrawer({
 }: AppDrawerProps): React.JSX.Element {
   const { isDark, toggleTheme } = useTheme();
   const { user } = useAuth();
-  const {
-    displayName,
-    avatarUrl,
-    initials,
-    isLoading: isProfileLoading,
-  } = useProfile(user?.email);
+  const { profile, isLoading: isProfileLoading } = useProfile();
+
+  // Derive display properties from raw profile using pure helpers
+  const displayName = useMemo(
+    () => getProfileDisplayName(profile, user?.email),
+    [profile, user?.email]
+  );
+  const avatarUrl = useMemo(() => getProfileAvatarUrl(profile), [profile]);
+  const initials = useMemo(
+    () => getProfileInitials(profile, user?.email),
+    [profile, user?.email]
+  );
 
   const database = useDatabase();
   const insets = useSafeAreaInsets();

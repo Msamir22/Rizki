@@ -1,8 +1,9 @@
 /**
  * useProfile Hook
  *
- * Observes the first Profile record from WatermelonDB and exposes
- * derived display properties (name, avatar, initials) for UI components.
+ * Observes the first Profile record from WatermelonDB.
+ * Only handles data subscription — all presentation logic (initials,
+ * display name, avatar URL) lives in `@/utils/profile-helpers`.
  *
  * Follows the same observer pattern as usePreferredCurrency.
  *
@@ -11,7 +12,7 @@
 
 import { database, Profile } from "@astik/db";
 import { Q } from "@nozbe/watermelondb";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 // =============================================================================
 // Types
@@ -20,45 +21,8 @@ import { useEffect, useMemo, useState } from "react";
 interface UseProfileResult {
   /** The raw WatermelonDB Profile record (null while loading or if absent) */
   readonly profile: Profile | null;
-  /** Resolved display name: fullName → displayName → email fallback → "" */
-  readonly displayName: string;
-  /** Profile avatar URL, or null if not set */
-  readonly avatarUrl: string | null;
-  /** 1-2 character initials derived from name or email */
-  readonly initials: string;
   /** True while the initial Profile observation is pending */
   readonly isLoading: boolean;
-}
-
-// =============================================================================
-// Helpers
-// =============================================================================
-
-/**
- * Derives 1-2 uppercase initials from a name string.
- * - "Mohamed Samir" → "MS"
- * - "Mohamed" → "MO"
- * - "" → ""
- */
-function deriveInitialsFromName(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  if (parts.length >= 2) {
-    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-  }
-  if (parts[0] && parts[0].length >= 2) {
-    return parts[0].slice(0, 2).toUpperCase();
-  }
-  return parts[0]?.toUpperCase() ?? "";
-}
-
-/**
- * Derives 1-2 uppercase initials from an email address.
- * - "mo@gmail.com" → "MO"
- * - "a@b.com" → "A"
- */
-function deriveInitialsFromEmail(email: string): string {
-  const localPart = email.split("@")[0] ?? "";
-  return localPart.slice(0, 2).toUpperCase();
 }
 
 // =============================================================================
@@ -66,14 +30,16 @@ function deriveInitialsFromEmail(email: string): string {
 // =============================================================================
 
 /**
- * Observes the user's Profile record and exposes derived display properties.
+ * Observes the user's Profile record from WatermelonDB.
  *
- * @param email - The authenticated user's email (from useAuth().user.email).
- *   Used as fallback for displayName and initials when profile has no name data.
+ * This hook is intentionally thin — it only subscribes to the profile
+ * collection and exposes the raw record + loading state. All presentation
+ * logic (display name, initials, avatar URL) should be derived at the
+ * call-site using helpers from `@/utils/profile-helpers`.
  *
- * @returns An object with profile, displayName, avatarUrl, initials, and isLoading.
+ * @returns An object with profile and isLoading.
  */
-export function useProfile(email?: string | null): UseProfileResult {
+export function useProfile(): UseProfileResult {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -99,35 +65,8 @@ export function useProfile(email?: string | null): UseProfileResult {
     return () => subscription.unsubscribe();
   }, []);
 
-  const displayName = useMemo<string>(() => {
-    if (!profile) return email ?? "";
-
-    const fullName = profile.fullName;
-    if (fullName) return fullName;
-
-    return email ?? "";
-  }, [profile, email]);
-
-  const avatarUrl = useMemo<string | null>(() => {
-    return profile?.avatarUrl ?? null;
-  }, [profile?.avatarUrl]);
-
-  const initials = useMemo<string>(() => {
-    if (profile) {
-      const fullName = profile.fullName;
-      if (fullName) return deriveInitialsFromName(fullName);
-    }
-
-    if (email) return deriveInitialsFromEmail(email);
-
-    return "";
-  }, [profile, email]);
-
   return {
     profile,
-    displayName,
-    avatarUrl,
-    initials,
     isLoading,
   };
 }
