@@ -14,7 +14,7 @@
 
 import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback } from "react";
-import { Image, Text, TouchableOpacity, View } from "react-native";
+import { Image, Text, TouchableOpacity, View, type ViewStyle } from "react-native";
 
 import { palette } from "@/constants/colors";
 
@@ -37,7 +37,7 @@ const EMPTY_ILLUSTRATION =
 
 const ILLUSTRATION_SIZE = { width: 200, height: 140 };
 
-const ADD_BUTTON_SHADOW: Record<string, unknown> = {
+const ADD_BUTTON_SHADOW: ViewStyle = {
   shadowColor: palette.gold[600],
   shadowOffset: { width: 0, height: 4 },
   shadowOpacity: 0.3,
