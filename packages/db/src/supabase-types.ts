@@ -209,7 +209,7 @@ export type Database = {
           amount: number;
           category_id?: string | null;
           created_at?: string;
-          currency?: Database["public"]["Enums"]["currency_type"];
+          currency: Database["public"]["Enums"]["currency_type"];
           deleted?: boolean;
           id?: string;
           name: string;
