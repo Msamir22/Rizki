@@ -18,6 +18,7 @@ import React from "react";
 import { Text, View, type ViewStyle } from "react-native";
 
 import { palette } from "@/constants/colors";
+import { getChangeColor, getChangeIcon } from "@/utils/profit-loss-helpers";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -51,24 +52,6 @@ const STRIP_SHADOW: ViewStyle = {
 };
 
 // ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function getChangeIcon(
-  percent: number
-): "arrow-up" | "arrow-down" | "remove-outline" {
-  if (percent > 0) return "arrow-up";
-  if (percent < 0) return "arrow-down";
-  return "remove-outline";
-}
-
-function getChangeColor(percent: number): string {
-  if (percent > 0) return palette.nileGreen[500];
-  if (percent < 0) return palette.red[500];
-  return palette.slate[400];
-}
-
-// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
@@ -91,6 +74,8 @@ export function LiveRatesStrip({
     <View
       className="absolute left-4 right-4 flex-row items-center justify-center rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3"
       style={[STRIP_SHADOW, { bottom: bottomInset + 10 }]}
+      accessibilityRole="summary"
+      accessibilityLabel={`Live rates: Gold $${goldPerOz.toFixed(0)} per ounce, ${goldChangePercent >= 0 ? "up" : "down"} ${Math.abs(goldChangePercent).toFixed(1)} percent. Silver $${silverPricePerGramUsd.toFixed(2)} per gram, ${silverChangePercent >= 0 ? "up" : "down"} ${Math.abs(silverChangePercent).toFixed(1)} percent.`}
     >
       {/* Gold Price */}
       <View className="flex-row items-center">
@@ -104,6 +89,7 @@ export function LiveRatesStrip({
           name={getChangeIcon(goldChangePercent)}
           size={12}
           color={goldColor}
+          accessible={false}
         />
       </View>
 
@@ -122,6 +108,7 @@ export function LiveRatesStrip({
           name={getChangeIcon(silverChangePercent)}
           size={12}
           color={silverColor}
+          accessible={false}
         />
       </View>
     </View>

@@ -22,30 +22,16 @@ import { formatCurrency, formatPurityForDisplay } from "@astik/logic";
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
 import type { MetalHolding } from "@/hooks/useMetalHoldings";
+import {
+  getProfitLossColor,
+  getProfitLossIcon,
+} from "@/utils/profit-loss-helpers";
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
 const WEIGHT_UNIT = "g";
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function getProfitLossColor(amount: number, isDark: boolean): string {
-  if (amount > 0) return palette.nileGreen[500];
-  if (amount < 0) return palette.red[500];
-  return isDark ? palette.slate[400] : palette.slate[500];
-}
-
-function getProfitLossIcon(
-  amount: number
-): "arrow-up" | "arrow-down" | "remove" {
-  if (amount > 0) return "arrow-up";
-  if (amount < 0) return "arrow-down";
-  return "remove";
-}
 
 // ---------------------------------------------------------------------------
 // Component
