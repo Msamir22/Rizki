@@ -501,13 +501,11 @@ describe("edit-account-service", () => {
       // Capture the created transaction to verify type and category
       let createdTx: Record<string, unknown> | undefined;
       mockDb.get.mockImplementation((tableName: string) => ({
-        create: jest.fn(
-          (builder: (r: Record<string, unknown>) => void) => {
-            createdTx = { id: `new-${tableName}-${Date.now()}` };
-            builder(createdTx);
-            return Promise.resolve(createdTx);
-          }
-        ),
+        create: jest.fn((builder: (r: Record<string, unknown>) => void) => {
+          createdTx = { id: `new-${tableName}-${Date.now()}` };
+          builder(createdTx);
+          return Promise.resolve(createdTx);
+        }),
       }));
 
       const result = await createBalanceAdjustmentTransaction(
@@ -532,13 +530,11 @@ describe("edit-account-service", () => {
       // Capture the created transaction to verify type and category
       let createdTx: Record<string, unknown> | undefined;
       mockDb.get.mockImplementation((tableName: string) => ({
-        create: jest.fn(
-          (builder: (r: Record<string, unknown>) => void) => {
-            createdTx = { id: `new-${tableName}-${Date.now()}` };
-            builder(createdTx);
-            return Promise.resolve(createdTx);
-          }
-        ),
+        create: jest.fn((builder: (r: Record<string, unknown>) => void) => {
+          createdTx = { id: `new-${tableName}-${Date.now()}` };
+          builder(createdTx);
+          return Promise.resolve(createdTx);
+        }),
       }));
 
       const result = await createBalanceAdjustmentTransaction(
@@ -563,13 +559,11 @@ describe("edit-account-service", () => {
       // The transaction amount should be positive regardless of direction
       let createdTx: Record<string, unknown> | undefined;
       mockDb.get.mockImplementation((tableName: string) => ({
-        create: jest.fn(
-          (builder: (r: Record<string, unknown>) => void) => {
-            createdTx = { id: `new-${tableName}-${Date.now()}` };
-            builder(createdTx);
-            return Promise.resolve(createdTx);
-          }
-        ),
+        create: jest.fn((builder: (r: Record<string, unknown>) => void) => {
+          createdTx = { id: `new-${tableName}-${Date.now()}` };
+          builder(createdTx);
+          return Promise.resolve(createdTx);
+        }),
       }));
 
       await createBalanceAdjustmentTransaction(

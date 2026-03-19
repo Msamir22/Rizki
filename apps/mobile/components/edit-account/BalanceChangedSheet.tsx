@@ -205,7 +205,9 @@ export function BalanceChangedSheet({
                     activeOpacity={0.7}
                     accessibilityRole="radio"
                     accessibilityLabel="Just update the balance silently"
-                    accessibilityState={{ checked: selectedOption === "silent" }}
+                    accessibilityState={{
+                      checked: selectedOption === "silent",
+                    }}
                     className={`flex-row items-center p-4 rounded-xl mb-2 border ${
                       selectedOption === "silent"
                         ? "border-nileGreen-500 bg-nileGreen-50 dark:bg-nileGreen-900/20"
@@ -239,7 +241,9 @@ export function BalanceChangedSheet({
                     activeOpacity={0.7}
                     accessibilityRole="radio"
                     accessibilityLabel="Track the balance change as a transaction"
-                    accessibilityState={{ checked: selectedOption === "tracked" }}
+                    accessibilityState={{
+                      checked: selectedOption === "tracked",
+                    }}
                     className={`flex-row items-center p-4 rounded-xl border ${
                       selectedOption === "tracked"
                         ? "border-nileGreen-500 bg-nileGreen-50 dark:bg-nileGreen-900/20"
@@ -276,9 +280,7 @@ export function BalanceChangedSheet({
                   accessibilityRole="button"
                   accessibilityLabel="Confirm balance change"
                   className={`py-4 rounded-xl items-center ${
-                    isSubmitting
-                      ? "bg-nileGreen-400"
-                      : "bg-nileGreen-500"
+                    isSubmitting ? "bg-nileGreen-400" : "bg-nileGreen-500"
                   }`}
                 >
                   <Text className="text-base font-bold text-white">
