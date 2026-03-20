@@ -160,5 +160,16 @@ export const migrations = schemaMigrations({
         }),
       ],
     },
+    {
+      toVersion: 13,
+      steps: [
+        addColumns({
+          table: "budgets",
+          columns: [
+            { name: "alert_fired_level", type: "string", isOptional: true },
+          ],
+        }),
+      ],
+    },
   ],
 });

@@ -23,6 +23,8 @@ import { useMarketRates } from "@/hooks/useMarketRates";
 import { createRecurringPayment } from "@/services/recurring-payment-service";
 import { createTransaction } from "@/services/transaction-service";
 import { createTransfer } from "@/services/transfer-service";
+import { useBudgetAlert } from "@/hooks/useBudgetAlert";
+import { BudgetAlertModal } from "@/components/budget/BudgetAlertModal";
 import {
   validateTransactionForm,
   type TransactionValidationErrors,
@@ -42,6 +44,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 export default function AddTransaction(): React.ReactNode {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const budgetAlert = useBudgetAlert();
 
   const { accounts } = useAccounts();
 
@@ -328,7 +331,7 @@ export default function AddTransaction(): React.ReactNode {
       return;
     }
 
-    await createTransaction({
+    const tx = await createTransaction({
       amount,
       currency: selectedAccount.currency,
       categoryId: selectedCategoryId,
@@ -340,6 +343,11 @@ export default function AddTransaction(): React.ReactNode {
       date,
       linkedRecurringId,
     });
+
+    // Check budget alerts for expense transactions
+    if (type === "EXPENSE") {
+      await budgetAlert.checkAfterTransaction(tx);
+    }
   };
 
   // Handle Save
@@ -393,7 +401,11 @@ export default function AddTransaction(): React.ReactNode {
         title: "Created",
         message: "Transaction Created successfully",
       });
-      router.back();
+
+      // If a budget alert was triggered, stay on screen to show it
+      if (!budgetAlert.isVisible) {
+        router.back();
+      }
     } catch (error) {
       console.error(error);
       // Error is already logged above; validation errors are shown inline
@@ -723,6 +735,17 @@ export default function AddTransaction(): React.ReactNode {
           onClose={() => setIsCategoryModalOpen(false)}
         />
       )}
+
+      {/* Budget Alert Modal */}
+      <BudgetAlertModal
+        visible={budgetAlert.isVisible}
+        alert={budgetAlert.alert}
+        onDismiss={() => {
+          budgetAlert.dismiss();
+          router.back();
+        }}
+        onViewBudget={budgetAlert.viewBudget}
+      />
     </View>
   );
 }

@@ -188,11 +188,12 @@ export type Database = {
       };
       budgets: {
         Row: {
+          alert_fired_level: string | null;
           alert_threshold: number;
           amount: number;
           category_id: string | null;
           created_at: string;
-          currency: Database["public"]["Enums"]["currency_type"];
+          currency: Database["public"]["Enums"]["currency_type"] | null;
           deleted: boolean;
           id: string;
           name: string;
@@ -205,11 +206,12 @@ export type Database = {
           user_id: string;
         };
         Insert: {
+          alert_fired_level?: string | null;
           alert_threshold?: number;
           amount: number;
           category_id?: string | null;
           created_at?: string;
-          currency: Database["public"]["Enums"]["currency_type"];
+          currency?: Database["public"]["Enums"]["currency_type"] | null;
           deleted?: boolean;
           id?: string;
           name: string;
@@ -222,11 +224,12 @@ export type Database = {
           user_id: string;
         };
         Update: {
+          alert_fired_level?: string | null;
           alert_threshold?: number;
           amount?: number;
           category_id?: string | null;
           created_at?: string;
-          currency?: Database["public"]["Enums"]["currency_type"];
+          currency?: Database["public"]["Enums"]["currency_type"] | null;
           deleted?: boolean;
           id?: string;
           name?: string;

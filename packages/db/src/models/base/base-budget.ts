@@ -28,11 +28,12 @@ export abstract class BaseBudget extends Model {
     categories: { type: "belongs_to", key: "category_id" },
   };
 
+  @field("alert_fired_level") alertFiredLevel?: string;
   @field("alert_threshold") alertThreshold!: number;
   @field("amount") amount!: number;
   @field("category_id") categoryId?: string;
   @readonly @date("created_at") createdAt!: Date;
-  @field("currency") currency!: CurrencyType;
+  @field("currency") currency?: CurrencyType;
   @field("deleted") deleted!: boolean;
   @field("name") name!: string;
   @field("period") period!: BudgetPeriod;

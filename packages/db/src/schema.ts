@@ -7,7 +7,7 @@
 import { appSchema, tableSchema } from "@nozbe/watermelondb";
 
 export const schema = appSchema({
-  version: 12,
+  version: 13,
   tables: [
     tableSchema({
       name: "accounts",
@@ -72,6 +72,7 @@ export const schema = appSchema({
     tableSchema({
       name: "budgets",
       columns: [
+        { name: "alert_fired_level", type: "string", isOptional: true },
         { name: "alert_threshold", type: "number" },
         { name: "amount", type: "number" },
         {
@@ -81,7 +82,7 @@ export const schema = appSchema({
           isIndexed: true,
         },
         { name: "created_at", type: "number" },
-        { name: "currency", type: "string" },
+        { name: "currency", type: "string", isOptional: true },
         { name: "deleted", type: "boolean" },
         { name: "name", type: "string" },
         { name: "period", type: "string" },
