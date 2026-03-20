@@ -15,6 +15,7 @@ import {
 } from "@nozbe/watermelondb/decorators";
 import type { Associations } from "@nozbe/watermelondb/Model";
 import type {
+  AlertFiredLevel,
   CurrencyType,
   BudgetPeriod,
   BudgetStatus,
@@ -28,7 +29,7 @@ export abstract class BaseBudget extends Model {
     categories: { type: "belongs_to", key: "category_id" },
   };
 
-  @field("alert_fired_level") alertFiredLevel?: string;
+  @field("alert_fired_level") alertFiredLevel?: AlertFiredLevel;
   @field("alert_threshold") alertThreshold!: number;
   @field("amount") amount!: number;
   @field("category_id") categoryId?: string;

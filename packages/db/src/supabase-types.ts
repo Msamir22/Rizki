@@ -188,7 +188,9 @@ export type Database = {
       };
       budgets: {
         Row: {
-          alert_fired_level: string | null;
+          alert_fired_level:
+            | Database["public"]["Enums"]["alert_fired_level"]
+            | null;
           alert_threshold: number;
           amount: number;
           category_id: string | null;
@@ -206,7 +208,9 @@ export type Database = {
           user_id: string;
         };
         Insert: {
-          alert_fired_level?: string | null;
+          alert_fired_level?:
+            | Database["public"]["Enums"]["alert_fired_level"]
+            | null;
           alert_threshold?: number;
           amount: number;
           category_id?: string | null;
@@ -224,7 +228,9 @@ export type Database = {
           user_id: string;
         };
         Update: {
-          alert_fired_level?: string | null;
+          alert_fired_level?:
+            | Database["public"]["Enums"]["alert_fired_level"]
+            | null;
           alert_threshold?: number;
           amount?: number;
           category_id?: string | null;
@@ -971,6 +977,7 @@ export type Database = {
     };
     Enums: {
       account_type: "CASH" | "BANK" | "DIGITAL_WALLET";
+      alert_fired_level: "WARNING" | "DANGER";
       asset_type: "METAL" | "CRYPTO" | "REAL_ESTATE";
       budget_period: "WEEKLY" | "MONTHLY" | "CUSTOM";
       budget_status: "ACTIVE" | "PAUSED";
@@ -1161,6 +1168,7 @@ export const Constants = {
   public: {
     Enums: {
       account_type: ["CASH", "BANK", "DIGITAL_WALLET"],
+      alert_fired_level: ["WARNING", "DANGER"],
       asset_type: ["METAL", "CRYPTO", "REAL_ESTATE"],
       budget_period: ["WEEKLY", "MONTHLY", "CUSTOM"],
       budget_status: ["ACTIVE", "PAUSED"],
