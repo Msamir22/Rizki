@@ -171,5 +171,17 @@ export const migrations = schemaMigrations({
         }),
       ],
     },
+    {
+      toVersion: 14,
+      steps: [
+        addColumns({
+          table: "budgets",
+          columns: [
+            { name: "paused_at", type: "string", isOptional: true },
+            { name: "pause_intervals", type: "string" },
+          ],
+        }),
+      ],
+    },
   ],
 });

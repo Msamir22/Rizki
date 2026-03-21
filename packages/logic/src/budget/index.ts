@@ -25,3 +25,12 @@ export {
 } from "./budget-spending";
 
 export type { ProgressStatus, SpendingMetrics } from "./budget-spending";
+
+export {
+  isWithinPauseWindow,
+  filterExcludedTransactions,
+  buildPauseInterval,
+  parsePauseIntervals,
+} from "./budget-pause-utils";
+
+export type { PauseInterval } from "./budget-pause-utils";

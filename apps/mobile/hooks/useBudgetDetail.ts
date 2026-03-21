@@ -16,6 +16,7 @@ import {
   getDaysElapsed,
   getWeeklyBuckets,
   computeSpendingMetrics,
+  filterExcludedTransactions,
   type SpendingMetrics,
   type WeeklyBucket,
 } from "@astik/logic/src/budget";
@@ -144,14 +145,21 @@ export function useBudgetDetail(budgetId: string): UseBudgetDetailResult {
           conditions.push(Q.where("category_id", Q.oneOf(categoryIds)));
         }
 
-        const txs = await database
+        const allTxs = await database
           .get<Transaction>("transactions")
           .query(Q.and(...conditions))
           .fetch();
 
+        // Exclude paused-window transactions
+        const activeTxs = filterExcludedTransactions(
+          allTxs,
+          budget.typedPauseIntervals,
+          budget.pausedAtMs
+        );
+
         weeklyData.push({
           bucket,
-          amount: txs.reduce((sum, tx) => sum + tx.amount, 0),
+          amount: activeTxs.reduce((sum, tx) => sum + tx.amount, 0),
         });
       }
 
@@ -169,7 +177,7 @@ export function useBudgetDetail(budgetId: string): UseBudgetDetailResult {
           .fetch();
 
         for (const child of children) {
-          const childTxs = await database
+          const allChildTxs = await database
             .get<Transaction>("transactions")
             .query(
               Q.and(
@@ -182,7 +190,17 @@ export function useBudgetDetail(budgetId: string): UseBudgetDetailResult {
             )
             .fetch();
 
-          const childAmount = childTxs.reduce((sum, tx) => sum + tx.amount, 0);
+          // Exclude paused-window transactions
+          const activeChildTxs = filterExcludedTransactions(
+            allChildTxs,
+            budget.typedPauseIntervals,
+            budget.pausedAtMs
+          );
+
+          const childAmount = activeChildTxs.reduce(
+            (sum, tx) => sum + tx.amount,
+            0
+          );
           if (childAmount > 0) {
             breakdown.push({
               categoryId: child.id,
