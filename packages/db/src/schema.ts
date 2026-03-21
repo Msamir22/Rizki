@@ -7,7 +7,7 @@
 import { appSchema, tableSchema } from "@nozbe/watermelondb";
 
 export const schema = appSchema({
-  version: 13,
+  version: 14,
   tables: [
     tableSchema({
       name: "accounts",
@@ -85,6 +85,8 @@ export const schema = appSchema({
         { name: "currency", type: "string", isOptional: true },
         { name: "deleted", type: "boolean" },
         { name: "name", type: "string" },
+        { name: "pause_intervals", type: "string" },
+        { name: "paused_at", type: "string", isOptional: true },
         { name: "period", type: "string" },
         { name: "period_end", type: "number", isOptional: true },
         { name: "period_start", type: "number", isOptional: true },

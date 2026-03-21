@@ -37,6 +37,8 @@ export abstract class BaseBudget extends Model {
   @field("currency") currency?: CurrencyType;
   @field("deleted") deleted!: boolean;
   @field("name") name!: string;
+  @field("pause_intervals") pauseIntervals!: string;
+  @field("paused_at") pausedAt?: string;
   @field("period") period!: BudgetPeriod;
   @date("period_end") periodEnd?: Date;
   @date("period_start") periodStart?: Date;

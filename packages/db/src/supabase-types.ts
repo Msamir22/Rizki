@@ -199,6 +199,8 @@ export type Database = {
           deleted: boolean;
           id: string;
           name: string;
+          pause_intervals: Json;
+          paused_at: string | null;
           period: Database["public"]["Enums"]["budget_period"];
           period_end: string | null;
           period_start: string | null;
@@ -219,6 +221,8 @@ export type Database = {
           deleted?: boolean;
           id?: string;
           name: string;
+          pause_intervals?: Json;
+          paused_at?: string | null;
           period: Database["public"]["Enums"]["budget_period"];
           period_end?: string | null;
           period_start?: string | null;
@@ -239,6 +243,8 @@ export type Database = {
           deleted?: boolean;
           id?: string;
           name?: string;
+          pause_intervals?: Json;
+          paused_at?: string | null;
           period?: Database["public"]["Enums"]["budget_period"];
           period_end?: string | null;
           period_start?: string | null;

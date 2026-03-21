@@ -20,7 +20,12 @@ import {
   type AlertFiredLevel,
 } from "@astik/db";
 import { Q, type Collection } from "@nozbe/watermelondb";
-import { getCurrentPeriodBounds } from "@astik/logic/src/budget";
+import {
+  getCurrentPeriodBounds,
+  filterExcludedTransactions,
+  buildPauseInterval,
+  parsePauseIntervals,
+} from "@astik/logic/src/budget";
 
 // =============================================================================
 // TYPES
@@ -176,7 +181,8 @@ export async function deleteBudget(budgetId: string): Promise<void> {
 // =============================================================================
 
 /**
- * Pause a budget — spending is frozen, new transactions ignored.
+ * Pause a budget — spending is frozen at this moment.
+ * Records `paused_at` timestamp for interval tracking.
  */
 export async function pauseBudget(budgetId: string): Promise<void> {
   const budget = await budgetsCollection().find(budgetId);
@@ -184,19 +190,35 @@ export async function pauseBudget(budgetId: string): Promise<void> {
   await database.write(async () => {
     await budget.update((b) => {
       b.status = "PAUSED" as BudgetStatus;
+      b.pausedAt = new Date().toISOString();
     });
   });
 }
 
 /**
  * Resume a paused budget.
+ * Pushes the completed pause interval {from: paused_at, to: now}
+ * into `pause_intervals` and clears `paused_at`.
  */
 export async function resumeBudget(budgetId: string): Promise<void> {
   const budget = await budgetsCollection().find(budgetId);
+  const pausedAtMs = budget.pausedAtMs;
+  const nowMs = Date.now();
 
   await database.write(async () => {
     await budget.update((b) => {
       b.status = "ACTIVE" as BudgetStatus;
+
+      // Build and append the completed pause interval
+      if (pausedAtMs !== undefined) {
+        const currentIntervals = parsePauseIntervals(
+          String(b.pauseIntervals ?? "[]")
+        );
+        const newInterval = buildPauseInterval(pausedAtMs, nowMs);
+        b.pauseIntervals = JSON.stringify([...currentIntervals, newInterval]);
+      }
+
+      b.pausedAt = undefined;
     });
   });
 }
@@ -245,6 +267,7 @@ export async function autoPauseBudget(budgetId: string): Promise<void> {
   await database.write(async () => {
     await budget.update((b) => {
       b.status = "PAUSED" as BudgetStatus;
+      b.pausedAt = new Date().toISOString();
     });
   });
 }
@@ -300,7 +323,14 @@ export async function getSpendingForBudget(budget: Budget): Promise<number> {
       .fetch();
   }
 
-  return transactions.reduce((sum, tx) => sum + tx.amount, 0);
+  // Exclude transactions that fall within any pause interval
+  const filtered = filterExcludedTransactions(
+    transactions,
+    budget.typedPauseIntervals,
+    budget.pausedAtMs
+  );
+
+  return filtered.reduce((sum, tx) => sum + tx.amount, 0);
 }
 
 /**
