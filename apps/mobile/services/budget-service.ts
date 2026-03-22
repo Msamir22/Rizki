@@ -96,10 +96,10 @@ export async function createBudget(input: CreateBudgetInput): Promise<Budget> {
     );
   }
 
-  // Validate uniqueness
-  await validateBudgetUniqueness(input.type, input.period, input.categoryId);
-
+  // F7 fix: Validate uniqueness inside database.write for atomicity
   return database.write(async () => {
+    await validateBudgetUniqueness(input.type, input.period, input.categoryId);
+
     const budget = await budgetsCollection().create((b) => {
       b.userId = userId;
       b.name = input.name;
@@ -143,17 +143,23 @@ export async function updateBudget(
     );
   }
 
-  // Re-validate uniqueness if period or categoryId changed (C2 fix)
-  if (input.period !== undefined || input.categoryId !== undefined) {
-    await validateBudgetUniqueness(
-      budget.type,
-      input.period ?? budget.period,
-      input.categoryId ?? budget.categoryId,
-      budgetId
-    );
+  // F6 fix: Prevent clearing categoryId on CATEGORY budgets
+  if (budget.type === "CATEGORY" && input.categoryId === "") {
+    throw new Error("Category budgets require a categoryId");
   }
 
+  // F7 fix: Validate uniqueness and apply update inside the same write for atomicity
   return database.write(async () => {
+    // Re-validate uniqueness if period or categoryId changed (C2 fix)
+    if (input.period !== undefined || input.categoryId !== undefined) {
+      await validateBudgetUniqueness(
+        budget.type,
+        input.period ?? budget.period,
+        input.categoryId ?? budget.categoryId,
+        budgetId
+      );
+    }
+
     await budget.update((b) => {
       if (input.name !== undefined) b.name = input.name;
       if (input.amount !== undefined) b.amount = input.amount;

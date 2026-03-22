@@ -23,6 +23,7 @@ import {
 import {
   getSpendingForBudget,
   setAlertFiredLevel,
+  resetAlertFiredLevel,
   getCategoryAndSubcategoryIds,
 } from "./budget-service";
 
@@ -51,6 +52,10 @@ export interface BudgetAlert {
  * - Only fires once per level per period (tracked by `alert_fired_level`)
  * - WARNING fires when threshold is crossed for the first time
  * - DANGER fires when 100% is crossed for the first time
+ *
+ * Period rollover:
+ * - Resets `alert_fired_level` when the current period's start is after
+ *   the budget's last update, ensuring new-period alerts are not suppressed.
  *
  * @param transaction - The newly created transaction
  * @returns Alert metadata if a threshold was crossed, null otherwise
@@ -93,6 +98,14 @@ export async function checkBudgetAlerts(
       transaction.date.getTime() > bounds.end.getTime()
     ) {
       continue;
+    }
+
+    // F5 fix: Reset alert level on period rollover so new-period alerts fire correctly
+    if (
+      budget.alertFiredLevel &&
+      bounds.start.getTime() > budget.updatedAt.getTime()
+    ) {
+      await resetAlertFiredLevel(budget.id);
     }
 
     const spent = await getSpendingForBudget(budget);

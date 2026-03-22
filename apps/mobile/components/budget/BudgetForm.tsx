@@ -122,8 +122,20 @@ export function BudgetForm({
   const updateField = useCallback(
     <K extends keyof FormState>(key: K, value: FormState[K]): void => {
       setForm((prev) => ({ ...prev, [key]: value }));
-      // Clear error for this field
-      setErrors((prev) => ({ ...prev, [key]: undefined, general: undefined }));
+
+      // Map form keys to their corresponding FormErrors keys
+      const errorKeyMap: Partial<Record<keyof FormState, keyof FormErrors>> = {
+        categoryId: "category",
+        periodStart: "period",
+        periodEnd: "period",
+      };
+      const errorKey = errorKeyMap[key] ?? (key as keyof FormErrors);
+
+      setErrors((prev) => ({
+        ...prev,
+        [errorKey]: undefined,
+        general: undefined,
+      }));
     },
     []
   );

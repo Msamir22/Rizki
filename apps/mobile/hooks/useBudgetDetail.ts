@@ -217,7 +217,7 @@ export function useBudgetDetail(budgetId: string): UseBudgetDetailResult {
         breakdown = breakdown.sort((a, b) => b.amount - a.amount);
       }
 
-      // Recent transactions
+      // Recent transactions — over-fetch to compensate for pause-window filtering
       const recentConditions = [
         Q.where("deleted", false),
         Q.where("type", "EXPENSE"),
@@ -230,14 +230,21 @@ export function useBudgetDetail(budgetId: string): UseBudgetDetailResult {
         recentConditions.push(Q.where("category_id", Q.oneOf(categoryIds)));
       }
 
-      const recent = await database
+      const recentRaw = await database
         .get<Transaction>("transactions")
         .query(
           ...recentConditions,
           Q.sortBy("date", Q.desc),
-          Q.take(RECENT_TRANSACTIONS_LIMIT)
+          Q.take(RECENT_TRANSACTIONS_LIMIT * 2)
         )
         .fetch();
+
+      // Exclude paused-window transactions, then trim to the desired limit
+      const recentFiltered = filterExcludedTransactions(
+        recentRaw,
+        budget.typedPauseIntervals,
+        budget.pausedAtMs
+      ).slice(0, RECENT_TRANSACTIONS_LIMIT);
 
       if (!cancelled) {
         setMetrics(computedMetrics);
@@ -245,7 +252,7 @@ export function useBudgetDetail(budgetId: string): UseBudgetDetailResult {
         setDaysElapsed(elapsed);
         setWeeklySpending(weeklyData);
         setSubcategoryBreakdown(breakdown);
-        setRecentTransactions(recent);
+        setRecentTransactions(recentFiltered);
         setIsLoading(false);
       }
     }
