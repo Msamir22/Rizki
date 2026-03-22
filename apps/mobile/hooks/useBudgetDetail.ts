@@ -95,7 +95,15 @@ export function useBudgetDetail(budgetId: string): UseBudgetDetailResult {
         () => {
           // Budget not found or deleted
           setBudget(null);
-          setState((prev) => ({ ...prev, isLoading: false }));
+          setState({
+            metrics: null,
+            daysLeft: 0,
+            daysElapsed: 1,
+            weeklySpending: [],
+            subcategoryBreakdown: [],
+            recentTransactions: [],
+            isLoading: false,
+          });
         }
       );
 

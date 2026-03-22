@@ -39,6 +39,7 @@ import { useToast } from "@/components/ui/Toast";
 import { router } from "expo-router";
 import { useCategoryLookup } from "@/context/CategoriesContext";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
 
 // =============================================================================
 // Types
@@ -92,6 +93,7 @@ export function BudgetForm({
   const { expenseCategories } = useCategories();
   const categoryMap = useCategoryLookup();
   const { showToast } = useToast();
+  const { preferredCurrency } = usePreferredCurrency();
 
   // ── Form state ──
   const [form, setForm] = useState<FormState>(() => ({
@@ -402,7 +404,7 @@ export function BudgetForm({
         </View>
       )}
 
-      {/* Amount — S-10: EGP prefix */}
+      {/* Amount */}
       <View className="mb-5">
         <Text className="text-[10px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold mb-2">
           Budget Limit
@@ -412,7 +414,7 @@ export function BudgetForm({
             className="text-base font-bold pl-4"
             style={{ color: palette.nileGreen[500] }}
           >
-            EGP
+            {preferredCurrency}
           </Text>
           <TextInput
             value={form.amount}

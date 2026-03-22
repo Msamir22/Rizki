@@ -144,7 +144,6 @@ export function BudgetAlertModal({
             <View className="flex-row gap-3">
               <TouchableOpacity
                 onPress={() => {
-                  onDismiss();
                   onViewBudget(alert.budgetId);
                 }}
                 className="flex-1 py-3 rounded-xl items-center bg-slate-100 dark:bg-slate-700"
