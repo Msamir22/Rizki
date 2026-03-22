@@ -82,7 +82,7 @@ export function SubcategoryBreakdown({
             <View
               className="h-full rounded-full"
               style={{
-                width: `${Math.min(item.percentage, 100)}%`,
+                width: `${Math.max(0, Math.min(item.percentage, 100))}%`,
                 backgroundColor: COLORS[index % COLORS.length],
               }}
             />

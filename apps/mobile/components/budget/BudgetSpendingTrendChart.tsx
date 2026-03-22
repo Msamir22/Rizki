@@ -99,7 +99,8 @@ export function BudgetSpendingTrendChart({
   weeklyAverage,
 }: BudgetSpendingTrendChartProps): React.JSX.Element {
   const { isDark } = useTheme();
-  const maxAmount = Math.max(...data.map((d) => d.amount), weeklyAverage, 1);
+  const amounts = data.map((d) => d.amount);
+  const maxAmount = Math.max(...amounts, weeklyAverage, 1);
 
   const getBarColor = (amount: number): string => {
     if (amount >= weeklyAverage * 1.2) return palette.red[500];

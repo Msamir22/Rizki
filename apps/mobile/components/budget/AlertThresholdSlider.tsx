@@ -11,16 +11,16 @@
  * @module AlertThresholdSlider
  */
 
+import { palette } from "@/constants/colors";
 import React, { useCallback } from "react";
 import { Text, View, type LayoutChangeEvent } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
   runOnJS,
+  useAnimatedStyle,
+  useDerivedValue,
+  useSharedValue,
 } from "react-native-reanimated";
-import { palette } from "@/constants/colors";
-
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -59,18 +59,19 @@ export function AlertThresholdSlider({
     [trackWidth]
   );
 
-  const normalizedValue =
-    (value - MIN_THRESHOLD) / (MAX_THRESHOLD - MIN_THRESHOLD);
+  const normalizedValue = useDerivedValue(() => {
+    return (value - MIN_THRESHOLD) / (MAX_THRESHOLD - MIN_THRESHOLD);
+  }, [value]);
 
   const thumbPosition = useAnimatedStyle(() => ({
     left:
       trackWidth.value > 0
-        ? normalizedValue * (trackWidth.value - THUMB_SIZE)
+        ? normalizedValue.value * (trackWidth.value - THUMB_SIZE)
         : 0,
   }));
 
   const fillStyle = useAnimatedStyle(() => ({
-    width: trackWidth.value > 0 ? normalizedValue * trackWidth.value : 0,
+    width: trackWidth.value > 0 ? normalizedValue.value * trackWidth.value : 0,
   }));
 
   const panGesture = Gesture.Pan().onUpdate((e) => {
@@ -124,6 +125,7 @@ export function AlertThresholdSlider({
           <Animated.View
             className="absolute rounded-full"
             style={[
+              // eslint-disable-next-line react-native/no-inline-styles
               {
                 width: THUMB_SIZE,
                 height: THUMB_SIZE,

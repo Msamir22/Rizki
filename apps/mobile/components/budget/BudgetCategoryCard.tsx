@@ -89,7 +89,6 @@ export function BudgetCategoryCard({
 
   const animatedBarStyle = useAnimatedStyle(() => ({
     width: `${barWidth.value}%`,
-    backgroundColor: progressColor,
   }));
 
   const categoryMap = useCategoryLookup();
@@ -149,7 +148,7 @@ export function BudgetCategoryCard({
       >
         <Animated.View
           className="h-full rounded-full"
-          style={animatedBarStyle}
+          style={[animatedBarStyle, { backgroundColor: progressColor }]}
         />
       </View>
 

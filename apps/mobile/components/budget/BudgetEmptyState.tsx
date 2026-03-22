@@ -85,6 +85,9 @@ export function BudgetEmptyState({
       <TouchableOpacity
         onPress={handlePress}
         activeOpacity={0.85}
+        accessibilityRole="button"
+        accessibilityLabel="Create First Budget"
+        accessibilityHint="Opens the budget creation form"
         className="mt-8 flex-row items-center rounded-2xl px-8 py-4"
         style={{
           backgroundColor: palette.nileGreen[500],

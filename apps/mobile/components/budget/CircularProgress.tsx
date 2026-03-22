@@ -85,7 +85,7 @@ export function CircularProgress({
   const center = size / 2;
 
   // Clamp display percentage to 100 for the ring
-  const displayPercentage = Math.min(percentage, 100);
+  const displayPercentage = Math.max(0, Math.min(percentage, 100));
   const progress = useSharedValue(0);
 
   useEffect(() => {
@@ -101,7 +101,7 @@ export function CircularProgress({
 
   const progressColor = STATUS_COLORS[status];
   const trackColor = isDark ? TRACK_COLOR_DARK : TRACK_COLOR_LIGHT;
-  const roundedPercentage = Math.round(percentage);
+  const roundedPercentage = Math.round(displayPercentage);
 
   return (
     <View
