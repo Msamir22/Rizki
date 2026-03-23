@@ -37,6 +37,8 @@ description: when working on mobile app that uses react native
   - Always use `async/await` with try/catch for API calls.
   - Extract API logic into separate service files.
   - Use `zod` or similar libraries for runtime validation of API responses.
+  - When using Zod, derive TypeScript types with `z.infer<typeof schema>`
+    instead of duplicating type definitions.
   - Use `React Query`, `SWR`, or similar libraries for stateful data fetching
     and caching.
 

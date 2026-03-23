@@ -27,6 +27,9 @@ Code Style and Structure
 - Avoid enums; use maps instead.
 - Use functional components with TypeScript interfaces.
 - Use strict mode in TypeScript for better type safety.
+- Always narrow `unknown` in catch blocks (e.g., `if (error instanceof Error)`);
+  never use `any` for caught errors.
+- Never use `console.log` in production code; use a structured logger instead.
 
   Syntax and Formatting
 
