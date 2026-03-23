@@ -2,7 +2,7 @@
 description: Instructions for implementing mockups
 ---
 
-# Mobile UI Mockup Generation Prompt (Nano-Banna)
+# Mobile UI Mockup Generation Prompt (Stitch MCP)
 
 ## Product Context
 
@@ -145,10 +145,9 @@ The screen type will be specified when invoking this workflow.
 
 ---
 
-## 6. Nano-Banna Description Requirements (Critical)
+## 6. Stitch MCP Description Requirements (Critical)
 
-Produce a **pixel-precise visual description** intended for the nano-banna image
-generation tool.
+Produce a **pixel-precise visual description** intended for the Stitch MCP tool.
 
 - Describe **every visible UI element**, including:
   - Screen structure and layout
@@ -164,7 +163,7 @@ generation tool.
 ## 7. Zero Guessing Rule (Very Important)
 
 - Do **not** leave any visual or behavioral detail unspecified.
-- Do **not** allow nano-banna to:
+- Do **not** allow Stitch MCP to:
   - Invent UI elements
   - Add decorative visuals
   - Infer missing content or interactions
@@ -183,7 +182,80 @@ generation tool.
 - Each mockup description must be:
   - Self-contained
   - Complete
-  - Ready to be sent directly to nano-banna without modification
+  - Ready to be sent directly to Stitch MCP without modification
 
-Please If you have any concerns/questions, you can ask me before starting the
-implementation.
+---
+
+## 9. Mockup Storage & Traceability (MANDATORY)
+
+After mockups are **reviewed and approved by the user**, the agent MUST:
+
+### 9.1 Locate the Spec Folder
+
+- Identify the current branch name
+- Locate the corresponding folder under `specs/`
+- The folder name MUST **exactly match the branch name**
+
+**Example:**
+
+- Branch: `017-dashboard-ui-polish`
+- Folder: `specs/017-dashboard-ui-polish`
+
+---
+
+### 9.2 Create Mockups Folder
+
+- Inside the spec folder, create a directory:
+  - `mockups/`
+
+**Final structure:**
+
+specs/017-dashboard-ui-polish/mockups/
+
+---
+
+### 9.3 Store Approved Mockups as Images
+
+- Save each approved mockup as an **image file** inside the `mockups/` folder
+- Each mockup MUST be stored as a separate file
+
+**Naming convention (MANDATORY):** feature-name.png/mockup-number.png
+
+- If variants or iterations are needed, use:
+
+mockup-1-v2.png mockup-2-v2.png
+
+---
+
+### 9.4 Image Requirements
+
+- Images must:
+  - Accurately reflect the **approved design**
+  - Match the **exact layout and styling**
+  - Be suitable as a **pixel-perfect reference for implementation**
+- Do NOT store:
+  - Drafts
+  - Rejected mockups
+  - Partial designs
+
+---
+
+### 9.5 Purpose
+
+- These images become the **single source of truth for UI implementation**
+- They MUST be used by:
+  - Developers → for pixel-perfect implementation
+  - Review agents → for visual validation against code
+
+---
+
+### 🚨 Rules
+
+- Do NOT overwrite existing mockups unless explicitly instructed
+- Do NOT store unapproved designs
+- Ensure stored images match **exactly what was approved**
+- Maintain consistent naming and structure across all features
+
+---
+
+If there are any concerns or questions, ask before starting the implementation.
