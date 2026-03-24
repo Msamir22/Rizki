@@ -72,7 +72,7 @@ const styles = StyleSheet.create({
     backgroundColor: palette.nileGreen[500],
   },
   recordingDot: {
-    backgroundColor: palette.red[500],
+    backgroundColor: palette.nileGreen[500],
   },
   pausedDot: {
     backgroundColor: palette.gold[500],

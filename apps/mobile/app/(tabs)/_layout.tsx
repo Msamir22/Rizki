@@ -24,6 +24,10 @@ export default function TabLayout(): React.ReactElement {
           <CustomBottomTabBar
             {...props}
             onMicPress={() => void voiceFlow.startFlow()}
+            isRecording={
+              voiceFlow.flowStatus === "recording" ||
+              voiceFlow.flowStatus === "paused"
+            }
           />
         )}
         screenOptions={{

@@ -153,21 +153,39 @@ export default function VoiceReviewScreen(): React.JSX.Element {
 
   return (
     <SafeAreaView className="flex-1 bg-background dark:bg-background-dark">
-      {/* Header */}
+      {/* Header (S-03 + S-06) */}
       <PageHeader
-        title="Review Voice Transaction"
+        title="Review Transactions"
         showDrawer={false}
         showBackButton={true}
+        rightAction={{
+          label: "Retry",
+          onPress: () => {
+            router.replace("/(tabs)" as never);
+            // User can re-trigger voice flow from the tab bar
+          },
+        }}
       />
 
-      {/* Transcript preview */}
+      {/* Transcript preview (S-04 + S-05) */}
       {transcript.length > 0 && (
         <View className="mx-4 mb-3 rounded-xl bg-slate-100 px-4 py-3 dark:bg-slate-800">
-          <View className="flex-row items-center mb-1">
-            <Ionicons name="mic-outline" size={14} color={palette.slate[500]} />
-            <Text className="ml-1.5 text-xs font-medium text-slate-500 dark:text-slate-400">
-              What you said
-            </Text>
+          <View className="flex-row items-center justify-between mb-1">
+            <View className="flex-row items-center">
+              <Ionicons
+                name="mic-outline"
+                size={14}
+                color={palette.slate[500]}
+              />
+              <Text className="ml-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                What I heard
+              </Text>
+            </View>
+            <View className="rounded px-1.5 py-0.5 bg-slate-200 dark:bg-slate-700">
+              <Text className="text-[10px] font-bold text-slate-500 dark:text-slate-400">
+                EN
+              </Text>
+            </View>
           </View>
           <Text className="text-sm text-slate-700 dark:text-slate-300">
             {transcript}

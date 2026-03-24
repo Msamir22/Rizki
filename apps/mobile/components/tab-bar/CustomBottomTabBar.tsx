@@ -5,13 +5,15 @@ import { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import React, { memo, useCallback } from "react";
-import { Pressable, TouchableOpacity, View } from "react-native";
+import { Pressable, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { IconConfig, TabIcon } from "./TabIcon";
 
 interface CustomBottomTabBarProps extends BottomTabBarProps {
   /** Callback when the mic button is pressed. */
   readonly onMicPress?: () => void;
+  /** Whether voice recording is currently active. */
+  readonly isRecording?: boolean;
 }
 
 /**
@@ -51,6 +53,7 @@ function CustomBottomTabBarComponent({
   state,
   navigation,
   onMicPress,
+  isRecording = false,
 }: CustomBottomTabBarProps): React.ReactElement {
   const insets = useSafeAreaInsets();
 
@@ -210,6 +213,14 @@ function CustomBottomTabBarComponent({
               <Ionicons name="mic" size={28} color={palette.slate[50]} />
             </LinearGradient>
           </Pressable>
+          {isRecording && (
+            <Text
+              className="mt-1 text-center text-[10px] font-semibold"
+              style={{ color: palette.nileGreen[500] }}
+            >
+              Listening
+            </Text>
+          )}
         </View>
       </View>
     </>
