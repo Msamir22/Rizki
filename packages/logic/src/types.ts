@@ -79,6 +79,8 @@ export interface ParsedSmsTransaction {
   readonly isAtmWithdrawal?: boolean;
   /** Last 4 digits of card extracted from SMS (for bank account matching) */
   readonly cardLast4?: string;
+  /** AI-matched account ID from voice input (empty string if no match) */
+  readonly accountId?: string;
 }
 
 export interface ParsedSmsAccountSuggestion {

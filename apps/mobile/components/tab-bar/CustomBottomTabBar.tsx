@@ -4,11 +4,15 @@ import { Ionicons } from "@expo/vector-icons";
 import { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
-import { router } from "expo-router";
-import React, { useCallback } from "react";
+import React, { memo, useCallback } from "react";
 import { Pressable, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { IconConfig, TabIcon } from "./TabIcon";
+
+interface CustomBottomTabBarProps extends BottomTabBarProps {
+  /** Callback when the mic button is pressed. */
+  readonly onMicPress?: () => void;
+}
 
 /**
  * Tab icon configuration
@@ -46,7 +50,8 @@ const TAB_ORDER = ["index", "accounts", "__mic__", "transactions", "metals"];
 function CustomBottomTabBarComponent({
   state,
   navigation,
-}: BottomTabBarProps): React.ReactElement {
+  onMicPress,
+}: CustomBottomTabBarProps): React.ReactElement {
   const insets = useSafeAreaInsets();
 
   // Calculate safe bottom padding
@@ -54,8 +59,10 @@ function CustomBottomTabBarComponent({
   const tabBarHeight = TAB_BAR_HEIGHT + bottomPadding;
 
   const handleMicPress = useCallback(() => {
-    router.push("/voice-input");
-  }, []);
+    if (onMicPress) {
+      onMicPress();
+    }
+  }, [onMicPress]);
 
   /**
    * Render a single tab item
@@ -200,7 +207,7 @@ function CustomBottomTabBarComponent({
                 borderRadius: MIC_BUTTON_SIZE / 2,
               }}
             >
-              <Ionicons name="mic" size={28} color="#FFFFFF" />
+              <Ionicons name="mic" size={28} color={palette.slate[50]} />
             </LinearGradient>
           </Pressable>
         </View>
@@ -209,4 +216,4 @@ function CustomBottomTabBarComponent({
   );
 }
 
-export const CustomBottomTabBar = React.memo(CustomBottomTabBarComponent);
+export const CustomBottomTabBar = memo(CustomBottomTabBarComponent);
