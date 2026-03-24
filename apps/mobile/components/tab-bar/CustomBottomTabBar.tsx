@@ -4,8 +4,22 @@ import { Ionicons } from "@expo/vector-icons";
 import { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
-import React, { memo, useCallback } from "react";
-import { Pressable, Text, TouchableOpacity, View } from "react-native";
+import React, { memo, useCallback, useEffect } from "react";
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  Easing,
+  cancelAnimation,
+} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { IconConfig, TabIcon } from "./TabIcon";
 
@@ -66,6 +80,35 @@ function CustomBottomTabBarComponent({
       onMicPress();
     }
   }, [onMicPress]);
+
+  // Pulse animation for recording state (T020)
+  const pulseScale = useSharedValue(1);
+  const pulseOpacity = useSharedValue(0.6);
+
+  useEffect(() => {
+    if (isRecording) {
+      pulseScale.value = withRepeat(
+        withTiming(1.6, { duration: 1200, easing: Easing.out(Easing.ease) }),
+        -1, // infinite
+        true // reverse
+      );
+      pulseOpacity.value = withRepeat(
+        withTiming(0, { duration: 1200, easing: Easing.out(Easing.ease) }),
+        -1,
+        true
+      );
+    } else {
+      cancelAnimation(pulseScale);
+      cancelAnimation(pulseOpacity);
+      pulseScale.value = withTiming(1, { duration: 200 });
+      pulseOpacity.value = withTiming(0, { duration: 200 });
+    }
+  }, [isRecording, pulseScale, pulseOpacity]);
+
+  const pulseAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pulseScale.value }],
+    opacity: pulseOpacity.value,
+  }));
 
   /**
    * Render a single tab item
@@ -184,6 +227,8 @@ function CustomBottomTabBarComponent({
             marginLeft: -MIC_BUTTON_SIZE / 2,
           }}
         >
+          {/* T020: Pulse ring behind mic button */}
+          <Animated.View style={[styles.pulseRing, pulseAnimatedStyle]} />
           <Pressable
             onPress={handleMicPress}
             accessibilityLabel="Voice input - record a transaction"
@@ -228,3 +273,13 @@ function CustomBottomTabBarComponent({
 }
 
 export const CustomBottomTabBar = memo(CustomBottomTabBarComponent);
+
+const styles = StyleSheet.create({
+  pulseRing: {
+    position: "absolute",
+    width: MIC_BUTTON_SIZE,
+    height: MIC_BUTTON_SIZE,
+    borderRadius: MIC_BUTTON_SIZE / 2,
+    backgroundColor: palette.nileGreen[500],
+  },
+});
