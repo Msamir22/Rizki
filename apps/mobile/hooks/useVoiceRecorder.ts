@@ -17,7 +17,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   useAudioRecorder,
-  useAudioRecorderState,
   AudioModule,
   RecordingPresets,
   setAudioModeAsync,
@@ -34,8 +33,11 @@ const MAX_RECORDING_DURATION_S = 60;
 /** Timer tick interval in milliseconds. */
 const TIMER_TICK_MS = 100;
 
-/** Polling interval for recorder state in milliseconds. */
-const STATE_POLL_INTERVAL_MS = 200;
+/**
+ * Delay (ms) after calling `record()` before marking the recorder as ready.
+ * Gives Android's MediaRecorder.start() time to transition on the native thread.
+ */
+const NATIVE_STABILIZATION_DELAY_MS = 300;
 
 // ---------------------------------------------------------------------------
 // Types
@@ -76,10 +78,6 @@ interface VoiceRecorderResult {
 
 export function useVoiceRecorder(): VoiceRecorderResult {
   const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
-  const recorderState = useAudioRecorderState(
-    audioRecorder,
-    STATE_POLL_INTERVAL_MS
-  );
 
   const [status, setStatus] = useState<RecorderStatus>("idle");
   const [durationMs, setDurationMs] = useState(0);
@@ -90,6 +88,19 @@ export function useVoiceRecorder(): VoiceRecorderResult {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastTickRef = useRef<number>(0);
   const accumulatedMsRef = useRef<number>(0);
+
+  /**
+   * Tracks whether the native MediaRecorder is in a state that accepts
+   * pause/stop. Set to `true` after `record()` + stabilization delay,
+   * and `false` after `stop()` or on error recovery.
+   */
+  const nativeReadyRef = useRef(false);
+
+  /**
+   * Ref to track the current status synchronously (avoids stale closure
+   * issues in callbacks where React state hasn't re-rendered yet).
+   */
+  const statusRef = useRef<RecorderStatus>("idle");
 
   // ---------------------------------------------------------------------------
   // Permission
@@ -155,13 +166,20 @@ export function useVoiceRecorder(): VoiceRecorderResult {
     ) {
       // Auto-stop but stay in overlay — user must choose Done or Discard
       void (async () => {
+        if (!nativeReadyRef.current) return;
         try {
           stopTimer();
+          nativeReadyRef.current = false;
+          statusRef.current = "completed";
           await audioRecorder.stop();
           setAudioUri(audioRecorder.uri ?? null);
           setStatus("completed");
         } catch (err: unknown) {
           console.error("[useVoiceRecorder] Auto-stop failed:", err);
+          // Recover: mark as completed anyway since we hit the limit
+          nativeReadyRef.current = false;
+          setAudioUri(audioRecorder.uri ?? null);
+          setStatus("completed");
         }
       })();
     }
@@ -181,6 +199,7 @@ export function useVoiceRecorder(): VoiceRecorderResult {
 
       // Reset state
       accumulatedMsRef.current = 0;
+      nativeReadyRef.current = false;
       setDurationMs(0);
       setAudioUri(null);
 
@@ -189,42 +208,78 @@ export function useVoiceRecorder(): VoiceRecorderResult {
       audioRecorder.record();
 
       setStatus("recording");
+      statusRef.current = "recording";
       startTimer();
+
+      // Allow the native MediaRecorder time to transition before
+      // accepting pause/stop commands. This prevents the
+      // IllegalStateException on Android when the user taps quickly.
+      await new Promise<void>((resolve) =>
+        setTimeout(resolve, NATIVE_STABILIZATION_DELAY_MS)
+      );
+      nativeReadyRef.current = true;
     } catch (err: unknown) {
       console.error("[useVoiceRecorder] Start failed:", err);
+      nativeReadyRef.current = false;
+      statusRef.current = "idle";
       setStatus("idle");
     }
   }, [audioRecorder, startTimer]);
 
   const pause = useCallback((): void => {
-    if (status !== "recording") return;
+    if (statusRef.current !== "recording") return;
+
+    if (!nativeReadyRef.current) {
+      console.warn(
+        "[useVoiceRecorder] Ignoring pause — native recorder still initializing"
+      );
+      return;
+    }
+
     try {
       stopTimer();
       audioRecorder.pause();
+      statusRef.current = "paused";
       setStatus("paused");
     } catch (err: unknown) {
       console.error("[useVoiceRecorder] Pause failed:", err);
+      // Don't change status — the recording may still be active natively
     }
-  }, [status, audioRecorder, stopTimer]);
+  }, [audioRecorder, stopTimer]);
 
   const resume = useCallback((): void => {
-    if (status !== "paused") return;
+    if (statusRef.current !== "paused") return;
     try {
       audioRecorder.record();
+      statusRef.current = "recording";
       setStatus("recording");
       startTimer();
+      // No stabilization delay needed for resume — MediaRecorder.resume()
+      // transitions synchronously on Android
     } catch (err: unknown) {
       console.error("[useVoiceRecorder] Resume failed:", err);
     }
-  }, [status, audioRecorder, startTimer]);
+  }, [audioRecorder, startTimer]);
 
   const stop = useCallback(async (): Promise<{
     uri: string;
     durationMs: number;
   } | null> => {
-    if (status !== "recording" && status !== "paused") return null;
+    if (statusRef.current !== "recording" && statusRef.current !== "paused") {
+      return null;
+    }
+
+    if (!nativeReadyRef.current) {
+      console.warn(
+        "[useVoiceRecorder] Ignoring stop — native recorder still initializing"
+      );
+      return null;
+    }
+
     try {
       stopTimer();
+      nativeReadyRef.current = false;
+      statusRef.current = "completed";
       await audioRecorder.stop();
       const uri = audioRecorder.uri;
       if (!uri) return null;
@@ -234,9 +289,12 @@ export function useVoiceRecorder(): VoiceRecorderResult {
       return { uri, durationMs: accumulatedMsRef.current };
     } catch (err: unknown) {
       console.error("[useVoiceRecorder] Stop failed:", err);
+      nativeReadyRef.current = false;
+      statusRef.current = "idle";
+      setStatus("idle");
       return null;
     }
-  }, [status, audioRecorder, stopTimer]);
+  }, [audioRecorder, stopTimer]);
 
   // ---------------------------------------------------------------------------
   // Cleanup (FR-021: temp file MUST be deleted)
@@ -257,9 +315,18 @@ export function useVoiceRecorder(): VoiceRecorderResult {
     try {
       stopTimer();
 
-      // Stop recording if still active
-      if (recorderState.isRecording) {
-        await audioRecorder.stop();
+      // Stop recording only if native recorder is ready (active)
+      if (nativeReadyRef.current) {
+        nativeReadyRef.current = false;
+        try {
+          await audioRecorder.stop();
+        } catch (stopErr: unknown) {
+          // Swallow stop errors during discard — we're cleaning up anyway
+          console.warn(
+            "[useVoiceRecorder] Stop during discard failed:",
+            stopErr
+          );
+        }
       }
 
       // Delete the temp file (FR-021)
@@ -270,24 +337,23 @@ export function useVoiceRecorder(): VoiceRecorderResult {
 
       // Reset state
       accumulatedMsRef.current = 0;
+      nativeReadyRef.current = false;
+      statusRef.current = "idle";
       setDurationMs(0);
       setAudioUri(null);
       setStatus("idle");
     } catch (err: unknown) {
       console.error("[useVoiceRecorder] Discard failed:", err);
+      statusRef.current = "idle";
       setStatus("idle");
     }
-  }, [
-    audioRecorder,
-    audioUri,
-    recorderState.isRecording,
-    stopTimer,
-    deleteAudioFile,
-  ]);
+  }, [audioRecorder, audioUri, stopTimer, deleteAudioFile]);
 
   const reset = useCallback((): void => {
     stopTimer();
     accumulatedMsRef.current = 0;
+    nativeReadyRef.current = false;
+    statusRef.current = "idle";
     setDurationMs(0);
     setAudioUri(null);
     setStatus("idle");
