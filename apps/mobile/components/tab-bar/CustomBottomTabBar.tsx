@@ -4,11 +4,31 @@ import { Ionicons } from "@expo/vector-icons";
 import { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
-import { router } from "expo-router";
-import React, { useCallback } from "react";
-import { Pressable, TouchableOpacity, View } from "react-native";
+import React, { memo, useCallback, useEffect } from "react";
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  Easing,
+  cancelAnimation,
+} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { IconConfig, TabIcon } from "./TabIcon";
+
+interface CustomBottomTabBarProps extends BottomTabBarProps {
+  /** Callback when the mic button is pressed. */
+  readonly onMicPress?: () => void;
+  /** Whether voice recording is currently active. */
+  readonly isRecording?: boolean;
+}
 
 /**
  * Tab icon configuration
@@ -46,7 +66,9 @@ const TAB_ORDER = ["index", "accounts", "__mic__", "transactions", "metals"];
 function CustomBottomTabBarComponent({
   state,
   navigation,
-}: BottomTabBarProps): React.ReactElement {
+  onMicPress,
+  isRecording = false,
+}: CustomBottomTabBarProps): React.ReactElement {
   const insets = useSafeAreaInsets();
 
   // Calculate safe bottom padding
@@ -54,8 +76,39 @@ function CustomBottomTabBarComponent({
   const tabBarHeight = TAB_BAR_HEIGHT + bottomPadding;
 
   const handleMicPress = useCallback(() => {
-    router.push("/voice-input");
-  }, []);
+    if (onMicPress) {
+      onMicPress();
+    }
+  }, [onMicPress]);
+
+  // Pulse animation for recording state (T020)
+  const pulseScale = useSharedValue(1);
+  const pulseOpacity = useSharedValue(0.6);
+
+  useEffect(() => {
+    if (isRecording) {
+      pulseScale.value = withRepeat(
+        withTiming(1.6, { duration: 1200, easing: Easing.out(Easing.ease) }),
+        -1, // infinite
+        true // reverse
+      );
+      pulseOpacity.value = withRepeat(
+        withTiming(0, { duration: 1200, easing: Easing.out(Easing.ease) }),
+        -1,
+        true
+      );
+    } else {
+      cancelAnimation(pulseScale);
+      cancelAnimation(pulseOpacity);
+      pulseScale.value = withTiming(1, { duration: 200 });
+      pulseOpacity.value = withTiming(0, { duration: 200 });
+    }
+  }, [isRecording, pulseScale, pulseOpacity]);
+
+  const pulseAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pulseScale.value }],
+    opacity: pulseOpacity.value,
+  }));
 
   /**
    * Render a single tab item
@@ -174,6 +227,8 @@ function CustomBottomTabBarComponent({
             marginLeft: -MIC_BUTTON_SIZE / 2,
           }}
         >
+          {/* T020: Pulse ring behind mic button */}
+          <Animated.View style={[styles.pulseRing, pulseAnimatedStyle]} />
           <Pressable
             onPress={handleMicPress}
             accessibilityLabel="Voice input - record a transaction"
@@ -200,13 +255,31 @@ function CustomBottomTabBarComponent({
                 borderRadius: MIC_BUTTON_SIZE / 2,
               }}
             >
-              <Ionicons name="mic" size={28} color="#FFFFFF" />
+              <Ionicons name="mic" size={28} color={palette.slate[50]} />
             </LinearGradient>
           </Pressable>
+          {isRecording && (
+            <Text
+              className="mt-1 text-center text-[10px] font-semibold"
+              style={{ color: palette.nileGreen[500] }}
+            >
+              Listening
+            </Text>
+          )}
         </View>
       </View>
     </>
   );
 }
 
-export const CustomBottomTabBar = React.memo(CustomBottomTabBarComponent);
+export const CustomBottomTabBar = memo(CustomBottomTabBarComponent);
+
+const styles = StyleSheet.create({
+  pulseRing: {
+    position: "absolute",
+    width: MIC_BUTTON_SIZE,
+    height: MIC_BUTTON_SIZE,
+    borderRadius: MIC_BUTTON_SIZE / 2,
+    backgroundColor: palette.nileGreen[500],
+  },
+});
