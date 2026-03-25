@@ -375,11 +375,11 @@ async function processWithRetry(
     }
   }
 
-  // All retries exhausted
+  // All retries exhausted — propagate the failure
   const finalMsg =
     lastError instanceof Error ? lastError.message : "Unknown error";
   console.error(`[parse-voice] All retries exhausted: ${finalMsg}`);
-  return { transcript: "", transactions: [] };
+  throw lastError instanceof Error ? lastError : new Error(finalMsg);
 }
 
 // ---------------------------------------------------------------------------
@@ -410,12 +410,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
     let languageHint: string | null = null;
     let categoriesInput: string | null = null;
     let accountsInput: AccountInfo[] = [];
+    let callerLocalDate: string | null = null;
 
     if (contentType.includes("multipart/form-data")) {
       const formData = await req.formData();
       const audioFile = formData.get("audio");
       languageHint = formData.get("language") as string | null;
       categoriesInput = formData.get("categories") as string | null;
+      callerLocalDate = formData.get("callerLocalDate") as string | null;
 
       // Parse accounts from form data
       const accountsRaw = formData.get("accounts") as string | null;
@@ -456,6 +458,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
         language?: unknown;
         categories?: unknown;
         accounts?: unknown;
+        callerLocalDate?: unknown;
       };
       try {
         body = await req.json();
@@ -480,6 +483,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
             typeof (a as AccountInfo).name === "string"
         );
       }
+
+      callerLocalDate =
+        typeof body.callerLocalDate === "string" ? body.callerLocalDate : null;
     }
 
     if (!audioBytes && !textQuery) {
@@ -500,7 +506,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const systemPrompt = buildSystemPrompt(categoryTree, accountsInput);
 
     // 5. Build content parts
-    let contents: ContentListUnion;
+
+    // Resolve today's date: prefer client-supplied local date over UTC server time
+    const todayDate =
+      callerLocalDate && /^\d{4}-\d{2}-\d{2}$/.test(callerLocalDate)
+        ? callerLocalDate
+        : new Date().toISOString().split("T")[0];
+
+    let contents: string | Array<Record<string, unknown>>;
 
     if (audioBytes) {
       // Multimodal: audio + text prompt
@@ -524,14 +537,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
         {
           text: `Parse the financial transactions from this voice recording.${
             languageHint ? ` Language hint: ${languageHint}.` : ""
-          } Today's date is ${new Date().toISOString().split("T")[0]}.`,
+          } Today's date is ${todayDate}.`,
         },
       ];
     } else {
       // Text-only mode (transcription or test)
       contents = `Parse this voice command into transactions: "${textQuery}".${
         languageHint ? ` Language: ${languageHint}.` : ""
-      } Today's date is ${new Date().toISOString().split("T")[0]}.`;
+      } Today's date is ${todayDate}.`;
     }
 
     // 6. Call Gemini with retry

@@ -344,4 +344,36 @@ describe("useVoiceRecorder", () => {
       expect(unwrap(result).audioUri).toBeNull();
     });
   });
+
+  // =========================================================================
+  // Auto-stop at 60 seconds (FR-004)
+  // =========================================================================
+  describe("auto-stop at 60 seconds", () => {
+    it("should auto-stop recording when elapsed time reaches 60s", async () => {
+      mockRequestPermissions.mockResolvedValueOnce({ granted: true });
+      const { result, rerender } = renderHook(() => useVoiceRecorder());
+
+      await actAsync(async () => {
+        await unwrap(result).start();
+      });
+
+      expect(unwrap(result).status).toBe("recording");
+
+      // Advance fake timers past the 60s limit.
+      // The hook uses a 100ms interval to update durationMs.
+      actSync(() => {
+        jest.advanceTimersByTime(60_000);
+      });
+
+      rerender();
+
+      // Allow any pending async work (the auto-stop IIFE) to complete
+      actSync(() => {
+        jest.runAllTimers();
+      });
+
+      expect(mockStop).toHaveBeenCalled();
+      expect(unwrap(result).status).toBe("completed");
+    });
+  });
 });

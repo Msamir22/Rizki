@@ -113,14 +113,34 @@ function normalizeType(raw: string): TransactionType {
   return "EXPENSE" as TransactionType;
 }
 
+/** Regex to detect date-only strings (YYYY-MM-DD) without time component. */
+const DATE_ONLY_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+
 /**
  * Parse an AI-returned date string into a Date object.
+ * Bare YYYY-MM-DD strings are treated as local dates (not UTC) to avoid
+ * off-by-one day errors in positive UTC offset timezones (e.g., Egypt UTC+2).
  * Falls back to current timestamp if empty or unparseable.
  */
 function parseAiDate(raw: string): Date {
   if (!raw || raw.trim() === "") {
     return new Date();
   }
+
+  // Date-only strings: create in local timezone to avoid UTC midnight shift
+  if (DATE_ONLY_REGEX.test(raw.trim())) {
+    const [yearStr, monthStr, dayStr] = raw.trim().split("-");
+    const localDate = new Date(
+      Number(yearStr),
+      Number(monthStr) - 1,
+      Number(dayStr)
+    );
+    if (!isNaN(localDate.getTime())) {
+      return localDate;
+    }
+    return new Date();
+  }
+
   const parsed = new Date(raw);
   if (isNaN(parsed.getTime())) {
     return new Date();
@@ -146,6 +166,10 @@ function parseAiDate(raw: string): Date {
 export async function parseVoiceWithAi(
   options: ParseVoiceOptions
 ): Promise<ParseVoiceResult | VoiceParserError> {
+  // Compute caller's local date in YYYY-MM-DD format for relative date resolution
+  const now = new Date();
+  const callerLocalDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+
   // FR-024: 30-second client-side timeout via AbortController
   const abortController = new AbortController();
   const timeoutId = setTimeout(() => {
@@ -168,6 +192,7 @@ export async function parseVoiceWithAi(
             language: options.languageHint,
             categories: options.categories,
             accounts: options.accounts,
+            callerLocalDate,
           },
           signal: abortController.signal,
         }
@@ -188,12 +213,14 @@ export async function parseVoiceWithAi(
       if (options.accounts && options.accounts.length > 0) {
         formData.append("accounts", JSON.stringify(options.accounts));
       }
+      formData.append("callerLocalDate", callerLocalDate);
 
       response = await supabase.functions.invoke<ParseVoiceResponse>(
         "parse-voice",
         { body: formData, signal: abortController.signal }
       );
     } else {
+      clearTimeout(timeoutId);
       return {
         kind: "unknown",
         message: "Either audioUri or textQuery must be provided.",

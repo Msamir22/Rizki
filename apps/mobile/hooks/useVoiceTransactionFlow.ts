@@ -125,7 +125,7 @@ export function useVoiceTransactionFlow(
     // Reset state and start recording
     setErrorMessage(null);
     setIsOverlayVisible(true);
-    setFlowStatus("recording");
+    updateFlowStatus("recording");
     originTabIndexRef.current = config.originTabIndex ?? 0;
 
     await recorder.start();

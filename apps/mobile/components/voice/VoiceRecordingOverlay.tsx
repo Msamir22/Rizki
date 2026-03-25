@@ -68,6 +68,11 @@ const styles = StyleSheet.create({
   controlBtnPrimary: {
     backgroundColor: palette.nileGreen[500],
   },
+  controlBtnDestructive: {
+    borderWidth: 1.5,
+    borderColor: palette.red[400],
+    backgroundColor: "transparent",
+  },
   retryBtn: {
     backgroundColor: palette.nileGreen[500],
   },
@@ -84,6 +89,10 @@ const styles = StyleSheet.create({
   labelPrimary: {
     color: palette.nileGreen[500],
     fontWeight: "600" as const,
+  },
+  labelDestructive: {
+    color: palette.red[500],
+    fontWeight: "400" as const,
   },
 });
 
@@ -160,6 +169,25 @@ function ControlButton({
   size = 48,
 }: ControlButtonProps): React.ReactElement {
   const isPrimary = variant === "primary";
+  const isDestructive = variant === "destructive";
+
+  const buttonStyle = isPrimary
+    ? styles.controlBtnPrimary
+    : isDestructive
+      ? styles.controlBtnDestructive
+      : styles.controlBtnDefault;
+
+  const labelStyle = isPrimary
+    ? styles.labelPrimary
+    : isDestructive
+      ? styles.labelDestructive
+      : styles.labelDefault;
+
+  const iconColor = isPrimary
+    ? palette.slate[50]
+    : isDestructive
+      ? palette.red[500]
+      : palette.slate[500];
 
   return (
     <Pressable
@@ -171,21 +199,11 @@ function ControlButton({
     >
       <View
         className="items-center justify-center rounded-full"
-        style={[
-          { width: size, height: size },
-          isPrimary ? styles.controlBtnPrimary : styles.controlBtnDefault,
-        ]}
+        style={[{ width: size, height: size }, buttonStyle]}
       >
-        <Ionicons
-          name={icon}
-          size={isPrimary ? 22 : 20}
-          color={isPrimary ? palette.slate[50] : palette.slate[500]}
-        />
+        <Ionicons name={icon} size={isPrimary ? 22 : 20} color={iconColor} />
       </View>
-      <Text
-        className="mt-1.5 text-xs"
-        style={isPrimary ? styles.labelPrimary : styles.labelDefault}
-      >
+      <Text className="mt-1.5 text-xs" style={labelStyle}>
         {label}
       </Text>
     </Pressable>
