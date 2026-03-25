@@ -59,6 +59,18 @@ export default function VoiceReviewScreen(): React.JSX.Element {
 
   const transcript = params.transcript ?? "";
 
+  /** Map tab indices to route paths for post-save navigation */
+  const originTabRoute = useMemo((): string => {
+    const index = Number(params.originTabIndex ?? "2");
+    const TAB_ROUTES: Record<number, string> = {
+      0: "/(tabs)",
+      1: "/(tabs)/accounts",
+      2: "/(tabs)/transactions",
+      3: "/(tabs)/metals",
+    };
+    return TAB_ROUTES[index] ?? "/(tabs)/transactions";
+  }, [params.originTabIndex]);
+
   // ── Save ────────────────────────────────────────────────────────────
 
   const handleSave = useCallback(
@@ -91,7 +103,7 @@ export default function VoiceReviewScreen(): React.JSX.Element {
         });
 
         // Navigate back to origin tab (FR-024: post-save navigation)
-        router.replace("/(tabs)/transactions");
+        router.replace(originTabRoute as never);
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         showToast({
@@ -103,7 +115,7 @@ export default function VoiceReviewScreen(): React.JSX.Element {
         setIsSaving(false);
       }
     },
-    [router, showToast]
+    [router, showToast, originTabRoute]
   );
 
   // ── Discard ─────────────────────────────────────────────────────────
@@ -118,12 +130,12 @@ export default function VoiceReviewScreen(): React.JSX.Element {
           text: "Discard",
           style: "destructive",
           onPress: () => {
-            router.replace("/(tabs)" as never);
+            router.replace(originTabRoute as never);
           },
         },
       ]
     );
-  }, [router]);
+  }, [router, originTabRoute]);
 
   // ── No transactions guard ───────────────────────────────────────────
 
@@ -139,7 +151,7 @@ export default function VoiceReviewScreen(): React.JSX.Element {
           No transactions to review.
         </Text>
         <TouchableOpacity
-          onPress={() => router.replace("/(tabs)" as never)}
+          onPress={() => router.replace(originTabRoute as never)}
           className="mt-6 px-6 py-3 rounded-2xl"
           style={{ backgroundColor: palette.slate[800] }}
         >
@@ -161,7 +173,7 @@ export default function VoiceReviewScreen(): React.JSX.Element {
         rightAction={{
           label: "Retry",
           onPress: () => {
-            router.replace("/(tabs)" as never);
+            router.replace(originTabRoute as never);
             // User can re-trigger voice flow from the tab bar
           },
         }}

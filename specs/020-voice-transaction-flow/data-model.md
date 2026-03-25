@@ -11,7 +11,7 @@
 | `uri`        | `string`                                                          | Temporary file URI of the recorded audio |
 | `durationMs` | `number`                                                          | Recording duration in milliseconds       |
 | `status`     | `"idle" \| "recording" \| "paused" \| "completed" \| "discarded"` | Current session state                    |
-| `mimeType`   | `string`                                                          | Audio MIME type (e.g., `audio/m4a`)      |
+| `mimeType`   | `string`                                                          | Audio MIME type (e.g., `audio/mp4`)      |
 
 **Lifecycle**: Created when recording starts → completed when "Done" tapped →
 discarded when "X" tapped or timeout. Never persisted to database.
@@ -48,7 +48,9 @@ discarded when "X" tapped or timeout. Never persisted to database.
 | `counterparty`       | `string`                | Merchant/person/entity name     |
 | `categorySystemName` | `string`                | Category from the provided tree |
 | `description`        | `string`                | Short English description       |
-| `accountId`          | `string \| null`        | Matched account ID or null      |
+| `accountId`          | `string`                | Matched account ID or empty     |
+| `date`               | `string`                | ISO 8601 date or empty string   |
+| `confidenceScore`    | `number`                | Extraction confidence (0–1)     |
 
 **Note**: `currency` is NOT returned by AI — set client-side from
 `preferredCurrency`.

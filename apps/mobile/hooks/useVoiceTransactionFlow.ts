@@ -92,11 +92,23 @@ export function useVoiceTransactionFlow(
   // Store origin tab for post-save navigation
   const originTabIndexRef = useRef(config.originTabIndex ?? 0);
 
+  // Track flow status in a ref to avoid stale closure in startFlow guard
+  const flowStatusRef = useRef<FlowStatus>("idle");
+
+  /** Update both React state and ref to keep concurrency guard in sync */
+  const updateFlowStatus = useCallback((next: FlowStatus): void => {
+    flowStatusRef.current = next;
+    setFlowStatus(next);
+  }, []);
+
   // ---------------------------------------------------------------------------
   // Actions
   // ---------------------------------------------------------------------------
 
   const startFlow = useCallback(async (): Promise<void> => {
+    // Concurrency guard — prevent overlapping recording sessions (FR-017)
+    if (flowStatusRef.current !== "idle") return;
+
     // Request permission first if needed
     if (!recorder.hasPermission) {
       const granted = await recorder.requestPermission();
@@ -104,7 +116,7 @@ export function useVoiceTransactionFlow(
         setErrorMessage(
           "Microphone permission is required for voice recording. Please enable it in Settings."
         );
-        setFlowStatus("error");
+        updateFlowStatus("error");
         setIsOverlayVisible(true);
         return;
       }
@@ -117,29 +129,29 @@ export function useVoiceTransactionFlow(
     originTabIndexRef.current = config.originTabIndex ?? 0;
 
     await recorder.start();
-  }, [recorder, config.originTabIndex]);
+  }, [recorder, config.originTabIndex, updateFlowStatus]);
 
   const pauseRecording = useCallback((): void => {
     recorder.pause();
-    setFlowStatus("paused");
-  }, [recorder]);
+    updateFlowStatus("paused");
+  }, [recorder, updateFlowStatus]);
 
   const resumeRecording = useCallback((): void => {
     recorder.resume();
-    setFlowStatus("recording");
-  }, [recorder]);
+    updateFlowStatus("recording");
+  }, [recorder, updateFlowStatus]);
 
   const submitRecording = useCallback(async (): Promise<void> => {
     // Stop recording
     const result = await recorder.stop();
     if (!result) {
       setErrorMessage("Failed to finalize recording. Please try again.");
-      setFlowStatus("error");
+      updateFlowStatus("error");
       return;
     }
 
     // Show analyzing state
-    setFlowStatus("analyzing");
+    updateFlowStatus("analyzing");
 
     // Submit to AI
     const aiResult = await parseVoiceWithAi({
@@ -155,12 +167,12 @@ export function useVoiceTransactionFlow(
     // Handle result
     if (isVoiceParserError(aiResult)) {
       setErrorMessage(aiResult.message);
-      setFlowStatus("error");
+      updateFlowStatus("error");
       return;
     }
 
     // Success — navigate to review screen
-    setFlowStatus("success");
+    updateFlowStatus("success");
     setIsOverlayVisible(false);
 
     // Navigate to voice review with parsed data
@@ -175,21 +187,27 @@ export function useVoiceTransactionFlow(
 
     // Reset for next use
     recorder.reset();
-    setFlowStatus("idle");
-  }, [recorder, config.preferredCurrency, config.categories, config.accounts]);
+    updateFlowStatus("idle");
+  }, [
+    recorder,
+    config.preferredCurrency,
+    config.categories,
+    config.accounts,
+    updateFlowStatus,
+  ]);
 
   const discardRecording = useCallback(async (): Promise<void> => {
     await recorder.discard();
     setIsOverlayVisible(false);
-    setFlowStatus("idle");
+    updateFlowStatus("idle");
     setErrorMessage(null);
-  }, [recorder]);
+  }, [recorder, updateFlowStatus]);
 
   const retryRecording = useCallback(async (): Promise<void> => {
     setErrorMessage(null);
-    setFlowStatus("recording");
+    updateFlowStatus("recording");
     await recorder.start();
-  }, [recorder]);
+  }, [recorder, updateFlowStatus]);
 
   return {
     flowStatus,

@@ -30,9 +30,6 @@ import { palette } from "@/constants/colors";
 // Constants
 // ---------------------------------------------------------------------------
 
-/** Number of waveform bars to display. */
-const _BAR_COUNT = 30;
-
 /** Fixed heights for bars to create a natural waveform pattern. */
 const BAR_PATTERN = [
   0.3, 0.5, 0.4, 0.7, 0.6, 0.8, 0.5, 0.9, 0.7, 0.4, 0.6, 0.8, 0.5, 0.7, 0.9,

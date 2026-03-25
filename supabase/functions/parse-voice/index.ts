@@ -301,6 +301,7 @@ function detectAudioMimeType(bytes: Uint8Array): string {
     return "audio/wav";
   // M4A/AAC: check for ftyp box (ISO base media file format)
   if (
+    bytes.length >= 8 &&
     bytes[4] === 0x66 &&
     bytes[5] === 0x74 &&
     bytes[6] === 0x79 &&

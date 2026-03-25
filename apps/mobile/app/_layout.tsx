@@ -215,7 +215,7 @@ function RootLayoutNav(): React.ReactNode {
             presentation: "modal",
           }}
         />
-        <Stack.Screen name="voice-input" />
+        <Stack.Screen name="voice-review" />
         <Stack.Screen
           name="add-transaction"
           options={{

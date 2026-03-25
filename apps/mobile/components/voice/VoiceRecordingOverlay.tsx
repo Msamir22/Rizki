@@ -208,7 +208,7 @@ function VoiceRecordingOverlayComponent({
   onRetry,
 }: VoiceRecordingOverlayProps): React.ReactElement | null {
   const insets = useSafeAreaInsets();
-  const bottomPadding = Math.max(insets.bottom);
+  const bottomPadding = Math.max(insets.bottom, 0);
 
   const elapsedSeconds = Math.floor(durationMs / 1000);
   const progressPercent = Math.min(

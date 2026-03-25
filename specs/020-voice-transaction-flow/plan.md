@@ -2,11 +2,9 @@
 
 **Branch**: `020-voice-transaction-flow` | **Date**: 2026-03-24 (updated
 post-clarify) **Spec**:
-[spec.md](file:///e:/Work/My%20Projects/Astik/specs/020-voice-transaction-flow/spec.md)
-**Research**:
-[research.md](file:///e:/Work/My%20Projects/Astik/specs/020-voice-transaction-flow/research.md)
-**Data Model**:
-[data-model.md](file:///e:/Work/My%20Projects/Astik/specs/020-voice-transaction-flow/data-model.md)
+[spec.md](file:///specs/020-voice-transaction-flow/spec.md) **Research**:
+[research.md](file:///specs/020-voice-transaction-flow/research.md) **Data
+Model**: [data-model.md](file:///specs/020-voice-transaction-flow/data-model.md)
 
 ## Summary
 
@@ -52,7 +50,7 @@ _GATE: Must pass before implementation._
 > **Why first**: All other work depends on the AI being able to accept
 > categories, accounts, and return transcript + accountId.
 
-#### [MODIFY] [index.ts](file:///e:/Work/My%20Projects/Astik/supabase/functions/parse-voice/index.ts)
+#### [MODIFY] [index.ts](file:///supabase/functions/parse-voice/index.ts)
 
 1. **Accept dynamic inputs from client**:
    - `categories` (string) — category tree, fall back to embedded CATEGORY_TREE
@@ -98,7 +96,7 @@ _GATE: Must pass before implementation._
 npx expo install expo-audio
 ```
 
-#### [NEW] [useVoiceRecorder.ts](file:///e:/Work/My%20Projects/Astik/apps/mobile/hooks/useVoiceRecorder.ts)
+#### [NEW] [useVoiceRecorder.ts](file:///apps/mobile/hooks/useVoiceRecorder.ts)
 
 Custom hook encapsulating recording lifecycle:
 
@@ -118,7 +116,7 @@ Custom hook encapsulating recording lifecycle:
 
 ### Phase 3: Recording Overlay Component
 
-#### [NEW] [VoiceRecordingOverlay.tsx](file:///e:/Work/My%20Projects/Astik/apps/mobile/components/voice/VoiceRecordingOverlay.tsx)
+#### [NEW] [VoiceRecordingOverlay.tsx](file:///apps/mobile/components/voice/VoiceRecordingOverlay.tsx)
 
 Bottom-sheet overlay showing:
 
@@ -130,7 +128,7 @@ Bottom-sheet overlay showing:
 
 Props: `visible`, `onSubmit(audioUri)`, `onDiscard()`
 
-#### [NEW] [WaveformVisualizer.tsx](file:///e:/Work/My%20Projects/Astik/apps/mobile/components/voice/WaveformVisualizer.tsx)
+#### [NEW] [WaveformVisualizer.tsx](file:///apps/mobile/components/voice/WaveformVisualizer.tsx)
 
 Animated waveform bars driven by audio metering data from `useVoiceRecorder`.
 
@@ -138,7 +136,7 @@ Animated waveform bars driven by audio metering data from `useVoiceRecorder`.
 
 ### Phase 4: Update Client Service Layer
 
-#### [MODIFY] [ai-voice-parser-service.ts](file:///e:/Work/My%20Projects/Astik/apps/mobile/services/ai-voice-parser-service.ts)
+#### [MODIFY] [ai-voice-parser-service.ts](file:///apps/mobile/services/ai-voice-parser-service.ts)
 
 1. **Accept new parameters**: `categories`, `accounts`, `preferredCurrency`
 2. **Send categories and accounts** via FormData alongside audio
@@ -161,7 +159,7 @@ Animated waveform bars driven by audio metering data from `useVoiceRecorder`.
 
 ### Phase 5: Refactor TransactionReview Component
 
-#### [MODIFY] [SmsTransactionReview.tsx](file:///e:/Work/My%20Projects/Astik/apps/mobile/components/sms-sync/SmsTransactionReview.tsx) → rename to `TransactionReview.tsx`
+#### [MODIFY] [SmsTransactionReview.tsx](file:///apps/mobile/components/sms-sync/SmsTransactionReview.tsx) → rename to `TransactionReview.tsx`
 
 1. **Add `source` prop**: `"sms" | "voice"`
 2. **Add `transcript` prop** (optional): displayed in a card at top for voice
@@ -178,22 +176,22 @@ Animated waveform bars driven by audio metering data from `useVoiceRecorder`.
 
 #### [MODIFY] Related files:
 
-- [SmsTransactionItem.tsx](file:///e:/Work/My%20Projects/Astik/apps/mobile/components/sms-sync/SmsTransactionItem.tsx)
+- [SmsTransactionItem.tsx](file:///apps/mobile/components/sms-sync/SmsTransactionItem.tsx)
   — conditionally hide SMS-specific badges
-- [SmsTransactionEditModal.tsx](file:///e:/Work/My%20Projects/Astik/apps/mobile/components/sms-sync/SmsTransactionEditModal.tsx)
+- [SmsTransactionEditModal.tsx](file:///apps/mobile/components/sms-sync/SmsTransactionEditModal.tsx)
   — rename to `TransactionEditModal.tsx`
 
 ---
 
 ### Phase 6: Tab Bar + Voice Flow Integration
 
-#### [MODIFY] [CustomBottomTabBar.tsx](file:///e:/Work/My%20Projects/Astik/apps/mobile/components/tab-bar/CustomBottomTabBar.tsx)
+#### [MODIFY] [CustomBottomTabBar.tsx](file:///apps/mobile/components/tab-bar/CustomBottomTabBar.tsx)
 
 1. Change `handleMicPress` from `router.push("/voice-input")` to toggling
    overlay visibility
 2. Add pulse animation on mic button while recording is active
 
-#### [NEW] [voice-review.tsx](file:///e:/Work/My%20Projects/Astik/apps/mobile/app/voice-review.tsx)
+#### [NEW] [voice-review.tsx](file:///apps/mobile/app/voice-review.tsx)
 
 New route for the voice transaction review screen. Uses `TransactionReview` with
 `source="voice"`.
@@ -202,7 +200,7 @@ New route for the voice transaction review screen. Uses `TransactionReview` with
   to the tab the user was on before tapping mic. Pass the origin tab index via
   route params.
 
-#### [DELETE] [voice-input.tsx](file:///e:/Work/My%20Projects/Astik/apps/mobile/app/voice-input.tsx)
+#### [DELETE] [voice-input.tsx](file:///apps/mobile/app/voice-input.tsx)
 
 The old full-page voice input screen is replaced by the overlay + review flow.
 Delete after migration is complete.
@@ -211,7 +209,7 @@ Delete after migration is complete.
 
 ### Phase 7: State Management & Error Handling
 
-#### [NEW] [useVoiceTransactionFlow.ts](file:///e:/Work/My%20Projects/Astik/apps/mobile/hooks/useVoiceTransactionFlow.ts)
+#### [NEW] [useVoiceTransactionFlow.ts](file:///apps/mobile/hooks/useVoiceTransactionFlow.ts)
 
 Orchestrator hook managing the full flow:
 

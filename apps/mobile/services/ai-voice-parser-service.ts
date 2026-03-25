@@ -169,6 +169,7 @@ export async function parseVoiceWithAi(
             categories: options.categories,
             accounts: options.accounts,
           },
+          signal: abortController.signal,
         }
       );
     } else if (options.audioUri) {
@@ -190,7 +191,7 @@ export async function parseVoiceWithAi(
 
       response = await supabase.functions.invoke<ParseVoiceResponse>(
         "parse-voice",
-        { body: formData }
+        { body: formData, signal: abortController.signal }
       );
     } else {
       return {
