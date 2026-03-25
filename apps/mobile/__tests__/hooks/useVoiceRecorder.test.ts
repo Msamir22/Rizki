@@ -364,11 +364,20 @@ describe("useVoiceRecorder", () => {
       mockRequestPermissions.mockResolvedValueOnce({ granted: true });
       const { result } = renderHook(() => useVoiceRecorder());
 
+      // 1. Start recording — must happen before advancing timers
       await actAsync(async () => {
-        jest.advanceTimersByTime(60_000);
-        // Flush promise chain kicked off by timer callback / stop()
-        await Promise.resolve();
+        await unwrap(result).start();
       });
+      expect(unwrap(result).status).toBe("recording");
+
+      // 2. Advance past the 60s limit; the hook's 100ms interval
+      //    will accumulate durationMs which triggers the auto-stop useEffect
+      actSync(() => {
+        jest.advanceTimersByTime(60_000);
+      });
+
+      // 3. Flush microtasks so the auto-stop async IIFE
+      //    (audioRecorder.stop() + setStatus("completed")) settles
       await actAsync(async () => {
         await Promise.resolve();
       });
