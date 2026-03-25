@@ -251,13 +251,19 @@ function VoiceRecordingOverlayComponent({
   );
   const safeOnRetry = useMemo(() => fireAndForget(onRetry), [onRetry]);
 
+  const safeOnPause = useMemo(
+    () => fireAndForget(onPause) ?? (() => {}),
+    [onPause]
+  );
+  const safeOnResume = useMemo(
+    () => fireAndForget(onResume) ?? (() => {}),
+    [onResume]
+  );
+
   const handlePauseResume = useCallback((): void => {
-    if (isPaused) {
-      void onResume();
-    } else {
-      void onPause();
-    }
-  }, [isPaused, onPause, onResume]);
+    if (isPaused) safeOnResume();
+    else safeOnPause();
+  }, [isPaused, safeOnPause, safeOnResume]);
 
   // Dynamic panel position based on tab bar height
   const panelStyle = useMemo(
@@ -277,7 +283,7 @@ function VoiceRecordingOverlayComponent({
   // Status dot color
   const dotStyle = isRecording ? styles.recordingDot : styles.pausedDot;
 
-  if (!visible) return null;
+  if (!visible || status === "idle" || status === "success") return null;
 
   return (
     <>

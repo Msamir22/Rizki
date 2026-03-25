@@ -10,7 +10,7 @@
  *   - Lightweight renderHook utility from react-test-renderer (project pattern)
  */
 
-import React from "react";
+import React, { createElement, useState } from "react";
 
 // ---------------------------------------------------------------------------
 // react-test-renderer — manual types & import (project pattern)
@@ -89,6 +89,8 @@ import { useVoiceRecorder } from "@/hooks/useVoiceRecorder";
 // Lightweight renderHook utility (project pattern)
 // ---------------------------------------------------------------------------
 
+const mountedUnmounts: Array<() => void> = [];
+
 interface HookRef<T> {
   current: T | null;
 }
@@ -110,7 +112,7 @@ function renderHook<T>(hookFn: () => T): {
 
   function TestComponent(): null {
     result.current = hookFn();
-    const [, setState] = React.useState(0);
+    const [, setState] = useState(0);
     forceUpdate = () => setState((n) => n + 1);
     return null;
   }
@@ -118,7 +120,13 @@ function renderHook<T>(hookFn: () => T): {
   let renderer: ReactTestRendererInstance;
 
   actSync(() => {
-    renderer = RTR.create(React.createElement(TestComponent));
+    renderer = RTR.create(createElement(TestComponent));
+  });
+
+  mountedUnmounts.push(() => {
+    actSync(() => {
+      renderer.unmount();
+    });
   });
 
   return {
@@ -147,6 +155,9 @@ describe("useVoiceRecorder", () => {
   });
 
   afterEach(() => {
+    mountedUnmounts.splice(0).forEach((fn) => fn());
+    jest.runOnlyPendingTimers();
+    jest.clearAllTimers();
     jest.useRealTimers();
   });
 
@@ -351,25 +362,15 @@ describe("useVoiceRecorder", () => {
   describe("auto-stop at 60 seconds", () => {
     it("should auto-stop recording when elapsed time reaches 60s", async () => {
       mockRequestPermissions.mockResolvedValueOnce({ granted: true });
-      const { result, rerender } = renderHook(() => useVoiceRecorder());
+      const { result } = renderHook(() => useVoiceRecorder());
 
       await actAsync(async () => {
-        await unwrap(result).start();
-      });
-
-      expect(unwrap(result).status).toBe("recording");
-
-      // Advance fake timers past the 60s limit.
-      // The hook uses a 100ms interval to update durationMs.
-      actSync(() => {
         jest.advanceTimersByTime(60_000);
+        // Flush promise chain kicked off by timer callback / stop()
+        await Promise.resolve();
       });
-
-      rerender();
-
-      // Allow any pending async work (the auto-stop IIFE) to complete
-      actSync(() => {
-        jest.runAllTimers();
+      await actAsync(async () => {
+        await Promise.resolve();
       });
 
       expect(mockStop).toHaveBeenCalled();

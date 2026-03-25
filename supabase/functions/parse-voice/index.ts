@@ -502,14 +502,30 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const ai = new GoogleGenAI({ apiKey });
 
     // 4. Build system prompt with dynamic category tree and accounts
-    const categoryTree = categoriesInput ?? DEFAULT_CATEGORY_TREE;
+    const categoryTree =
+      typeof categoriesInput === "string" && categoriesInput.trim().length > 0
+        ? categoriesInput
+        : DEFAULT_CATEGORY_TREE;
     const systemPrompt = buildSystemPrompt(categoryTree, accountsInput);
 
     // 5. Build content parts
 
     // Resolve today's date: prefer client-supplied local date over UTC server time
+    const isValidIsoLocalDate = (value: string): boolean => {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+      const d = new Date(`${value}T00:00:00Z`);
+      return !Number.isNaN(d.getTime()) && d.toISOString().startsWith(value);
+    };
+
+    if (callerLocalDate && !isValidIsoLocalDate(callerLocalDate)) {
+      return errorResponse(
+        "`callerLocalDate` must be a valid YYYY-MM-DD date.",
+        400
+      );
+    }
+
     const todayDate =
-      callerLocalDate && /^\d{4}-\d{2}-\d{2}$/.test(callerLocalDate)
+      callerLocalDate && isValidIsoLocalDate(callerLocalDate)
         ? callerLocalDate
         : new Date().toISOString().split("T")[0];
 
