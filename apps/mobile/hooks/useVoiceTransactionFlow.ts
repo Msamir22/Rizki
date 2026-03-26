@@ -186,7 +186,7 @@ export function useVoiceTransactionFlow(
     });
 
     // Reset for next use
-    recorder.reset();
+    await recorder.reset();
     updateFlowStatus("idle");
   }, [
     recorder,

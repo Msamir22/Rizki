@@ -89,21 +89,32 @@ interface VoiceRecorderResult {
 
 /**
  * Polls until `conditionFn` returns true or `timeoutMs` elapses.
- * Resolves `true` if the condition was met, `false` on timeout.
+ * Resolves `true` if the condition was met, `false` on timeout or abort.
+ *
+ * Accepts an optional AbortSignal so callers can cancel the poll
+ * (e.g. on component unmount) to prevent leaked intervals.
  */
 function waitForCondition(
   conditionFn: () => boolean,
   timeoutMs: number,
-  pollMs: number
+  pollMs: number,
+  signal?: AbortSignal
 ): Promise<boolean> {
   return new Promise<boolean>((resolve) => {
+    if (signal?.aborted) {
+      resolve(false);
+      return;
+    }
     if (conditionFn()) {
       resolve(true);
       return;
     }
     const start = Date.now();
     const interval = setInterval(() => {
-      if (conditionFn()) {
+      if (signal?.aborted) {
+        clearInterval(interval);
+        resolve(false);
+      } else if (conditionFn()) {
         clearInterval(interval);
         resolve(true);
       } else if (Date.now() - start >= timeoutMs) {
@@ -111,6 +122,16 @@ function waitForCondition(
         resolve(false);
       }
     }, pollMs);
+
+    // Also listen for abort to clear immediately
+    signal?.addEventListener(
+      "abort",
+      () => {
+        clearInterval(interval);
+        resolve(false);
+      },
+      { once: true }
+    );
   });
 }
 
@@ -150,6 +171,13 @@ export function useVoiceRecorder(): VoiceRecorderResult {
    * clears state while start()'s stabilization delay is still pending.
    */
   const nativeStartPromiseRef = useRef<Promise<void> | null>(null);
+
+  /**
+   * AbortController aborted on unmount to cancel any in-flight
+   * waitForCondition polling in stop(), preventing leaked intervals
+   * that reference stale refs.
+   */
+  const unmountAbortRef = useRef(new AbortController());
 
   // ---------------------------------------------------------------------------
   // Permission
@@ -197,10 +225,12 @@ export function useVoiceRecorder(): VoiceRecorderResult {
     }
   }, []);
 
-  // Clean up timer on unmount
+  // Clean up timer and abort pending polls on unmount
   useEffect(() => {
+    const abortController = unmountAbortRef.current;
     return () => {
       stopTimer();
+      abortController.abort();
     };
   }, [stopTimer]);
 
@@ -351,7 +381,8 @@ export function useVoiceRecorder(): VoiceRecorderResult {
       const ready = await waitForCondition(
         () => nativeReadyRef.current,
         STOP_READINESS_TIMEOUT_MS,
-        READINESS_POLL_INTERVAL_MS
+        READINESS_POLL_INTERVAL_MS,
+        unmountAbortRef.current.signal
       );
 
       if (!ready) {
