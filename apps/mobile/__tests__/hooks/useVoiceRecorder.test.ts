@@ -55,10 +55,6 @@ const mockRecorder = {
 
 jest.mock("expo-audio", () => ({
   useAudioRecorder: jest.fn(() => mockRecorder),
-  useAudioRecorderState: jest.fn(() => ({
-    isRecording: false,
-    durationMillis: 0,
-  })),
   AudioModule: {
     requestRecordingPermissionsAsync: (...args: unknown[]): Promise<unknown> =>
       mockRequestPermissions(...args) as Promise<unknown>,
@@ -83,7 +79,10 @@ jest.mock("expo-file-system", () => ({
 // Import module under test — after mocks
 // ---------------------------------------------------------------------------
 
-import { useVoiceRecorder } from "@/hooks/useVoiceRecorder";
+import {
+  useVoiceRecorder,
+  NATIVE_STABILIZATION_DELAY_MS,
+} from "@/hooks/useVoiceRecorder";
 
 // ---------------------------------------------------------------------------
 // Lightweight renderHook utility (project pattern)
@@ -142,6 +141,51 @@ function renderHook<T>(hookFn: () => T): {
       });
     },
   };
+}
+
+// ---------------------------------------------------------------------------
+// Helper: start recording with stabilization delay flush
+// When start() is called with jest.useFakeTimers(), the stabilization
+// setTimeout won't resolve until we advance timers. This helper handles
+// the full sequence: kick off start, advance timers, flush microtasks.
+// ---------------------------------------------------------------------------
+
+async function startRecordingWithFlush(
+  result: HookRef<ReturnType<typeof useVoiceRecorder>>
+): Promise<void> {
+  // start() internally does:
+  //   1. await setAudioModeAsync()      — async, resolves via microtask
+  //   2. await prepareToRecordAsync()   — async, resolves via microtask
+  //   3. record()                       — synchronous
+  //   4. setStatus("recording")         — synchronous
+  //   5. startTimer()                   — synchronous (schedules interval)
+  //   6. await setTimeout(NATIVE_STABILIZATION_DELAY_MS) — needs fake timer advance
+  //   7. nativeReadyRef.current = true  — after setTimeout resolves
+  //
+  // With fake timers we must:
+  //   a) Kick off start() (don't await — it will hang on step 6)
+  //   b) Flush microtasks so steps 1-5 complete and setTimeout is scheduled
+  //   c) Advance fake timers by the stabilization delay to fire the setTimeout
+  //   d) Flush microtasks again so step 7 completes
+
+  await actAsync(async () => {
+    const hook = unwrap(result);
+    const startPromise = hook.start(); // kick off, don't await
+
+    // Flush microtasks so prepareToRecordAsync + setAudioModeAsync resolve
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    // Now setTimeout is scheduled — advance fake timers
+    jest.advanceTimersByTime(NATIVE_STABILIZATION_DELAY_MS);
+
+    // Flush microtasks so the setTimeout callback (nativeReadyRef = true) runs
+    await Promise.resolve();
+
+    // Wait for start() to fully complete
+    await startPromise;
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -214,9 +258,7 @@ describe("useVoiceRecorder", () => {
       mockRequestPermissions.mockResolvedValueOnce({ granted: true });
       const { result } = renderHook(() => useVoiceRecorder());
 
-      await actAsync(async () => {
-        await unwrap(result).start();
-      });
+      await startRecordingWithFlush(result);
 
       expect(unwrap(result).status).toBe("recording");
       expect(unwrap(result).isRecording).toBe(true);
@@ -232,7 +274,10 @@ describe("useVoiceRecorder", () => {
       const { result } = renderHook(() => useVoiceRecorder());
 
       await actAsync(async () => {
-        await unwrap(result).start();
+        void unwrap(result).start();
+        jest.advanceTimersByTime(NATIVE_STABILIZATION_DELAY_MS);
+        await Promise.resolve();
+        await Promise.resolve();
       });
 
       expect(unwrap(result).status).toBe("idle");
@@ -247,9 +292,7 @@ describe("useVoiceRecorder", () => {
       mockRequestPermissions.mockResolvedValueOnce({ granted: true });
       const { result } = renderHook(() => useVoiceRecorder());
 
-      await actAsync(async () => {
-        await unwrap(result).start();
-      });
+      await startRecordingWithFlush(result);
 
       actSync(() => {
         unwrap(result).pause();
@@ -263,9 +306,7 @@ describe("useVoiceRecorder", () => {
       mockRequestPermissions.mockResolvedValueOnce({ granted: true });
       const { result } = renderHook(() => useVoiceRecorder());
 
-      await actAsync(async () => {
-        await unwrap(result).start();
-      });
+      await startRecordingWithFlush(result);
 
       actSync(() => {
         unwrap(result).pause();
@@ -289,9 +330,7 @@ describe("useVoiceRecorder", () => {
       mockRequestPermissions.mockResolvedValueOnce({ granted: true });
       const { result } = renderHook(() => useVoiceRecorder());
 
-      await actAsync(async () => {
-        await unwrap(result).start();
-      });
+      await startRecordingWithFlush(result);
 
       let stopResult: { uri: string; durationMs: number } | null = null;
       await actAsync(async () => {
@@ -306,6 +345,42 @@ describe("useVoiceRecorder", () => {
         );
       }
     });
+
+    it("should wait for native readiness if stop is called during warmup (fast-tap)", async () => {
+      mockRequestPermissions.mockResolvedValueOnce({ granted: true });
+      const { result } = renderHook(() => useVoiceRecorder());
+
+      // Kick off start but do NOT flush the stabilization delay yet
+      await actAsync(async () => {
+        const hook = unwrap(result);
+        const startPromise = hook.start();
+
+        // Flush microtasks so prepareToRecordAsync resolves, but NOT the timer
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
+
+        // Now call stop() — native is NOT ready yet, so it should poll/await
+        const stopPromise = hook.stop();
+
+        // Advance timers to fire the stabilization delay AND the readiness poll
+        jest.advanceTimersByTime(NATIVE_STABILIZATION_DELAY_MS + 100);
+        await Promise.resolve();
+        await Promise.resolve();
+
+        // Let the promises settle
+        await startPromise;
+        const stopRes = await stopPromise;
+
+        // stop() should have waited and returned a valid result
+        expect(stopRes).not.toBeNull();
+        if (stopRes) {
+          expect(stopRes.uri).toBe("file:///tmp/recording.m4a");
+        }
+      });
+
+      expect(unwrap(result).status).toBe("completed");
+    });
   });
 
   // =========================================================================
@@ -316,9 +391,7 @@ describe("useVoiceRecorder", () => {
       mockRequestPermissions.mockResolvedValueOnce({ granted: true });
       const { result } = renderHook(() => useVoiceRecorder());
 
-      await actAsync(async () => {
-        await unwrap(result).start();
-      });
+      await startRecordingWithFlush(result);
 
       await actAsync(async () => {
         await unwrap(result).stop();
@@ -332,27 +405,75 @@ describe("useVoiceRecorder", () => {
       expect(unwrap(result).status).toBe("idle");
       expect(unwrap(result).audioUri).toBeNull();
     });
+
+    it("should handle discard during warmup window without leaving native recorder running", async () => {
+      mockRequestPermissions.mockResolvedValueOnce({ granted: true });
+      const { result } = renderHook(() => useVoiceRecorder());
+
+      // Kick off start but don't flush the stabilization delay
+      await actAsync(async () => {
+        const hook = unwrap(result);
+        const startPromise = hook.start();
+
+        // Flush microtasks so prepareToRecordAsync resolves
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
+
+        // Call discard during warmup — should await the start promise
+        const discardPromise = hook.discard();
+
+        // Advance timers to let stabilization delay and cleanup complete
+        jest.advanceTimersByTime(NATIVE_STABILIZATION_DELAY_MS + 100);
+        await Promise.resolve();
+        await Promise.resolve();
+
+        await startPromise;
+        await discardPromise;
+      });
+
+      expect(unwrap(result).status).toBe("idle");
+    });
   });
 
   // =========================================================================
   // Reset
   // =========================================================================
   describe("reset", () => {
-    it("should reset all state back to idle", async () => {
+    it("should reset all state back to idle from completed", async () => {
       mockRequestPermissions.mockResolvedValueOnce({ granted: true });
       const { result } = renderHook(() => useVoiceRecorder());
 
+      await startRecordingWithFlush(result);
+
       await actAsync(async () => {
-        await unwrap(result).start();
+        await unwrap(result).stop();
       });
 
-      actSync(() => {
-        unwrap(result).reset();
+      await actAsync(async () => {
+        await unwrap(result).reset();
       });
 
       expect(unwrap(result).status).toBe("idle");
       expect(unwrap(result).durationMs).toBe(0);
       expect(unwrap(result).audioUri).toBeNull();
+    });
+
+    it("should delegate to discard when called during recording", async () => {
+      mockRequestPermissions.mockResolvedValueOnce({ granted: true });
+      const { result } = renderHook(() => useVoiceRecorder());
+
+      await startRecordingWithFlush(result);
+      expect(unwrap(result).status).toBe("recording");
+
+      // reset() while recording should call discard() internally
+      await actAsync(async () => {
+        await unwrap(result).reset();
+      });
+
+      expect(unwrap(result).status).toBe("idle");
+      // discard calls stop on the native recorder
+      expect(mockStop).toHaveBeenCalled();
     });
   });
 
@@ -364,10 +485,8 @@ describe("useVoiceRecorder", () => {
       mockRequestPermissions.mockResolvedValueOnce({ granted: true });
       const { result } = renderHook(() => useVoiceRecorder());
 
-      // 1. Start recording — must happen before advancing timers
-      await actAsync(async () => {
-        await unwrap(result).start();
-      });
+      // 1. Start recording (includes stabilization delay flush)
+      await startRecordingWithFlush(result);
       expect(unwrap(result).status).toBe("recording");
 
       // 2. Advance past the 60s limit; the hook's 100ms interval

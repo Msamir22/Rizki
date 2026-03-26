@@ -199,11 +199,24 @@ export async function parseVoiceWithAi(
       );
     } else if (options.audioUri) {
       // Audio mode — send as multipart form data
-      const audioResponse = await fetch(options.audioUri);
-      const audioBlob = await audioResponse.blob();
+      // React Native's FormData natively supports { uri, type, name } objects
+      // for file uploads. Using fetch(localUri).blob() doesn't work reliably
+      // on Android (bare paths without file:// prefix cause "Network request failed").
+      //
+      // Only prepend file:// for bare absolute paths (starting with "/").
+      // Leave URIs with existing schemes (file://, content://, http://) untouched.
+      const hasScheme = options.audioUri.includes("://");
+      const fileUri = hasScheme
+        ? options.audioUri
+        : `file://${options.audioUri}`;
 
       const formData = new FormData();
-      formData.append("audio", audioBlob, "recording.m4a");
+      const audioFile: ReactNativeFormDataFile = {
+        uri: fileUri,
+        type: "audio/mp4",
+        name: "recording.m4a",
+      };
+      formData.append("audio", audioFile);
       if (options.languageHint) {
         formData.append("language", options.languageHint);
       }
