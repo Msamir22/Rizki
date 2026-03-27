@@ -21,10 +21,12 @@ import { z } from "zod";
 
 import type {
   ParsedVoiceTransaction,
+  ReviewableTransaction,
   VoiceParserError,
 } from "@astik/logic/src/types";
 import type { Category } from "@astik/db";
 import {
+  computeSmsHash,
   normalizeType,
   parseAiDate,
   clampConfidence,
@@ -39,6 +41,9 @@ import type { CategoryMap } from "@astik/logic/src/utils/ai-parser-utils";
 
 /** Default category display name when AI doesn't provide one. */
 const DEFAULT_CATEGORY_DISPLAY_NAME = "other";
+
+/** Sender identifier for voice-input transactions (not from SMS). */
+const VOICE_INPUT_SENDER = "Voice";
 
 /** Client-side timeout for AI analysis request (FR-024). */
 const AI_TIMEOUT_MS = 30_000;
@@ -70,7 +75,7 @@ interface ParseVoiceOptions {
 }
 
 interface ParseVoiceResult {
-  readonly transactions: readonly ParsedVoiceTransaction[];
+  readonly transactions: readonly ReviewableTransaction[];
   readonly transcript: string;
   readonly originalTranscript: string;
   readonly detectedLanguage: string;
@@ -250,7 +255,11 @@ export async function parseVoiceWithAi(
       ? buildCategoryMap(options.categoryRecords)
       : undefined;
 
-    const results: ParsedVoiceTransaction[] = validTransactions.map(
+    // Compute a deduplication hash from the transcript (shared by all
+    // transactions parsed from the same voice recording).
+    const transcriptHash = await computeSmsHash(transcript);
+
+    const results: ReviewableTransaction[] = validTransactions.map(
       (aiTx: AiVoiceTransaction): ParsedVoiceTransaction => {
         const resolvedCategory = categoryMap
           ? parseCategory(aiTx.categorySystemName, categoryMap)
@@ -259,17 +268,21 @@ export async function parseVoiceWithAi(
         return {
           amount: Math.abs(aiTx.amount),
           currency:
-            options.preferredCurrency as ParsedVoiceTransaction["currency"],
+            options.preferredCurrency as ReviewableTransaction["currency"],
           type: normalizeType(aiTx.type),
           counterparty: aiTx.counterparty ?? "",
           date: parseAiDate(aiTx.date),
+          source: "VOICE" as const,
+          originLabel: aiTx.counterparty || VOICE_INPUT_SENDER,
           categoryId: resolvedCategory?.id ?? "",
           categoryDisplayName:
             resolvedCategory?.displayName ??
             (aiTx.categorySystemName || DEFAULT_CATEGORY_DISPLAY_NAME),
           confidence: clampConfidence(aiTx.confidenceScore),
           accountId: aiTx.accountId || "",
-          note: aiTx.description || "",
+          deduplicationHash: transcriptHash,
+          // Voice-specific fields (available via runtime narrowing)
+          note: aiTx.description ?? "",
           originalTranscript,
           detectedLanguage,
         };

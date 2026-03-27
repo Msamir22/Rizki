@@ -17,6 +17,8 @@ export const MOCK_PARSED_TRANSACTIONS: ParsedSmsTransaction[] = [
     rawSmsBody: "Transaction of 550 EGP at Uber with card 1234",
     confidence: 0.99,
     cardLast4: "1234",
+    source: "SMS",
+    originLabel: "CIB",
   },
   {
     amount: 1500,
@@ -30,6 +32,8 @@ export const MOCK_PARSED_TRANSACTIONS: ParsedSmsTransaction[] = [
     categoryDisplayName: "Groceries",
     rawSmsBody: "Purchase at Carrefour for 1500 EGP",
     confidence: 0.95,
+    source: "SMS",
+    originLabel: "NBE",
   },
   {
     amount: 1000,
@@ -43,6 +47,8 @@ export const MOCK_PARSED_TRANSACTIONS: ParsedSmsTransaction[] = [
     categoryDisplayName: "Salary & Income",
     rawSmsBody: "Received $1000 from Upwork",
     confidence: 0.9,
+    source: "SMS",
+    originLabel: "QNB",
   },
   {
     amount: 2000,
@@ -58,5 +64,7 @@ export const MOCK_PARSED_TRANSACTIONS: ParsedSmsTransaction[] = [
     rawSmsBody: "ATM Cash withdrawal of 2000 EGP using card 5678",
     confidence: 0.99,
     cardLast4: "5678",
+    source: "SMS",
+    originLabel: "Banque Misr",
   },
 ];

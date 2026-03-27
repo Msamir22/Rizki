@@ -19,8 +19,8 @@ import { PageHeader } from "@/components/navigation/PageHeader";
 import { TransactionReview } from "@/components/transaction-review/TransactionReview";
 import { useToast } from "@/components/ui/Toast";
 import { palette } from "@/constants/colors";
-import { batchCreateSmsTransactions } from "@/services/batch-sms-transactions";
-import type { ParsedSmsTransaction } from "@astik/logic/src/types";
+import { batchCreateTransactions } from "@/services/batch-sms-transactions";
+import type { ReviewableTransaction } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
@@ -46,10 +46,10 @@ export default function VoiceReviewScreen(): React.JSX.Element {
   const [discardModalVisible, setDiscardModalVisible] = useState(false);
 
   // Parse transactions from route params
-  const transactions = useMemo<readonly ParsedSmsTransaction[]>(() => {
+  const transactions = useMemo<readonly ReviewableTransaction[]>(() => {
     try {
       if (!params.transactions) return [];
-      const parsed = JSON.parse(params.transactions) as ParsedSmsTransaction[];
+      const parsed = JSON.parse(params.transactions) as ReviewableTransaction[];
       // Restore Date objects from serialized strings
       return parsed.map((t) => ({
         ...t,
@@ -81,13 +81,13 @@ export default function VoiceReviewScreen(): React.JSX.Element {
 
   const handleSave = useCallback(
     async (
-      selected: readonly ParsedSmsTransaction[],
+      selected: readonly ReviewableTransaction[],
       transactionAccountMap: ReadonlyMap<number, string>,
       toAccountMap: ReadonlyMap<number, string>
     ): Promise<void> => {
       setIsSaving(true);
       try {
-        const result = await batchCreateSmsTransactions(
+        const result = await batchCreateTransactions(
           selected,
           transactionAccountMap,
           toAccountMap

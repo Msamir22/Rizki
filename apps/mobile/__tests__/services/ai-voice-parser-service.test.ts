@@ -228,7 +228,10 @@ describe("ai-voice-parser-service", () => {
       });
 
       if (!isVoiceParserError(result)) {
-        expect(result.transactions[0].note).toBe("Morning coffee");
+        const firstTx = result.transactions[0];
+        expect(
+          "note" in firstTx ? (firstTx as { note: string }).note : undefined
+        ).toBe("Morning coffee");
         expect(result.originalTranscript).toBe("test original transcript");
         expect(result.detectedLanguage).toBe("en");
       }

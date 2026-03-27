@@ -3,53 +3,11 @@
  */
 
 import type {
-  AccountType,
   Category,
   CurrencyType,
   Transaction,
   TransactionType,
 } from "@astik/db";
-
-// ---------------------------------------------------------------------------
-// Shared Transaction Interfaces
-// ---------------------------------------------------------------------------
-
-/**
- * Common interface for parsed transactions shared by the generic
- * TransactionReview component. Both SMS and Voice parsers produce
- * types that satisfy this contract.
- *
- * Architecture & Design Rationale:
- * - Pattern: Common Interface (ISP — Interface Segregation Principle)
- * - Why: The review component needs a contract that works for both
- *   SMS and Voice transactions without knowing the source.
- */
-export interface ReviewableTransaction {
-  readonly amount: number;
-  readonly currency: CurrencyType;
-  readonly type: TransactionType;
-  readonly counterparty: string;
-  readonly date: Date;
-  readonly categoryId: Category["id"];
-  readonly categoryDisplayName: Category["displayName"];
-  /** Parsing confidence score (0–1) */
-  readonly confidence: number;
-  /** AI-matched account ID (undefined if no match) */
-  readonly accountId?: string;
-}
-
-/**
- * Voice-specific parsed transaction.
- * Extends ReviewableTransaction with fields unique to voice input.
- */
-export interface ParsedVoiceTransaction extends ReviewableTransaction {
-  /** AI-extracted description/note */
-  readonly note: string;
-  /** Original spoken text in the user's language */
-  readonly originalTranscript: string;
-  /** ISO 639-1 language code detected by the AI (e.g., "ar", "en") */
-  readonly detectedLanguage: string;
-}
 
 // ---------------------------------------------------------------------------
 // Voice Parser Error
@@ -99,36 +57,68 @@ export interface SmsMessage {
   readonly read: boolean;
 }
 
+// ---------------------------------------------------------------------------
+// Shared transaction types
+// ---------------------------------------------------------------------------
+
+/** Origin source of a parsed transaction. */
+export type TransactionSource = "SMS" | "VOICE" | "MANUAL";
+
 /**
- * Fully parsed SMS transaction ready for user review.
- * Contains all extracted financial data and metadata needed for saving.
+ * Source-agnostic parsed transaction ready for user review.
+ *
+ * This is the shared contract consumed by TransactionReview,
+ * TransactionItem, TransactionEditModal, and the batch-save pipeline.
+ * Source-specific subtypes (ParsedSmsTransaction, ParsedVoiceTransaction)
+ * extend this interface with additional metadata.
  */
-export interface ParsedSmsTransaction {
+export interface ReviewableTransaction {
   readonly amount: number;
   readonly currency: CurrencyType;
   readonly type: TransactionType;
   readonly counterparty: string;
   readonly date: Date;
-  readonly smsBodyHash: string;
-  readonly senderDisplayName: string;
   readonly categoryId: Category["id"];
   readonly categoryDisplayName: Category["displayName"];
-  readonly rawSmsBody: string;
   /** Parsing confidence score (0–1) */
   readonly confidence: number;
+  /** Display label for the transaction origin (sender name, "Voice", etc.) */
+  readonly originLabel: string;
+  /** Origin source of this transaction */
+  readonly source: TransactionSource;
+  /** Optional deduplication key (smsBodyHash for SMS, transcript hash for voice) */
+  readonly deduplicationHash?: string;
+  /** AI-matched account ID (undefined if no match) */
+  readonly accountId?: string;
   /** AI-extracted merchant name (may differ from counterparty) */
   readonly merchant?: Transaction["counterparty"];
+}
+
+/**
+ * Fully parsed SMS transaction ready for user review.
+ * Extends ReviewableTransaction with SMS-specific metadata.
+ */
+export interface ParsedSmsTransaction extends ReviewableTransaction {
+  readonly source: "SMS";
+  readonly smsBodyHash: string;
+  readonly senderDisplayName: string;
+  readonly rawSmsBody: string;
   /** True if this is an ATM/Bank cash withdrawal (should be saved as transfer) */
   readonly isAtmWithdrawal?: boolean;
   /** Last 4 digits of card extracted from SMS (for bank account matching) */
   readonly cardLast4?: string;
-  /** AI-matched account ID from voice input (undefined if no match) */
-  readonly accountId?: string;
 }
 
-export interface ParsedSmsAccountSuggestion {
-  readonly name: string;
-  readonly currency: CurrencyType;
-  readonly accountType: AccountType;
-  readonly isDefault: boolean;
+/**
+ * Voice-specific parsed transaction.
+ * Extends ReviewableTransaction with fields unique to voice input.
+ */
+export interface ParsedVoiceTransaction extends ReviewableTransaction {
+  readonly source: "VOICE";
+  /** AI-extracted description/note */
+  readonly note: string;
+  /** Original spoken text in the user's language */
+  readonly originalTranscript: string;
+  /** ISO 639-1 language code detected by the AI (e.g., "ar", "en") */
+  readonly detectedLanguage: string;
 }

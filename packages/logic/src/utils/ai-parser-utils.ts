@@ -15,7 +15,17 @@
  * @module ai-parser-utils
  */
 
-import type { Category, TransactionType } from "@astik/db";
+import type { Category, CurrencyType, TransactionType } from "@astik/db";
+import { SUPPORTED_CURRENCIES } from "./currency-data";
+
+// Constants
+// ---------------------------------------------------------------------------
+
+// Derived from SUPPORTED_CURRENCIES so it stays in sync with CurrencyType
+// automatically. No manual list to maintain.
+const VALID_CURRENCIES: ReadonlySet<string> = new Set<CurrencyType>(
+  SUPPORTED_CURRENCIES.map((c) => c.code)
+);
 
 // ---------------------------------------------------------------------------
 // Types
@@ -118,6 +128,16 @@ export function parseAiDate(raw: string): Date {
  */
 export function clampConfidence(score: number): number {
   return Math.min(1, Math.max(0, score));
+}
+
+export function normalizeCurrency(raw: string): CurrencyType | null {
+  const upper = raw.toUpperCase();
+  if (VALID_CURRENCIES.has(upper)) {
+    return upper as CurrencyType;
+  }
+
+  // Unknown currency — return null so callers can skip or handle appropriately.
+  return null;
 }
 
 /**

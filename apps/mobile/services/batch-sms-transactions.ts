@@ -30,7 +30,7 @@ import {
   Transfer,
   type CurrencyType,
 } from "@astik/db";
-import type { ParsedSmsTransaction } from "@astik/logic";
+import type { ReviewableTransaction } from "@astik/logic";
 import { Q, type Model } from "@nozbe/watermelondb";
 import { ensureCashAccount } from "./account-service";
 import { getCurrentUserId } from "./supabase";
@@ -68,13 +68,13 @@ function accumulateBalanceDelta(
 // ---------------------------------------------------------------------------
 
 /**
- * Save confirmed SMS transactions to the database.
+ * Save confirmed transactions to the database.
  *
  * Each transaction is routed to the correct account via the
  * `transactionAccountMap` (index → accountId), built by the
  * review page's batched resolution.
  *
- * ATM withdrawals (isAtmWithdrawal === true) are automatically
+ * ATM withdrawals (isAtmWithdrawal === true, SMS-specific) are automatically
  * processed as transfers from the bank account to a Cash account.
  *
  * Performance: All records are created and all account balances
@@ -86,8 +86,8 @@ function accumulateBalanceDelta(
  * @param toAccountMap         - Optional mapping from transaction index → cash account ID (TO, ATM only)
  * @returns Summary of saved/failed counts
  */
-export async function batchCreateSmsTransactions(
-  transactions: readonly ParsedSmsTransaction[],
+export async function batchCreateTransactions(
+  transactions: readonly ReviewableTransaction[],
   transactionAccountMap: ReadonlyMap<number, string>,
   toAccountMap?: ReadonlyMap<number, string>
 ): Promise<BatchSaveResult> {
@@ -115,7 +115,11 @@ export async function batchCreateSmsTransactions(
 
   for (let i = 0; i < transactions.length; i++) {
     const tx = transactions[i];
-    if (tx.isAtmWithdrawal && !toAccountMap?.has(i)) {
+    if (
+      "isAtmWithdrawal" in tx &&
+      (tx as { isAtmWithdrawal?: boolean }).isAtmWithdrawal &&
+      !toAccountMap?.has(i)
+    ) {
       atmCurrencies.add(tx.currency);
     }
   }
@@ -155,7 +159,10 @@ export async function batchCreateSmsTransactions(
     }
 
     // ── ATM Withdrawal: prepare as Transfer (bank → cash) ──
-    if (tx.isAtmWithdrawal) {
+    if (
+      "isAtmWithdrawal" in tx &&
+      (tx as { isAtmWithdrawal?: boolean }).isAtmWithdrawal
+    ) {
       // Prefer user-selected TO account, fall back to auto-resolved by currency
       const cashAccountId =
         toAccountMap?.get(i) ?? cashAccountIdByCurrency.get(tx.currency);
@@ -177,7 +184,7 @@ export async function batchCreateSmsTransactions(
           t.currency = tx.currency;
           t.date = new Date(tx.date);
           t.notes = `ATM Withdrawal`;
-          t.smsBodyHash = tx.smsBodyHash;
+          t.smsBodyHash = tx.deduplicationHash;
           t.deleted = false;
         })
       );
@@ -203,8 +210,8 @@ export async function batchCreateSmsTransactions(
         record.counterparty = tx.counterparty || undefined;
         record.note = "";
         record.date = tx.date;
-        record.source = "SMS";
-        record.smsBodyHash = tx.smsBodyHash;
+        record.source = tx.source;
+        record.smsBodyHash = tx.deduplicationHash;
         record.isDraft = false;
         record.deleted = false;
       })

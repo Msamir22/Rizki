@@ -25,7 +25,7 @@
 
 import { palette } from "@/constants/colors";
 import type { MatchReason } from "@/services/sms-account-matcher";
-import { formatCurrency, type ParsedSmsTransaction } from "@astik/logic";
+import { formatCurrency, type ReviewableTransaction } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
 import React, { memo, useCallback, useState } from "react";
 import { Text, TouchableOpacity, View } from "react-native";
@@ -37,7 +37,7 @@ import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 
 interface TransactionItemProps {
   /** The parsed transaction data */
-  readonly transaction: ParsedSmsTransaction;
+  readonly transaction: ReviewableTransaction;
   /** The original index in the flat transactions array */
   readonly index: number;
   /** Whether this item is selected for saving */
@@ -46,8 +46,8 @@ interface TransactionItemProps {
   readonly accountName: string | null;
   /** How the match was determined (used for fallback display) */
   readonly matchReason?: MatchReason;
-  /** SMS sender display name (fallback when no account match) */
-  readonly senderDisplayName: string;
+  /** Optional expanded content (SMS body, voice note, etc.) */
+  readonly expandedContent?: React.ReactNode;
   /** Toggle selection — receives index so parent can use a stable ref */
   readonly onToggleSelect: (index: number) => void;
   /** Called when user taps the item to edit — receives index */
@@ -80,7 +80,7 @@ function TransactionItemInner({
   index,
   isSelected,
   accountName,
-  senderDisplayName,
+  expandedContent,
   onToggleSelect,
   onPress,
   hasMissingInfo = false,
@@ -130,22 +130,23 @@ function TransactionItemInner({
 
         {/* Content */}
         <View className="flex-1 mr-3">
-          {/* Top row: sender (senderDisplayName) + amount */}
+          {/* Top row: origin label + amount */}
           <View className="flex-row items-center justify-between mb-1">
             <View className="flex-row items-center flex-shrink">
               <Text
                 className="text-sm font-semibold text-white flex-shrink"
                 numberOfLines={1}
               >
-                {senderDisplayName}
+                {transaction.originLabel}
               </Text>
-              {transaction.isAtmWithdrawal && (
-                <View className="bg-amber-500/20 px-1.5 py-0.5 rounded ml-2">
-                  <Text className="text-[10px] font-bold text-amber-400">
-                    Cash Withdrawal
-                  </Text>
-                </View>
-              )}
+              {"isAtmWithdrawal" in transaction &&
+                transaction.isAtmWithdrawal === true && (
+                  <View className="bg-amber-500/20 px-1.5 py-0.5 rounded ml-2">
+                    <Text className="text-[10px] font-bold text-amber-400">
+                      Cash Withdrawal
+                    </Text>
+                  </View>
+                )}
               {needsReview && (
                 <View className="bg-amber-500/20 px-1.5 py-0.5 rounded ml-2">
                   <Text className="text-[10px] font-bold text-amber-400">
@@ -217,21 +218,14 @@ function TransactionItemInner({
         </View>
       </TouchableOpacity>
 
-      {/* Expanded: original SMS body */}
-      {isExpanded && (
+      {/* Expanded: source-specific content */}
+      {isExpanded && expandedContent && (
         <Animated.View
           entering={FadeIn.duration(200)}
           exiting={FadeOut.duration(150)}
           className="px-4 pb-4 pt-0"
         >
-          <View className="bg-slate-900/60 rounded-xl p-3">
-            <Text className="text-xs text-slate-500 mb-1 font-medium">
-              Original SMS
-            </Text>
-            <Text className="text-xs text-slate-400 leading-5">
-              {transaction.rawSmsBody}
-            </Text>
-          </View>
+          {expandedContent}
         </Animated.View>
       )}
     </View>

@@ -23,12 +23,12 @@ import { palette } from "@/constants/colors";
 import { useSmsScanContext } from "@/context/SmsScanContext";
 import { useSmsSync } from "@/hooks/useSmsSync";
 import { PageHeader } from "@/components/navigation/PageHeader";
-import { batchCreateSmsTransactions } from "@/services/batch-sms-transactions";
+import { batchCreateTransactions } from "@/services/batch-sms-transactions";
 import {
   flushQueuedTransactions,
   setReviewingActive,
 } from "@/services/sms-live-detection-handler";
-import type { ParsedSmsTransaction } from "@astik/logic";
+import type { ReviewableTransaction } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
@@ -64,13 +64,13 @@ export default function SmsReviewScreen(): React.JSX.Element {
 
   const handleSave = useCallback(
     async (
-      selected: readonly ParsedSmsTransaction[],
+      selected: readonly ReviewableTransaction[],
       transactionAccountMap: ReadonlyMap<number, string>,
       toAccountMap: ReadonlyMap<number, string>
     ) => {
       setIsSaving(true);
       try {
-        const result = await batchCreateSmsTransactions(
+        const result = await batchCreateTransactions(
           selected,
           transactionAccountMap,
           toAccountMap

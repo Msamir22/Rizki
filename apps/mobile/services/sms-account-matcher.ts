@@ -31,7 +31,10 @@ import {
   database,
   type CurrencyType,
 } from "@astik/db";
-import { ParsedSmsTransaction, isKnownFinancialSender } from "@astik/logic";
+import {
+  type ReviewableTransaction,
+  isKnownFinancialSender,
+} from "@astik/logic";
 import { Q } from "@nozbe/watermelondb";
 
 // ---------------------------------------------------------------------------
@@ -397,22 +400,24 @@ function matchAccountCore(
 // ---------------------------------------------------------------------------
 
 /**
- * Matches a single parsed SMS transaction to the best-fit user account.
- * Maps `ParsedSmsTransaction` → `MatchInput` and delegates to `matchAccountCore`.
+ * Matches a single parsed transaction to the best-fit user account.
+ * Maps `ReviewableTransaction` → `MatchInput` and delegates to `matchAccountCore`.
  *
- * @param transaction - The parsed SMS transaction
+ * @param transaction - The parsed transaction
  * @param accounts - Pre-fetched list of accounts with bank details
  * @returns The best match, or a "none" match if nothing fits
  */
 function matchTransaction(
-  transaction: ParsedSmsTransaction,
+  transaction: ReviewableTransaction,
   accounts: readonly AccountWithBankDetails[]
 ): AccountMatch {
   const input: MatchInput = {
-    // Voice-parsed transactions lack senderDisplayName (SMS-only field);
-    // fall back to empty string so isSenderMatch returns false cleanly.
-    senderDisplayName: transaction.senderDisplayName ?? "",
-    cardLast4: transaction.cardLast4 ?? undefined,
+    // Use originLabel as the sender identifier (SMS: sender address, Voice: counterparty)
+    senderDisplayName: transaction.originLabel ?? "",
+    cardLast4:
+      "cardLast4" in transaction
+        ? ((transaction as { cardLast4?: string }).cardLast4 ?? undefined)
+        : undefined,
     currency: transaction.currency ?? undefined,
   };
 
@@ -435,7 +440,7 @@ function matchTransaction(
  * @param onBatchComplete - Called after each batch with index → match map
  */
 async function matchTransactionsBatched(
-  transactions: readonly ParsedSmsTransaction[],
+  transactions: readonly ReviewableTransaction[],
   userId: string,
   batchSize: number = DEFAULT_BATCH_SIZE,
   onBatchComplete: (batch: ReadonlyMap<number, AccountMatch>) => void,
@@ -482,7 +487,7 @@ async function matchTransactionsBatched(
  * @returns Map of transaction index → AccountMatch
  */
 async function matchAllTransactions(
-  transactions: readonly ParsedSmsTransaction[],
+  transactions: readonly ReviewableTransaction[],
   userId: string
 ): Promise<ReadonlyMap<number, AccountMatch>> {
   const accounts = await fetchAccountsWithDetails(userId);

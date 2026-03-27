@@ -41,7 +41,7 @@ import {
 } from "@/services/sms-account-matcher";
 import { prepareSavePayload } from "@/services/sms-review-save-service";
 import { getCurrentUserId } from "@/services/supabase";
-import type { ParsedSmsTransaction } from "@astik/logic";
+import type { ReviewableTransaction } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
 import React, {
   useCallback,
@@ -72,10 +72,10 @@ import { TransactionFiltersBar } from "@/components/transactions/TransactionFilt
 
 interface TransactionReviewProps {
   /** All parsed transactions from the scan */
-  readonly transactions: readonly ParsedSmsTransaction[];
+  readonly transactions: readonly ReviewableTransaction[];
   /** Called when user saves selected transactions with their account mappings */
   readonly onSave: (
-    selected: readonly ParsedSmsTransaction[],
+    selected: readonly ReviewableTransaction[],
     transactionAccountMap: ReadonlyMap<number, string>,
     toAccountMap: ReadonlyMap<number, string>
   ) => Promise<void>;
@@ -91,7 +91,7 @@ type ReviewListItem =
   | {
       readonly kind: "transaction";
       readonly originalIndex: number;
-      readonly tx: ParsedSmsTransaction;
+      readonly tx: ReviewableTransaction;
       readonly key: string;
     };
 
@@ -100,14 +100,14 @@ type ReviewListItem =
 // ---------------------------------------------------------------------------
 
 function groupByDate(
-  transactions: readonly ParsedSmsTransaction[],
-  originalTransactions: readonly ParsedSmsTransaction[]
+  transactions: readonly ReviewableTransaction[],
+  originalTransactions: readonly ReviewableTransaction[]
 ): readonly ReviewListItem[] {
   const items: ReviewListItem[] = [];
   let lastDate = "";
 
   // Build a lookup from transaction reference → original index
-  const originalIndexMap = new Map<ParsedSmsTransaction, number>();
+  const originalIndexMap = new Map<ReviewableTransaction, number>();
   originalTransactions.forEach((tx, i) => originalIndexMap.set(tx, i));
 
   // Transactions are assumed to be roughly sorted by date from the scan
@@ -145,11 +145,11 @@ function groupByDate(
  * Returns a new array of filtered transactions.
  */
 function applyFilters(
-  transactions: readonly ParsedSmsTransaction[],
+  transactions: readonly ReviewableTransaction[],
   period: GroupingPeriod,
   selectedTypes: readonly TransactionTypeFilter[],
   searchQuery: string
-): readonly ParsedSmsTransaction[] {
+): readonly ReviewableTransaction[] {
   let filtered = [...transactions];
 
   // Period filter
@@ -161,7 +161,7 @@ function applyFilters(
     });
   }
 
-  // Type filter — map ParsedSmsTransaction type to TransactionTypeFilter
+  // Type filter — map ReviewableTransaction type to TransactionTypeFilter
   const includesAll = selectedTypes.includes("All");
   if (!includesAll && selectedTypes.length > 0) {
     filtered = filtered.filter((tx) => {
@@ -170,13 +170,13 @@ function applyFilters(
     });
   }
 
-  // Search filter
+  // Search filter (uses generic originLabel instead of SMS-specific senderDisplayName)
   if (searchQuery.trim()) {
     const lower = searchQuery.trim().toLowerCase();
     filtered = filtered.filter(
       (tx) =>
         tx.counterparty?.toLowerCase().includes(lower) ||
-        tx.senderDisplayName.toLowerCase().includes(lower) ||
+        tx.originLabel.toLowerCase().includes(lower) ||
         tx.amount.toString().includes(lower)
     );
   }
@@ -308,19 +308,20 @@ export function TransactionReview({
   }, [transactions, showToast]);
 
   // ── Derived data ──────────────────────────────────────────────────
-  const effectiveTransactions = useMemo((): readonly ParsedSmsTransaction[] => {
-    return transactions.map((tx, i) => {
-      const overrides = transactionOverrides.get(i);
-      if (!overrides) return tx;
-      return {
-        ...tx,
-        amount: overrides.amount,
-        counterparty: overrides.counterparty,
-        type: overrides.type,
-        categoryId: overrides.categoryId,
-      };
-    });
-  }, [transactions, transactionOverrides]);
+  const effectiveTransactions =
+    useMemo((): readonly ReviewableTransaction[] => {
+      return transactions.map((tx, i) => {
+        const overrides = transactionOverrides.get(i);
+        if (!overrides) return tx;
+        return {
+          ...tx,
+          amount: overrides.amount,
+          counterparty: overrides.counterparty,
+          type: overrides.type,
+          categoryId: overrides.categoryId,
+        };
+      });
+    }, [transactions, transactionOverrides]);
 
   // Apply filters before grouping
   const filteredTransactions = useMemo(
@@ -336,7 +337,7 @@ export function TransactionReview({
 
   // Selection counts based on filtered view
   const filteredOriginalIndices = useMemo(() => {
-    const indexMap = new Map<ParsedSmsTransaction, number>();
+    const indexMap = new Map<ReviewableTransaction, number>();
     effectiveTransactions.forEach((tx, i) => indexMap.set(tx, i));
     return filteredTransactions.map((tx) => indexMap.get(tx) ?? 0);
   }, [filteredTransactions, effectiveTransactions]);
@@ -480,7 +481,18 @@ export function TransactionReview({
           index={item.originalIndex}
           isSelected={selectedIndicesRef.current.has(item.originalIndex)}
           accountName={accountName}
-          senderDisplayName={tx.senderDisplayName}
+          expandedContent={
+            "rawSmsBody" in tx && tx.rawSmsBody ? (
+              <View className="bg-slate-900/60 rounded-xl p-3">
+                <Text className="text-xs text-slate-500 mb-1 font-medium">
+                  Original SMS
+                </Text>
+                <Text className="text-xs text-slate-400 leading-5">
+                  {tx.rawSmsBody as string}
+                </Text>
+              </View>
+            ) : undefined
+          }
           onToggleSelect={handleToggleItem}
           onPress={handleOpenEditModal}
           hasMissingInfo={invalidIndices.has(item.originalIndex)}

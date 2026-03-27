@@ -10,17 +10,17 @@
  * @module ai-sms-parser-service
  */
 
-import { supabase } from "./supabase";
 import { z } from "zod";
+import { supabase } from "./supabase";
 
-import type { Category, CurrencyType } from "@astik/db";
+import type { Category } from "@astik/db";
 import {
-  SUPPORTED_CURRENCIES,
+  buildCategoryMap,
   buildCategoryTree,
+  clampConfidence,
+  normalizeCurrency,
   normalizeType,
   parseCategory,
-  buildCategoryMap,
-  clampConfidence,
   type CategoryMap,
 } from "@astik/logic";
 import type { ParsedSmsTransaction, SmsMessage } from "@astik/logic/src/types";
@@ -69,14 +69,6 @@ export interface SmsCandidate {
 }
 
 // ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-// Derived from SUPPORTED_CURRENCIES so it stays in sync with CurrencyType
-// automatically. No manual list to maintain.
-const VALID_CURRENCIES: ReadonlySet<string> = new Set<CurrencyType>(
-  SUPPORTED_CURRENCIES.map((c) => c.code)
-);
 
 /**
  * Client-side chunk size — messages per Edge Function call.
@@ -164,16 +156,6 @@ function parseAiResponse(data: unknown): ChunkAiResult {
   return { transactions, hasError: false };
 }
 
-function normalizeCurrency(raw: string): CurrencyType | null {
-  const upper = raw.toUpperCase();
-  if (VALID_CURRENCIES.has(upper)) {
-    return upper as CurrencyType;
-  }
-
-  // Unknown currency — return null so callers can skip or handle appropriately.
-  return null;
-}
-
 function parseDate(dateStr: string, fallbackMs: number): Date {
   const parsed = new Date(dateStr);
   if (isNaN(parsed.getTime())) {
@@ -244,6 +226,9 @@ function mapAiTransactions(
       type: normalizeType(aiTx.type),
       counterparty,
       date: parseDate(aiTx.date, candidate.message.date),
+      source: "SMS",
+      originLabel: candidate.message.address,
+      deduplicationHash: candidate.smsBodyHash,
       smsBodyHash: candidate.smsBodyHash,
       senderDisplayName: candidate.message.address,
       categoryId: category.id,

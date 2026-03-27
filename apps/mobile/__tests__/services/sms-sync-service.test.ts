@@ -183,6 +183,8 @@ function createParsedTransaction(
     categoryDisplayName: "bank_fees",
     rawSmsBody: "Purchase of EGP 100.00 at TestShop",
     confidence: 0.85,
+    source: "SMS",
+    originLabel: "NBE",
     ...overrides,
   };
 }
