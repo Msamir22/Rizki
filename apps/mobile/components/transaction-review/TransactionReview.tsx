@@ -29,7 +29,7 @@ import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback } from "react";
 import { FlatList, Text, TouchableOpacity, View } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
-import { TransactionEditModal } from "./TransactionEditModal";
+import { TransactionEditModal } from "./edit-modal/TransactionEditModal";
 import { TransactionItem } from "./TransactionItem";
 import { TransactionFiltersBar } from "@/components/transactions/TransactionFiltersBar";
 import {
