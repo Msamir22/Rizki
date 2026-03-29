@@ -33,14 +33,14 @@ import { TransactionEditModal } from "./TransactionEditModal";
 import { TransactionItem } from "./TransactionItem";
 import { TransactionFiltersBar } from "@/components/transactions/TransactionFiltersBar";
 import {
-  type ReviewListItem,
-  useTransactionReviewState,
-} from "./useTransactionReviewState";
-import {
   getExpandedContent,
   OriginalContentBlock,
 } from "./get-expanded-content";
 import { ReviewActionBar } from "./ReviewActionBar";
+import {
+  type ReviewListItem,
+  useTransactionReviewState,
+} from "@/hooks/useTransactionReviewState";
 
 // ---------------------------------------------------------------------------
 // Types
