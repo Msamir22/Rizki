@@ -10,12 +10,21 @@
  * @module ai-sms-parser-service
  */
 
-import { supabase } from "./supabase";
 import { z } from "zod";
+import { supabase } from "./supabase";
 
-import type { Category, CurrencyType, TransactionType } from "@astik/db";
-import { SUPPORTED_CURRENCIES, buildCategoryTree } from "@astik/logic";
-import type { ParsedSmsTransaction, SmsMessage } from "@astik/logic/src/types";
+import type { Category } from "@astik/db";
+import {
+  buildCategoryMap,
+  buildCategoryTree,
+  clampConfidence,
+  normalizeCurrency,
+  normalizeType,
+  parseCategory,
+  type CategoryMap,
+  type ParsedSmsTransaction,
+  type SmsMessage,
+} from "@astik/logic";
 
 // ---------------------------------------------------------------------------
 // Schemas — AI response validation
@@ -49,11 +58,6 @@ export interface ParseSmsContext {
   readonly supportedCurrencies: readonly string[];
 }
 
-type CategoryMap = Map<
-  Category["systemName"],
-  { name: Category["displayName"]; id: Category["id"] }
->;
-
 // ---------------------------------------------------------------------------
 // Input type — candidate SMS for AI processing
 // ---------------------------------------------------------------------------
@@ -66,19 +70,6 @@ export interface SmsCandidate {
 }
 
 // ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-// Derived from SUPPORTED_CURRENCIES so it stays in sync with CurrencyType
-// automatically. No manual list to maintain.
-const VALID_CURRENCIES: ReadonlySet<string> = new Set<CurrencyType>(
-  SUPPORTED_CURRENCIES.map((c) => c.code)
-);
-
-const VALID_TYPES: ReadonlySet<string> = new Set<TransactionType>([
-  "EXPENSE",
-  "INCOME",
-]);
 
 /**
  * Client-side chunk size — messages per Edge Function call.
@@ -166,46 +157,6 @@ function parseAiResponse(data: unknown): ChunkAiResult {
   return { transactions, hasError: false };
 }
 
-function normalizeCurrency(raw: string): CurrencyType | null {
-  const upper = raw.toUpperCase();
-  if (VALID_CURRENCIES.has(upper)) {
-    return upper as CurrencyType;
-  }
-
-  // Unknown currency — return null so callers can skip or handle appropriately.
-  return null;
-}
-
-function normalizeType(raw: string): TransactionType {
-  const upper = raw.toUpperCase();
-  if (VALID_TYPES.has(upper)) {
-    return upper as TransactionType;
-  }
-
-  // It's okay to default to expense as it's the most common type of transaction.
-  return "EXPENSE" as TransactionType;
-}
-
-/**
- * Validate and normalize an AI-returned category system_name.
- * Falls back to "other" if the AI returned an unknown category.
- */
-function parseCategory(
-  categorySystemName: string,
-  validCategories: CategoryMap
-): { name: Category["displayName"]; id: Category["id"] } | null {
-  const directMatch = validCategories.get(categorySystemName);
-  if (directMatch) return directMatch;
-
-  const fallbackCategory = validCategories.get("other");
-  if (fallbackCategory) return fallbackCategory;
-  console.warn(
-    `[ai-sms-parser] Unknown category "${categorySystemName}" from AI and no "other" fallback category exists`
-  );
-
-  return null;
-}
-
 function parseDate(dateStr: string, fallbackMs: number): Date {
   const parsed = new Date(dateStr);
   if (isNaN(parsed.getTime())) {
@@ -235,16 +186,9 @@ function mapAiTransactions(
       continue;
     }
 
-    // Filter out transactions with unsupported currencies
-    if (!currency) {
-      console.warn(
-        `[ai-sms-parser] Unsupported currency "${aiTx.currency}" for messageId: ${aiTx.messageId}, skipping`
-      );
-      continue;
-    }
-
     // Filter out untrusted transactions (promotional offers, ambiguous messages)
     if (!aiTx.isTrusted) {
+      // eslint-disable-next-line no-console
       console.info(
         `[ai-sms-parser] Untrusted transaction from ${candidate.message.address}, ` +
           `amount: ${aiTx.amount} ${aiTx.currency}, skipping`
@@ -262,25 +206,21 @@ function mapAiTransactions(
 
     const category = parseCategory(aiTx.categorySystemName, validCategoryMap);
 
-    if (!category) {
-      console.warn(
-        `[ai-sms-parser] No valid category mapping for messageId: ${aiTx.messageId}, skipping`
-      );
-      continue;
-    }
-
     results.push({
       amount: Math.abs(aiTx.amount),
       currency,
       type: normalizeType(aiTx.type),
       counterparty,
       date: parseDate(aiTx.date, candidate.message.date),
+      source: "SMS",
+      originLabel: candidate.message.address,
+      deduplicationHash: candidate.smsBodyHash,
       smsBodyHash: candidate.smsBodyHash,
       senderDisplayName: candidate.message.address,
       categoryId: category.id,
-      categoryDisplayName: category.name,
+      categoryDisplayName: category.displayName,
       rawSmsBody: candidate.message.body,
-      confidence: Math.min(1, Math.max(0, aiTx.confidenceScore)),
+      confidence: clampConfidence(aiTx.confidenceScore),
       isAtmWithdrawal: aiTx.isAtmWithdrawal ?? false,
       cardLast4: aiTx.cardLast4,
     });
@@ -376,6 +316,7 @@ export async function parseSmsWithAi(
   if (candidates.length === 0) return emptyResult;
 
   if (USE_MOCK_DATA) {
+    // eslint-disable-next-line no-console
     console.info(
       "[ai-sms-parser] 🟡 Using MOCK parsed transactions to save AI tokens."
     );
@@ -383,12 +324,7 @@ export async function parseSmsWithAi(
   }
 
   // Build validation set once for the entire parse session
-  const validCategoryMap: CategoryMap = new Map(
-    context.categories.map((c) => [
-      c.systemName,
-      { name: c.displayName, id: c.id },
-    ])
-  );
+  const validCategoryMap = buildCategoryMap(context.categories);
 
   try {
     // Build the lookup map: messageId → candidate

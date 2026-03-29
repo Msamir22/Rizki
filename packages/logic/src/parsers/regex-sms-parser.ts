@@ -221,6 +221,8 @@ export class RegexSmsParser implements SmsParserStrategy {
       categoryDisplayName: categorySystemName,
       rawSmsBody: smsBody,
       confidence: 0.85, // Regex-based parsing has moderate confidence
+      source: "SMS",
+      originLabel: sender,
     };
   }
 }

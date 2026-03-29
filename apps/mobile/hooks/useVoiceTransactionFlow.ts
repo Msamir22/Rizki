@@ -24,6 +24,7 @@ import {
   parseVoiceWithAi,
   isVoiceParserError,
 } from "@/services/ai-voice-parser-service";
+import type { Category } from "@astik/db";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -69,9 +70,11 @@ interface FlowConfig {
   /** User's preferred currency code */
   readonly preferredCurrency: string;
   /** User's category tree string */
-  readonly categories?: string;
+  readonly categories: string;
   /** User's accounts for AI matching */
-  readonly accounts?: ReadonlyArray<{ id: string; name: string }>;
+  readonly accounts: ReadonlyArray<{ id: string; name: string }>;
+  /** User's categories from the database — used for AI category → ID resolution */
+  readonly categoryRecords: readonly Category[];
   /** Origin tab index (for post-save navigation) */
   readonly originTabIndex?: number;
 }
@@ -142,6 +145,19 @@ export function useVoiceTransactionFlow(
   }, [recorder, updateFlowStatus]);
 
   const submitRecording = useCallback(async (): Promise<void> => {
+    // Minimum duration guard: recordings under 1.5s are too short to contain
+    // meaningful speech and tend to cause AI hallucinations on noise/silence.
+    const MIN_RECORDING_DURATION_MS = 1500;
+    if (recorder.durationMs < MIN_RECORDING_DURATION_MS) {
+      // Stop recording and clean up temp files before returning
+      await recorder.discard();
+      setErrorMessage(
+        "Recording too short. Please speak for at least 1.5 seconds."
+      );
+      updateFlowStatus("error");
+      return;
+    }
+
     // Stop recording
     const result = await recorder.stop();
     if (!result) {
@@ -159,6 +175,7 @@ export function useVoiceTransactionFlow(
       preferredCurrency: config.preferredCurrency,
       categories: config.categories,
       accounts: config.accounts,
+      categoryRecords: config.categoryRecords,
     });
 
     // Clean up temp audio file (FR-021)
@@ -167,6 +184,15 @@ export function useVoiceTransactionFlow(
     // Handle result
     if (isVoiceParserError(aiResult)) {
       setErrorMessage(aiResult.message);
+      updateFlowStatus("error");
+      return;
+    }
+
+    // Empty recording guard (FR-010): prevent navigation when no transactions parsed
+    if (aiResult.transactions.length === 0) {
+      setErrorMessage(
+        "We couldn't parse any transaction from the voice note. Please try again with clearer details."
+      );
       updateFlowStatus("error");
       return;
     }
@@ -181,6 +207,8 @@ export function useVoiceTransactionFlow(
       params: {
         transactions: JSON.stringify(aiResult.transactions),
         transcript: aiResult.transcript,
+        originalTranscript: aiResult.originalTranscript,
+        detectedLanguage: aiResult.detectedLanguage,
         originTabIndex: String(originTabIndexRef.current),
       },
     });
@@ -193,6 +221,7 @@ export function useVoiceTransactionFlow(
     config.preferredCurrency,
     config.categories,
     config.accounts,
+    config.categoryRecords,
     updateFlowStatus,
   ]);
 

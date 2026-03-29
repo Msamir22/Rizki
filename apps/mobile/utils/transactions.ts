@@ -57,19 +57,21 @@ export async function createTransactionFromVoice(
       tx.accountId = accountId;
       tx.amount = Math.abs(parsed.amount); // Amount is always positive
       tx.currency = parsed.currency;
-      tx.type = parsed.isIncome ? "INCOME" : "EXPENSE";
-      tx.categoryId = parsed.detectedCategory || "other"; // Will need category lookup
-      tx.counterparty = parsed.counterparty || parsed.description || undefined;
-      tx.note = parsed.description || undefined;
-      tx.date = new Date();
+      tx.type = parsed.type;
+      tx.categoryId = parsed.categoryId;
+      tx.counterparty = parsed.counterparty;
+      tx.note = parsed.note || undefined;
+      tx.date = parsed.date;
       tx.source = "VOICE";
       tx.isDraft = false; // Voice transactions are confirmed
       tx.deleted = false;
     });
   });
 
-  // Update account balance
-  await updateAccountBalance(accountId, parsed.amount, !parsed.isIncome);
+  // Update account balance — use Math.abs to match the stored amount (line 58).
+  // Without this, a negative AI amount (e.g. -50) would invert the balance direction.
+  const isExpense = parsed.type === "EXPENSE";
+  await updateAccountBalance(accountId, Math.abs(parsed.amount), isExpense);
 
   return newTransaction;
 }

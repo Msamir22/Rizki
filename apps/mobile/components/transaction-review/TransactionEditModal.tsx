@@ -39,7 +39,7 @@ import {
   formatConversionPreview,
   formatAmountInput,
   parseAmountInput,
-  type ParsedSmsTransaction,
+  type ReviewableTransaction,
 } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
 import React, {
@@ -70,7 +70,7 @@ interface TransactionEditModalProps {
   /** Whether the modal is visible */
   readonly visible: boolean;
   /** The transaction being edited */
-  readonly transaction: ParsedSmsTransaction;
+  readonly transaction: ReviewableTransaction;
   /** Currently assigned account name */
   readonly currentAccountName: string | null;
   /** Currently assigned account ID */
@@ -139,9 +139,7 @@ export function TransactionEditModal({
 
   // "+ New" account creation state
   const [isCreatingNew, setIsCreatingNew] = useState(false);
-  const [newAccountName, setNewAccountName] = useState(
-    transaction.senderDisplayName
-  );
+  const [newAccountName, setNewAccountName] = useState(transaction.originLabel);
 
   // ATM withdrawal TO account state
   const [selectedToAccountId, setSelectedToAccountId] = useState("");
@@ -217,8 +215,9 @@ export function TransactionEditModal({
     selectedAccountCurrency !== "" &&
     selectedAccountCurrency !== transaction.currency;
 
-  // Cash withdrawal mode
-  const isAtmWithdrawal = transaction.isAtmWithdrawal === true;
+  // Cash withdrawal mode (SMS-specific via runtime narrowing)
+  const isAtmWithdrawal =
+    "isAtmWithdrawal" in transaction && transaction.isAtmWithdrawal === true;
 
   // Use a ref to prevent re-initialization when accountOptions recalculates
   // (e.g. after creating a pending account)
@@ -250,7 +249,7 @@ export function TransactionEditModal({
     setIsAccountPickerOpen(false);
     // Auto-switch to text input when no bank accounts exist
     setIsCreatingNew(!hasBankAccounts);
-    setNewAccountName(transaction.senderDisplayName);
+    setNewAccountName(transaction.originLabel);
     setNewAccountError(null);
     setFormErrors({});
 
@@ -283,10 +282,14 @@ export function TransactionEditModal({
     cashAccountOptions,
   ]);
 
+  const transactionIdentity =
+    transaction.deduplicationHash ??
+    `${transaction.counterparty}-${transaction.amount}-${transaction.date.getTime()}`;
+
   // Reset flag when transaction changes
   useEffect(() => {
     hasInitializedRef.current = false;
-  }, [transaction.smsBodyHash]);
+  }, [transactionIdentity]);
 
   // TODO(tech-debt): Extract to useAutoCategorySelection hook shared with add-transaction.tsx
   // Issue: #TODO
@@ -313,9 +316,8 @@ export function TransactionEditModal({
   const handleStartNew = useCallback<() => void>(() => {
     setIsCreatingNew(true);
     setIsAccountPickerOpen(false);
-    setNewAccountName(transaction.senderDisplayName);
-    setNewAccountError(null);
-  }, [transaction.senderDisplayName]);
+    setNewAccountName(transaction.originLabel);
+  }, [transaction.originLabel]);
 
   const handleCancelNew = useCallback<() => void>(() => {
     setIsCreatingNew(false);
@@ -356,8 +358,11 @@ export function TransactionEditModal({
       pendingAccountToCreate = buildPendingAccount(tempId, {
         name: trimmedName,
         currency: transaction.currency,
-        senderDisplayName: transaction.senderDisplayName,
-        cardLast4: transaction.cardLast4 ?? undefined,
+        senderDisplayName: transaction.originLabel,
+        cardLast4:
+          "cardLast4" in transaction
+            ? ((transaction as { cardLast4?: string }).cardLast4 ?? undefined)
+            : undefined,
       });
 
       resolvedAccountId = tempId;
@@ -509,7 +514,7 @@ export function TransactionEditModal({
                   className="text-sm text-white font-semibold flex-shrink"
                   numberOfLines={1}
                 >
-                  {transaction.senderDisplayName}
+                  {transaction.originLabel}
                 </Text>
                 <Text className="text-[10px] text-slate-400 mt-0.5">
                   {formatToLocalDateString(transaction.date)}

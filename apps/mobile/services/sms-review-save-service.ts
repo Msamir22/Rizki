@@ -24,7 +24,7 @@ import {
 import type { AccountMatch } from "@/services/sms-account-matcher";
 import type { TransactionEdits } from "@/services/sms-edit-modal-service";
 import { ensureCashAccount } from "@/services/account-service";
-import type { ParsedSmsTransaction } from "@astik/logic";
+import type { ReviewableTransaction } from "@astik/logic";
 import type { CurrencyType } from "@astik/db";
 
 // ---------------------------------------------------------------------------
@@ -41,7 +41,7 @@ interface PrepareSaveInput {
   /** In-memory pending accounts created via "Create New" in the edit modal */
   readonly pendingAccounts: readonly PendingAccount[];
   /** The full effective (post-dedup) transactions array */
-  readonly effectiveTransactions: readonly ParsedSmsTransaction[];
+  readonly effectiveTransactions: readonly ReviewableTransaction[];
   /** The authenticated user's ID (needed for cash account creation) */
   readonly userId: string;
 }
@@ -49,7 +49,7 @@ interface PrepareSaveInput {
 interface PrepareSaveSuccess {
   readonly success: true;
   /** The selected transactions in order */
-  readonly selected: readonly ParsedSmsTransaction[];
+  readonly selected: readonly ReviewableTransaction[];
   /** Sequential index → real account ID (FROM account) */
   readonly transactionAccountMap: Map<number, string>;
   /** Sequential index → real cash account ID (TO account, ATM only) */
@@ -190,7 +190,7 @@ async function prepareSavePayload(
   }
 
   // Step 6: Build the final selected array + sequential index map
-  const selected: ParsedSmsTransaction[] = [];
+  const selected: ReviewableTransaction[] = [];
   for (const i of selectedOriginalIndices) {
     const transaction = effectiveTransactions[i];
     if (!transaction) {
@@ -229,7 +229,10 @@ async function prepareSavePayload(
   for (let seqIdx = 0; seqIdx < selectedOriginalIndices.length; seqIdx++) {
     const origIdx = selectedOriginalIndices[seqIdx];
     const tx = effectiveTransactions[origIdx];
-    if (!tx?.isAtmWithdrawal) continue;
+    const isAtm =
+      "isAtmWithdrawal" in tx &&
+      (tx as { isAtmWithdrawal?: boolean }).isAtmWithdrawal === true;
+    if (!isAtm) continue;
 
     const override = transactionOverrides.get(origIdx);
     const toId = override?.toAccountId;

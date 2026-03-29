@@ -32,7 +32,7 @@ import Animated, {
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { palette } from "@/constants/colors";
-import { TAB_BAR_HEIGHT } from "@/constants/ui";
+import { MIC_BUTTON_SIZE, TAB_BAR_HEIGHT } from "@/constants/ui";
 import { WaveformVisualizer } from "./WaveformVisualizer";
 
 // ---------------------------------------------------------------------------
@@ -44,6 +44,13 @@ const MAX_DURATION_S = 60;
 
 /** Duration threshold for "nearing limit" visual warning (seconds). */
 const NEAR_LIMIT_THRESHOLD_S = 50;
+
+/**
+ * Extra clearance above the tab bar to clear the protruding mic button.
+ * Derived from the MIC_BUTTON protrusion: top offset (-SIZE/2 + 8) ~ 24px,
+ * plus 8px breathing room.
+ */
+const MIC_BUTTON_CLEARANCE = MIC_BUTTON_SIZE / 2 - 8 + 8;
 
 // ---------------------------------------------------------------------------
 // Styles
@@ -266,8 +273,16 @@ function VoiceRecordingOverlayComponent({
   }, [isPaused, safeOnPause, safeOnResume]);
 
   // Dynamic panel position based on tab bar height
+  // The mic button on the tab bar protrudes 24px above the tab bar bounds (top: -24).
+  // Adding 32px to paddingBottom ensures the overlay content comfortably clears the mic button.
   const panelStyle = useMemo(
-    () => [styles.panelShadow, { bottom: TAB_BAR_HEIGHT + bottomPadding }],
+    () => [
+      styles.panelShadow,
+      {
+        bottom: 0,
+        paddingBottom: bottomPadding + TAB_BAR_HEIGHT + MIC_BUTTON_CLEARANCE,
+      },
+    ],
     [bottomPadding]
   );
 
@@ -416,7 +431,7 @@ function VoiceRecordingOverlayComponent({
                   label="Done"
                   onPress={safeOnSubmit}
                   variant="primary"
-                  size={52}
+                  size={56}
                 />
               </View>
             </>
