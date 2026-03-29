@@ -68,7 +68,7 @@ interface SmsAtmTransferResult {
  * Ensures the cash account exists, then atomically creates the transfer
  * and updates both account balances. Used by the live SMS detection handler.
  *
- * The batch SMS flow (`batch-sms-transactions.ts`) uses `prepareCreate`
+ * The batch flow (`batch-create-transactions.ts`) uses `prepareCreate`
  * for atomic batch writes and calls `ensureCashAccount` separately,
  * so it does NOT use this function.
  *

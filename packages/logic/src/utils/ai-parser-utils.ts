@@ -71,7 +71,6 @@ const FALLBACK_CATEGORY_SYSTEM_NAME = "other";
 /**
  * Normalize an AI-returned transaction type string.
  * Uppercases the input and validates against VALID_TYPES.
- * Defaults to "EXPENSE" for unknown types (most common transaction type).
  *
  * @param raw - Raw type string from AI response
  * @returns Normalized TransactionType
@@ -81,7 +80,12 @@ export function normalizeType(raw: string): TransactionType {
   if (VALID_TYPES.has(upper)) {
     return upper as TransactionType;
   }
-  return "EXPENSE" as TransactionType;
+
+  throw new Error(
+    `[normalizeType] Invalid transaction type: "${raw}". Expected one of: ${Array.from(
+      VALID_TYPES
+    ).join(", ")}`
+  );
 }
 
 /**
@@ -95,10 +99,6 @@ export function normalizeType(raw: string): TransactionType {
  * @returns Parsed Date object
  */
 export function parseAiDate(raw: string): Date {
-  if (!raw || raw.trim() === "") {
-    return new Date();
-  }
-
   // Date-only strings: create in local timezone to avoid UTC midnight shift
   if (DATE_ONLY_REGEX.test(raw.trim())) {
     const [yearStr, monthStr, dayStr] = raw.trim().split("-");
@@ -138,31 +138,35 @@ export function clampConfidence(score: number): number {
   return Math.min(1, Math.max(0, score));
 }
 
-export function normalizeCurrency(raw: string): CurrencyType | null {
+export function normalizeCurrency(raw: string): CurrencyType {
   const upper = raw.toUpperCase();
   if (VALID_CURRENCIES.has(upper)) {
     return upper as CurrencyType;
   }
 
-  // Unknown currency — return null so callers can skip or handle appropriately.
-  return null;
+  throw new Error(
+    `[normalizeCurrency] Invalid currency: "${raw}". Expected one of: ${Array.from(
+      VALID_CURRENCIES
+    ).join(", ")}`
+  );
 }
 
 /**
  * Validate and normalize an AI-returned category system_name.
  *
  * Looks up the category in the user's CategoryMap. Falls back to "other"
- * if the AI returned an unknown category. Returns null only if neither the
- * given category nor the "other" fallback exist.
+ * if the AI returned an unknown category. Throws if the "other" fallback
+ * category is missing from the map — this indicates a corrupt database.
  *
  * @param systemName - Category system_name from AI response
  * @param categoryMap - User's CategoryMap built from their Category[]
- * @returns Resolved category with id and displayName, or null if no fallback
+ * @returns Resolved category with id and displayName
+ * @throws Error if the "other" fallback category is not in the map
  */
 export function parseCategory(
   systemName: string,
   categoryMap: CategoryMap
-): ResolvedCategory | null {
+): ResolvedCategory {
   const directMatch = categoryMap.get(systemName);
   if (directMatch) {
     return { id: directMatch.id, displayName: directMatch.name };
@@ -173,7 +177,10 @@ export function parseCategory(
     return { id: fallback.id, displayName: fallback.name };
   }
 
-  return null;
+  throw new Error(
+    `[parseCategory] Fallback category "${FALLBACK_CATEGORY_SYSTEM_NAME}" not found in CategoryMap. ` +
+      "This likely indicates a corrupted or incomplete database — the 'other' category must always exist."
+  );
 }
 
 /**

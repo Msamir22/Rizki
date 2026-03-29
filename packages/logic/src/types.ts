@@ -76,7 +76,7 @@ export interface ReviewableTransaction {
   readonly amount: number;
   readonly currency: CurrencyType;
   readonly type: TransactionType;
-  readonly counterparty: string;
+  readonly counterparty?: string;
   readonly date: Date;
   readonly categoryId: Category["id"];
   readonly categoryDisplayName: Category["displayName"];

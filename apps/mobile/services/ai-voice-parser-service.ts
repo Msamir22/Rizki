@@ -21,7 +21,6 @@ import { z } from "zod";
 
 import type { Category } from "@astik/db";
 import {
-  computeSmsHash,
   normalizeCurrency,
   normalizeType,
   parseAiDate,
@@ -37,9 +36,6 @@ import {
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
-
-/** Default category display name when AI doesn't provide one. */
-const DEFAULT_CATEGORY_DISPLAY_NAME = "other";
 
 /** Sender identifier for voice-input transactions (not from SMS). */
 const VOICE_INPUT_SENDER = "Voice";
@@ -57,20 +53,16 @@ interface AccountInput {
 }
 
 interface ParseVoiceOptions {
-  /** Audio mode: local file URI */
-  readonly audioUri?: string;
-  /** Text mode: transcribed text for testing/fallback */
-  readonly textQuery?: string;
-  /** Optional language hint ("ar" or "en") */
-  readonly languageHint?: "ar" | "en";
+  /** Audio file URI */
+  readonly audioUri: string;
   /** User's category tree (L1/L2 format) */
-  readonly categories?: string;
+  readonly categories: string;
   /** User's accounts for AI matching */
-  readonly accounts?: readonly AccountInput[];
+  readonly accounts: readonly AccountInput[];
   /** User's preferred currency code (set client-side, not by AI) */
   readonly preferredCurrency: string;
   /** User's categories from the database — used for AI category → ID resolution */
-  readonly categoryRecords?: readonly Category[];
+  readonly categoryRecords: readonly Category[];
 }
 
 interface ParseVoiceResult {
@@ -84,26 +76,43 @@ interface ParseVoiceResult {
 // Schemas — AI response validation
 // ---------------------------------------------------------------------------
 
+/**
+ * Strict Zod schema for a single AI-extracted transaction.
+ * Mirrors `VoiceTransaction` from the edge function exactly.
+ *
+ * All fields are required — if the AI fails to extract any of them,
+ * the transaction is rejected by `safeParse` and logged as malformed.
+ * Only `counterparty` and `accountId` are legitimately nullable
+ * (the AI may not know the counterparty or matched account).
+ */
 const AiVoiceTransactionSchema = z.object({
   amount: z.number(),
   type: z.string(),
-  counterparty: z.string(),
-  categorySystemName: z.string().optional().default(""),
-  description: z.string().optional().default(""),
-  accountId: z.string().optional().default(""),
-  date: z.string().optional().default(""),
-  confidenceScore: z.number().optional().default(0.8),
+  counterparty: z.string().nullable(),
+  categorySystemName: z.string(),
+  description: z.string(),
+  accountId: z.string().nullable(),
+  date: z.string(),
+  confidenceScore: z.number(),
 });
 
 type AiVoiceTransaction = z.infer<typeof AiVoiceTransactionSchema>;
 
-interface ParseVoiceResponse {
-  readonly transcript?: string;
-  readonly original_transcript?: string;
-  readonly detected_language?: string;
-  readonly transactions: readonly unknown[];
-  readonly error?: string;
-}
+/**
+ * Strict Zod schema for the full edge-function response.
+ * Mirrors `AiResponse` from the edge function.
+ *
+ * All fields are required — a missing `transcript` or `transactions`
+ * array indicates a malformed response from Gemini.
+ * Only `error` is optional (present only in error responses).
+ */
+const ParseVoiceResponseSchema = z.object({
+  transcript: z.string(),
+  original_transcript: z.string(),
+  detected_language: z.string(),
+  transactions: z.array(z.unknown()),
+  error: z.string().optional(),
+});
 
 // ---------------------------------------------------------------------------
 // Removed — normalizeType and parseAiDate are now imported from @astik/logic
@@ -139,26 +148,11 @@ export async function parseVoiceWithAi(
 
   try {
     let response: {
-      data: ParseVoiceResponse | null;
+      data: unknown;
       error: { message: string } | null;
     };
 
-    if (options.textQuery) {
-      // Text mode — send as JSON
-      response = await supabase.functions.invoke<ParseVoiceResponse>(
-        "parse-voice",
-        {
-          body: {
-            query: options.textQuery,
-            language: options.languageHint,
-            categories: options.categories,
-            accounts: options.accounts,
-            callerLocalDate,
-          },
-          signal: abortController.signal,
-        }
-      );
-    } else if (options.audioUri) {
+    if (options.audioUri) {
       // Audio mode — send as multipart form data
       // React Native's FormData natively supports { uri, type, name } objects
       // for file uploads. Using fetch(localUri).blob() doesn't work reliably
@@ -178,9 +172,6 @@ export async function parseVoiceWithAi(
         name: "recording.m4a",
       };
       formData.append("audio", audioFile);
-      if (options.languageHint) {
-        formData.append("language", options.languageHint);
-      }
       if (options.categories) {
         formData.append("categories", options.categories);
       }
@@ -189,15 +180,15 @@ export async function parseVoiceWithAi(
       }
       formData.append("callerLocalDate", callerLocalDate);
 
-      response = await supabase.functions.invoke<ParseVoiceResponse>(
-        "parse-voice",
-        { body: formData, signal: abortController.signal }
-      );
+      response = await supabase.functions.invoke("parse-voice", {
+        body: formData,
+        signal: abortController.signal,
+      });
     } else {
       clearTimeout(timeoutId);
       return {
         kind: "unknown",
-        message: "Either audioUri or textQuery must be provided.",
+        message: "audioUri must be provided.",
       };
     }
 
@@ -214,18 +205,31 @@ export async function parseVoiceWithAi(
       };
     }
 
-    const data = response.data;
-    if (!data?.transactions || !Array.isArray(data.transactions)) {
-      console.warn("[ai-voice-parser] No transactions in response");
+    const rawData = response.data;
+    const parsed = ParseVoiceResponseSchema.safeParse(rawData);
+    if (!parsed.success) {
+      console.warn(
+        "[ai-voice-parser] Malformed response from edge function:",
+        parsed.error.issues
+      );
       return {
         kind: "empty",
         message: "No transactions found in your recording. Try again?",
       };
     }
 
-    const transcript = data.transcript ?? "";
-    const originalTranscript = data.original_transcript ?? transcript;
-    const detectedLanguage = data.detected_language ?? "en";
+    const data = parsed.data;
+    if (data.error) {
+      console.error("[ai-voice-parser] Edge Function error:", data.error);
+      return {
+        kind: "network",
+        message: data.error,
+      };
+    }
+
+    const transcript = data.transcript;
+    const originalTranscript = data.original_transcript || transcript;
+    const detectedLanguage = data.detected_language;
 
     // Validate and map AI response to ParsedVoiceTransaction
     const validTransactions: AiVoiceTransaction[] = [];
@@ -250,44 +254,31 @@ export async function parseVoiceWithAi(
     }
 
     // Build category map for lookup (if categories provided)
-    const categoryMap: CategoryMap | undefined = options.categoryRecords
-      ? buildCategoryMap(options.categoryRecords)
-      : undefined;
-
-    // Compute a deduplication hash from the transcript (shared by all
-    // transactions parsed from the same voice recording).
-    // TODO: Rename computeSmsHash → computeContentHash (name is SMS-specific but logic is source-agnostic)
-    const transcriptHash = await computeSmsHash(transcript);
+    const categoryMap: CategoryMap = buildCategoryMap(options.categoryRecords);
 
     const results: ReviewableTransaction[] = validTransactions.map(
       (aiTx: AiVoiceTransaction): ParsedVoiceTransaction => {
-        const resolvedCategory = categoryMap
-          ? parseCategory(aiTx.categorySystemName, categoryMap)
-          : null;
+        const resolvedCategory = parseCategory(
+          aiTx.categorySystemName,
+          categoryMap
+        );
 
-        // Validate currency via normalizeCurrency; fall back to preferredCurrency
-        // if it's already valid, otherwise default to EGP.
-        const validatedCurrency =
-          normalizeCurrency(options.preferredCurrency) ??
-          ("EGP" as ReviewableTransaction["currency"]);
+        // Validate currency via normalizeCurrency
+        const validatedCurrency = normalizeCurrency(options.preferredCurrency);
 
         return {
           amount: Math.abs(aiTx.amount),
           currency: validatedCurrency,
           type: normalizeType(aiTx.type),
-          counterparty: aiTx.counterparty ?? "",
+          counterparty: aiTx.counterparty ?? undefined,
           date: parseAiDate(aiTx.date),
           source: "VOICE" as const,
           originLabel: aiTx.counterparty || VOICE_INPUT_SENDER,
-          categoryId: resolvedCategory?.id ?? "",
-          categoryDisplayName:
-            resolvedCategory?.displayName ??
-            (aiTx.categorySystemName || DEFAULT_CATEGORY_DISPLAY_NAME),
+          categoryId: resolvedCategory.id,
+          categoryDisplayName: resolvedCategory.displayName,
           confidence: clampConfidence(aiTx.confidenceScore),
           accountId: aiTx.accountId || undefined,
-          deduplicationHash: transcriptHash,
-          // Voice-specific fields (available via runtime narrowing)
-          note: aiTx.description ?? "",
+          note: aiTx.description,
           originalTranscript,
           detectedLanguage,
         };

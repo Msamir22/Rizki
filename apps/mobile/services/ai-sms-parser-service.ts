@@ -186,14 +186,6 @@ function mapAiTransactions(
       continue;
     }
 
-    // Filter out transactions with unsupported currencies
-    if (!currency) {
-      console.warn(
-        `[ai-sms-parser] Unsupported currency "${aiTx.currency}" for messageId: ${aiTx.messageId}, skipping`
-      );
-      continue;
-    }
-
     // Filter out untrusted transactions (promotional offers, ambiguous messages)
     if (!aiTx.isTrusted) {
       // eslint-disable-next-line no-console
@@ -213,13 +205,6 @@ function mapAiTransactions(
         : aiTx.counterparty;
 
     const category = parseCategory(aiTx.categorySystemName, validCategoryMap);
-
-    if (!category) {
-      console.warn(
-        `[ai-sms-parser] No valid category mapping for messageId: ${aiTx.messageId}, skipping`
-      );
-      continue;
-    }
 
     results.push({
       amount: Math.abs(aiTx.amount),

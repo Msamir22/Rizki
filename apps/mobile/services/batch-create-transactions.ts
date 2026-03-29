@@ -20,7 +20,7 @@
  *   database.batch() call, reducing lock acquire/release overhead
  *   from N times to exactly 1.
  *
- * @module batch-sms-transactions
+ * @module batch-create-transactions
  */
 
 import {
@@ -86,8 +86,8 @@ function accumulateBalanceDelta(
  * @param toAccountMap         - Optional mapping from transaction index → cash account ID (TO, ATM only)
  * @returns Summary of saved/failed counts
  */
-export async function batchCreateTransactions(
-  transactions: readonly ReviewableTransaction[],
+export async function batchCreateTransactions<T extends ReviewableTransaction>(
+  transactions: readonly T[],
   transactionAccountMap: ReadonlyMap<number, string>,
   toAccountMap?: ReadonlyMap<number, string>
 ): Promise<BatchSaveResult> {
@@ -204,7 +204,7 @@ export async function batchCreateTransactions(
         record.currency = tx.currency;
         record.type = tx.type;
         record.categoryId = tx.categoryId;
-        record.counterparty = tx.counterparty || undefined;
+        record.counterparty = tx.counterparty ?? undefined;
         record.note = "";
         record.date = tx.date;
         record.source = tx.source;
@@ -237,7 +237,7 @@ export async function batchCreateTransactions(
     const missingIds = accountIds.filter((id) => !existingIds.has(id));
     if (missingIds.length > 0) {
       throw new Error(
-        `[batch-sms-transactions] Missing account rows for mapped IDs: ${missingIds.join(", ")}`
+        `[batch-create-transactions] Missing account rows for mapped IDs: ${missingIds.join(", ")}`
       );
     }
 

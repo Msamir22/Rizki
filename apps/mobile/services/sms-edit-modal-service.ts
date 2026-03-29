@@ -26,7 +26,7 @@ import type { TransactionType } from "@astik/db";
 /** Fields that can be overridden in the edit modal */
 interface TransactionEdits {
   readonly amount: number;
-  readonly counterparty: string;
+  readonly counterparty?: string;
   readonly categoryId: string;
   readonly type: TransactionType;
   readonly accountId: string | null;
@@ -47,7 +47,7 @@ interface BuildPendingAccountInput {
 interface BuildTransactionEditsInput {
   readonly accountId: string | null;
   readonly accountName: string | null;
-  readonly counterparty: string;
+  readonly counterparty?: string;
   readonly type: TransactionType;
   readonly categoryId: string;
   readonly amount: number;

@@ -23,7 +23,7 @@ import { palette } from "@/constants/colors";
 import { useSmsScanContext } from "@/context/SmsScanContext";
 import { useSmsSync } from "@/hooks/useSmsSync";
 import { PageHeader } from "@/components/navigation/PageHeader";
-import { batchCreateTransactions } from "@/services/batch-sms-transactions";
+import { batchCreateTransactions } from "@/services/batch-create-transactions";
 import {
   flushQueuedTransactions,
   setReviewingActive,

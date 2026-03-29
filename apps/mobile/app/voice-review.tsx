@@ -19,7 +19,7 @@ import { PageHeader } from "@/components/navigation/PageHeader";
 import { TransactionReview } from "@/components/transaction-review/TransactionReview";
 import { useToast } from "@/components/ui/Toast";
 import { palette } from "@/constants/colors";
-import { batchCreateTransactions } from "@/services/batch-sms-transactions";
+import { batchCreateTransactions } from "@/services/batch-create-transactions";
 import type { ReviewableTransaction } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";

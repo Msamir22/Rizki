@@ -93,7 +93,7 @@ const RESPONSE_SCHEMA = {
     transcript: {
       type: "string",
       description:
-        "Full text interpretation of the user's voice recording. Translate Arabic to English.",
+        "Full text interpretation of the user's voice recording. Translated to English if the user spoke in other language.",
     },
     original_transcript: {
       type: "string",
@@ -122,9 +122,9 @@ const RESPONSE_SCHEMA = {
             enum: ["EXPENSE", "INCOME"],
           },
           counterparty: {
-            type: "string",
+            type: ["string", "null"],
             description:
-              "The counterparty name (merchant, vendor, person, or entity). Translate to English if originally in Arabic. Return empty string if not mentioned.",
+              "The counterparty name (merchant, vendor, person, or entity). Translate to English if originally in Arabic. Return null if not mentioned.",
           },
           categorySystemName: {
             type: "string",
@@ -137,14 +137,14 @@ const RESPONSE_SCHEMA = {
               "Short description of the transaction. Translate to English if originally in Arabic.",
           },
           accountId: {
-            type: "string",
+            type: ["string", "null"],
             description:
-              "The matched account ID from the provided account list. Return empty string if no account was mentioned or no match found.",
+              "The matched account ID from the provided account list. Return null if no account was mentioned or no match found.",
           },
           date: {
             type: "string",
             description:
-              "ISO 8601 date string (YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss) if the user mentioned a date or time (e.g., 'yesterday', 'last Friday'). Return empty string if no date/time was mentioned.",
+              "ISO 8601 date string (YYYY-MM-DD). If the user mentioned a date or time (e.g., 'yesterday', 'last Friday'), resolve it relative to today's date. If no date was mentioned, default to today's date.",
           },
           confidenceScore: {
             type: "number",
@@ -194,11 +194,11 @@ The user has the following accounts:
 ${accounts.map((a) => `  - Name: "${a.name}" → ID: "${a.id}"`).join("\n")}
 
 If the user mentions an account by name (e.g., "from my CIB account"), match it to the closest account name above and return the corresponding ID in the accountId field.
-If no account is mentioned or no match found, return an empty string for accountId.
+If no account is mentioned or no match found, return null for accountId.
 `
       : `
 ACCOUNT MATCHING:
-No accounts provided. Always return empty string for accountId.
+No accounts provided. Always return null for accountId.
 `;
 
   return `You are Astik AI, a voice-to-transaction parser for an Egyptian personal finance app.
@@ -215,7 +215,7 @@ PARSING RULES:
 1. A user may describe one or more transactions in a single recording.
 2. Amount: Extract numerical amounts. Handle spoken numbers in Arabic or English.
 3. Type: EXPENSE for spending (bought, paid, etc.), INCOME for receiving (salary, gift, received, etc.).
-4. Counterparty: The entity or person involved. Translate Arabic names to English where reasonable. If the user does NOT mention a merchant or counterparty, return an empty string "".
+4. Counterparty: The entity or person involved. Translate Arabic names to English where reasonable. If the user does NOT mention a merchant or counterparty, return null.
 5. Category: return EXACTLY ONE system_name from the CATEGORY TREE below.
    You MUST NOT invent, combine, or modify category names.
    Valid values are ONLY the exact strings listed in the tree.
@@ -224,16 +224,24 @@ PARSING RULES:
    NEVER use *_other L2 categories (food_other, shopping_other, etc.) — always prefer the L1 parent.
    Only use 'other' as an absolute last resort.
 6. Description: A brief English summary of the transaction.
-7. Date: If the user mentions a date or time reference (e.g., "yesterday", "last Friday", "two days ago"), calculate the actual date based on today's date and return it in ISO 8601 format. If no date is mentioned, return an empty string.
+7. Date: ALWAYS return a date in ISO 8601 format (YYYY-MM-DD). If the user mentions a date or time reference (e.g., "yesterday", "last Friday", "two days ago"), calculate the actual date relative to today's date. If no date is mentioned, default to today's date.
 8. confidenceScore: your confidence in the accuracy of this extraction (0.0 to 1.0).
 
 ${accountSection}
 
 EXAMPLES:
-- "اشتريت قهوة من ستاربكس بـ ٨٠ جنيه" → { amount: 80, type: "EXPENSE", counterparty: "Starbucks", categorySystemName: "coffee_tea", description: "Coffee from Starbucks", accountId: "", date: "", confidenceScore: 0.95 }
-- "Paid 200 pounds for Uber" → { amount: 200, type: "EXPENSE", counterparty: "Uber", categorySystemName: "private_transport", description: "Uber ride", accountId: "", date: "", confidenceScore: 0.9 }
-- "I received my salary, 15000" → { amount: 15000, type: "INCOME", counterparty: "Employer", categorySystemName: "salary", description: "Monthly salary", accountId: "", date: "", confidenceScore: 0.85 }
-- "yesterday I spent 50 on groceries" → { amount: 50, type: "EXPENSE", counterparty: "", categorySystemName: "groceries", description: "Groceries", accountId: "", date: "<yesterday's date>", confidenceScore: 0.9 }
+- "اشتريت قهوة من ستاربكس بـ ٨٠ جنيه" → { amount: 80, type: "EXPENSE", counterparty: "Starbucks", categorySystemName: "coffee_tea", description: "Coffee from Starbucks", accountId: null, date: "<today's date>", confidenceScore: 0.95 }
+- "Paid 200 pounds for Uber" → { amount: 200, type: "EXPENSE", counterparty: "Uber", categorySystemName: "private_transport", description: "Uber ride", accountId: null, date: "<today's date>", confidenceScore: 0.9 }
+- "I received my salary, 15000" → { amount: 15000, type: "INCOME", counterparty: "Employer", categorySystemName: "salary", description: "Monthly salary", accountId: null, date: "<today's date>", confidenceScore: 0.85 }
+- "yesterday I spent 50 on groceries" → { amount: 50, type: "EXPENSE", counterparty: null, categorySystemName: "groceries", description: "Groceries", accountId: null, date: "<yesterday's date>", confidenceScore: 0.9 }
+- "دفعت ١٥٠ اوبر و ٣٠٠ كارفور" (Two transactions in one recording) → [
+    { amount: 150, type: "EXPENSE", counterparty: "Uber", categorySystemName: "private_transport", description: "Uber ride", accountId: null, date: "<today's date>", confidenceScore: 0.9 },
+    { amount: 300, type: "EXPENSE", counterparty: "Carrefour", categorySystemName: "groceries", description: "Groceries from Carrefour", accountId: null, date: "<today's date>", confidenceScore: 0.9 }
+  ]
+- "last Friday I paid 500 rent from my CIB account" → { amount: 500, type: "EXPENSE", counterparty: null, categorySystemName: "rent", description: "Rent payment", accountId: "<CIB account ID>", date: "<last Friday's date>", confidenceScore: 0.85 }
+- "5adet 100 gnih taxi" (Franco-Arab) → { amount: 100, type: "EXPENSE", counterparty: null, categorySystemName: "private_transport", description: "Taxi ride", accountId: null, date: "<today's date>", confidenceScore: 0.8 }
+- "Someone sent me 2000 as a gift two days ago" → { amount: 2000, type: "INCOME", counterparty: null, categorySystemName: "gift_income", description: "Gift received", accountId: null, date: "<two days ago date>", confidenceScore: 0.85 }
+- "I paid exactly 1250 pounds to the dentist on March 15th" → { amount: 1250, type: "EXPENSE", counterparty: "Dentist", categorySystemName: "health", description: "Dentist visit", accountId: null, date: "2026-03-15", confidenceScore: 1.0 }
 
 CATEGORY TREE:
 ${categoryTree}
@@ -262,10 +270,10 @@ ADDITIONAL RULES:
 interface VoiceTransaction {
   readonly amount: number;
   readonly type: string;
-  readonly counterparty: string;
+  readonly counterparty: string | null;
   readonly categorySystemName: string;
   readonly description: string;
-  readonly accountId: string;
+  readonly accountId: string | null;
   readonly date: string;
   readonly confidenceScore: number;
 }
@@ -442,18 +450,15 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
 
     // 2. Parse input — supports both multipart form data and JSON (text query)
-    const contentType = req.headers.get("content-type") ?? "";
+    const contentType = req.headers.get("content-type");
     let audioBytes: Uint8Array | null = null;
-    let textQuery: string | null = null;
-    let languageHint: string | null = null;
     let categoriesInput: string | null = null;
     let accountsInput: AccountInfo[] = [];
     let callerLocalDate: string | null = null;
 
-    if (contentType.includes("multipart/form-data")) {
+    if (contentType?.includes("multipart/form-data")) {
       const formData = await req.formData();
       const audioFile = formData.get("audio");
-      languageHint = formData.get("language") as string | null;
       categoriesInput = formData.get("categories") as string | null;
       callerLocalDate = formData.get("callerLocalDate") as string | null;
 
@@ -489,47 +494,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
         const buffer = await audioFile.arrayBuffer();
         audioBytes = new Uint8Array(buffer);
       }
-    } else if (contentType.includes("application/json")) {
-      // Fallback: accept a text transcription for testing / future use
-      let body: {
-        query?: unknown;
-        language?: unknown;
-        categories?: unknown;
-        accounts?: unknown;
-        callerLocalDate?: unknown;
-      };
-      try {
-        body = await req.json();
-      } catch {
-        return errorResponse("Invalid JSON body.", 400);
-      }
-
-      if (typeof body.query !== "string" || body.query.trim().length === 0) {
-        return errorResponse("`query` must be a non-empty string.", 400);
-      }
-      textQuery = body.query.trim();
-      languageHint = typeof body.language === "string" ? body.language : null;
-      categoriesInput =
-        typeof body.categories === "string" ? body.categories : null;
-
-      if (Array.isArray(body.accounts)) {
-        accountsInput = (body.accounts as unknown[]).filter(
-          (a: unknown): a is AccountInfo =>
-            typeof a === "object" &&
-            a !== null &&
-            typeof (a as AccountInfo).id === "string" &&
-            typeof (a as AccountInfo).name === "string"
-        );
-      }
-
-      callerLocalDate =
-        typeof body.callerLocalDate === "string" ? body.callerLocalDate : null;
     }
 
-    if (!audioBytes && !textQuery) {
-      return errorResponse(
-        "Either an 'audio' file (multipart) or a 'query' string (JSON) is required."
-      );
+    if (!audioBytes) {
+      return errorResponse("Audio file is required.");
     }
 
     // 3. Init Gemini
@@ -567,39 +535,28 @@ Deno.serve(async (req: Request): Promise<Response> => {
         ? callerLocalDate
         : new Date().toISOString().split("T")[0];
 
-    let contents: string | Array<Record<string, unknown>>;
-
-    if (audioBytes) {
-      // Multimodal: audio + text prompt
-      const mimeType = detectAudioMimeType(audioBytes);
-      // Encode in chunks to avoid call-stack limits on large buffers
-      const CHUNK_SIZE = 8192;
-      let binaryString = "";
-      for (let i = 0; i < audioBytes.length; i += CHUNK_SIZE) {
-        const chunk = audioBytes.subarray(i, i + CHUNK_SIZE);
-        binaryString += String.fromCharCode(...chunk);
-      }
-      const base64Audio = btoa(binaryString);
-
-      contents = [
-        {
-          inlineData: {
-            mimeType,
-            data: base64Audio,
-          },
-        },
-        {
-          text: `Parse the financial transactions from this voice recording.${
-            languageHint ? ` Language hint: ${languageHint}.` : ""
-          } Today's date is ${todayDate}.`,
-        },
-      ];
-    } else {
-      // Text-only mode (transcription or test)
-      contents = `Parse this voice command into transactions: "${textQuery}".${
-        languageHint ? ` Language: ${languageHint}.` : ""
-      } Today's date is ${todayDate}.`;
+    // 5. Build Gemini multimodal content (audio + text prompt)
+    const mimeType = detectAudioMimeType(audioBytes);
+    // Encode in chunks to avoid call-stack limits on large buffers
+    const CHUNK_SIZE = 8192;
+    let binaryString = "";
+    for (let i = 0; i < audioBytes.length; i += CHUNK_SIZE) {
+      const chunk = audioBytes.subarray(i, i + CHUNK_SIZE);
+      binaryString += String.fromCharCode(...chunk);
     }
+    const base64Audio = btoa(binaryString);
+
+    const contents: Array<Record<string, unknown>> = [
+      {
+        inlineData: {
+          mimeType,
+          data: base64Audio,
+        },
+      },
+      {
+        text: `Parse the financial transactions from this voice recording. Today's date is ${todayDate}.`,
+      },
+    ];
 
     // 6. Call Gemini with retry
     const result = await processWithRetry(ai, contents, systemPrompt);

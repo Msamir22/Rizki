@@ -1,20 +1,38 @@
 import { darkTheme, lightTheme } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
 import { Tabs } from "expo-router";
-import React from "react";
+import React, { useMemo } from "react";
 import { View } from "react-native";
 import { QuickActionFab } from "@/components/fab";
 import { CustomBottomTabBar } from "@/components/tab-bar/CustomBottomTabBar";
 import { VoiceRecordingOverlay } from "@/components/voice/VoiceRecordingOverlay";
 import { useVoiceTransactionFlow } from "@/hooks/useVoiceTransactionFlow";
 import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
+import { useCategories } from "@/hooks/useCategories";
+import { useAccounts } from "@/hooks/useAccounts";
+import { buildCategoryTree } from "@astik/logic";
 
 export default function TabLayout(): React.ReactElement {
   const { isDark } = useTheme();
   const { preferredCurrency } = usePreferredCurrency();
+  const { categories: allCategories } = useCategories({ topLevelOnly: false });
+  const { accounts } = useAccounts();
+
+  const categoryTree = useMemo(
+    () => buildCategoryTree(allCategories),
+    [allCategories]
+  );
+
+  const accountInputs = useMemo(
+    () => accounts.map((a) => ({ id: a.id, name: a.name })),
+    [accounts]
+  );
 
   const voiceFlow = useVoiceTransactionFlow({
     preferredCurrency,
+    categories: categoryTree,
+    accounts: accountInputs,
+    categoryRecords: allCategories,
   });
 
   return (

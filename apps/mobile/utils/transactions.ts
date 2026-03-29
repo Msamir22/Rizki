@@ -59,7 +59,7 @@ export async function createTransactionFromVoice(
       tx.currency = parsed.currency;
       tx.type = parsed.type;
       tx.categoryId = parsed.categoryId;
-      tx.counterparty = parsed.counterparty || undefined;
+      tx.counterparty = parsed.counterparty;
       tx.note = parsed.note || undefined;
       tx.date = parsed.date;
       tx.source = "VOICE";

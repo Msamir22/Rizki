@@ -24,6 +24,7 @@ import {
   parseVoiceWithAi,
   isVoiceParserError,
 } from "@/services/ai-voice-parser-service";
+import type { Category } from "@astik/db";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -69,9 +70,11 @@ interface FlowConfig {
   /** User's preferred currency code */
   readonly preferredCurrency: string;
   /** User's category tree string */
-  readonly categories?: string;
+  readonly categories: string;
   /** User's accounts for AI matching */
-  readonly accounts?: ReadonlyArray<{ id: string; name: string }>;
+  readonly accounts: ReadonlyArray<{ id: string; name: string }>;
+  /** User's categories from the database — used for AI category → ID resolution */
+  readonly categoryRecords: readonly Category[];
   /** Origin tab index (for post-save navigation) */
   readonly originTabIndex?: number;
 }
@@ -149,7 +152,7 @@ export function useVoiceTransactionFlow(
       // Stop recording and clean up temp files before returning
       await recorder.discard();
       setErrorMessage(
-        "Recording too short. Please speak for at least 2 seconds."
+        "Recording too short. Please speak for at least 1.5 seconds."
       );
       updateFlowStatus("error");
       return;
@@ -172,6 +175,7 @@ export function useVoiceTransactionFlow(
       preferredCurrency: config.preferredCurrency,
       categories: config.categories,
       accounts: config.accounts,
+      categoryRecords: config.categoryRecords,
     });
 
     // Clean up temp audio file (FR-021)
@@ -217,6 +221,7 @@ export function useVoiceTransactionFlow(
     config.preferredCurrency,
     config.categories,
     config.accounts,
+    config.categoryRecords,
     updateFlowStatus,
   ]);
 
