@@ -1,37 +1,35 @@
-import { useSync } from "@/providers/SyncProvider";
-import { MarketRate } from "@astik/db";
+import type { MarketRate } from "@astik/db";
 import { Q } from "@nozbe/watermelondb";
-import {
-  REALTIME_SUBSCRIBE_STATES,
-  RealtimeChannel,
-} from "@supabase/supabase-js";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useDatabase } from "../providers/DatabaseProvider";
-import { supabase } from "../services/supabase";
+import { useMarketRatesRealtime } from "../providers/MarketRatesRealtimeProvider";
 
 interface UseMarketRatesResult {
-  latestRates: MarketRate | null;
-  previousDayRate: MarketRate | null;
-  isLoading: boolean;
-  isConnected: boolean;
-  lastUpdated: Date | null;
-  isStale: boolean;
+  readonly latestRates: MarketRate | null;
+  readonly previousDayRate: MarketRate | null;
+  readonly isLoading: boolean;
+  readonly isConnected: boolean;
+  readonly lastUpdated: Date | null;
+  readonly isStale: boolean;
 }
 
 /**
- * Hook to get market rates from local WatermelonDB with realtime updates
+ * Hook to get market rates from local WatermelonDB.
+ *
+ * Connection state (`isConnected`) is provided by the app-level
+ * `MarketRatesRealtimeProvider`, so the realtime channel persists
+ * across screen navigations without re-subscribing.
+ *
  * Single source of truth: WatermelonDB (synced from Supabase)
  */
 export function useMarketRates(): UseMarketRatesResult {
   const database = useDatabase();
+  const { isConnected } = useMarketRatesRealtime();
   const [latestRates, setLatestRates] = useState<MarketRate | null>(null);
   const [previousDayRate, setPreviousDayRate] = useState<MarketRate | null>(
     null
   );
   const [isLoading, setIsLoading] = useState(true);
-  const [isConnected, setIsConnected] = useState(false);
-  const channelRef = useRef<RealtimeChannel | null>(null);
-  const { sync } = useSync();
 
   // Query latest market rate from local DB
   useEffect(() => {
@@ -73,41 +71,12 @@ export function useMarketRates(): UseMarketRatesResult {
     fetchPreviousDay().catch(console.error);
   }, [database, latestRates]); // Re-fetch when latest rate changes
 
-  // Set up realtime subscription for instant updates
-  useEffect(() => {
-    const channel = supabase
-      .channel("market-rates-realtime")
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "market_rates",
-        },
-        () => {
-          sync().catch(console.error);
-        }
-      )
-      .subscribe((status) => {
-        setIsConnected(status === REALTIME_SUBSCRIBE_STATES.SUBSCRIBED);
-      });
-
-    channelRef.current = channel;
-
-    return () => {
-      if (channelRef.current) {
-        supabase.removeChannel(channelRef.current);
-        channelRef.current = null;
-      }
-    };
-  }, [database]);
-
   return {
     latestRates,
     previousDayRate,
     isLoading,
     isConnected,
-    lastUpdated: latestRates?.createdAt || null,
+    lastUpdated: latestRates?.createdAt ?? null,
     isStale: latestRates?.isStale() ?? false,
   };
 }
