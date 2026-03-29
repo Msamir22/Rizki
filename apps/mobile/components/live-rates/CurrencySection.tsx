@@ -128,6 +128,10 @@ export function CurrencySection({
             onPress={toggleSearch}
             className="p-1.5 mr-2"
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={
+              isSearchVisible ? "Close currency search" : "Open currency search"
+            }
           >
             <Ionicons
               name={isSearchVisible ? "close-outline" : "search-outline"}

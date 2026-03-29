@@ -54,7 +54,11 @@ export function LiveRatesHeader({
       ? palette.nileGreen[500]
       : palette.slate[400];
 
-  const labelColor = isConnected ? palette.nileGreen[500] : palette.slate[400];
+  const labelColor = isStale
+    ? palette.gold[500]
+    : isConnected
+      ? palette.nileGreen[500]
+      : palette.slate[400];
 
   return (
     <View
@@ -66,7 +70,6 @@ export function LiveRatesHeader({
         <View
           className="absolute left-0 right-0 h-full items-center justify-center"
           pointerEvents="none"
-          style={{ zIndex: -1 }}
         >
           <Text
             className="text-2xl font-bold text-slate-800 dark:text-white px-12"
@@ -81,6 +84,8 @@ export function LiveRatesHeader({
           onPress={() => router.back()}
           testID="header-back"
           className="p-1"
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
         >
           <Ionicons
             name="arrow-back-outline"

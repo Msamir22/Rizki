@@ -46,17 +46,16 @@ export function CurrencyRow({
   rate,
   changePercent,
 }: CurrencyRowProps): React.JSX.Element {
-  const isUp = changePercent > 0;
-  const isFlat = changePercent === 0;
+  const roundedChange = Number(changePercent.toFixed(2));
+  const isUp = roundedChange > 0;
+  const isFlat = roundedChange === 0;
   const changeColor = isFlat
     ? "text-slate-500 dark:text-slate-400"
     : isUp
       ? "text-nileGreen-500"
       : "text-red-500";
-  const changeLabel = isFlat
-    ? "0.00%"
-    : `${Math.abs(changePercent).toFixed(2)}%`;
-  const changePrefix = isFlat ? "" : isUp ? "▲" : "▼";
+
+  const changeLabel = `${Math.abs(roundedChange).toFixed(2)}%`;
 
   const trendIcon = isFlat ? null : isUp ? "arrow-drop-up" : "arrow-drop-down";
   const trendIconColor = isFlat
@@ -95,13 +94,12 @@ export function CurrencyRow({
           {trendIcon && (
             <MaterialIcons
               name={trendIcon}
-              size={14}
+              size={20}
               color={trendIconColor}
               style={{ marginRight: -2, marginLeft: -3 }}
             />
           )}
           <Text className={`text-[11px] font-medium ${changeColor}`}>
-            {changePrefix}
             {changeLabel}
           </Text>
         </View>

@@ -59,6 +59,9 @@ export function getGoldPurityPrice(
   marketRates: NonNullable<MarketRate>,
   targetCurrency: CurrencyType = "USD"
 ): number {
+  if (purityFraction < 0 || purityFraction > 1) {
+    throw new RangeError("purityFraction must be between 0 and 1");
+  }
   const pure24kPrice = getMetalPrice("GOLD", marketRates, targetCurrency);
   return pure24kPrice * purityFraction;
 }

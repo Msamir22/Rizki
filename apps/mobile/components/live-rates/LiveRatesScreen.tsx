@@ -61,6 +61,15 @@ export function LiveRatesScreen(): React.JSX.Element {
     onRefresh,
   } = useLiveRatesScreen();
 
+  const refreshControl = (
+    <RefreshControl
+      refreshing={isRefreshing}
+      onRefresh={onRefresh}
+      tintColor={palette.nileGreen[500]}
+      colors={[palette.nileGreen[500]]}
+    />
+  );
+
   return (
     <View className="flex-1 bg-slate-50 dark:bg-slate-900">
       <LiveRatesHeader isConnected={isConnected} isStale={isStale} />
@@ -68,19 +77,18 @@ export function LiveRatesScreen(): React.JSX.Element {
       {isLoading && !hasData ? (
         <LiveRatesSkeleton />
       ) : !hasData ? (
-        <LiveRatesEmptyState />
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ flexGrow: 1 }}
+          refreshControl={refreshControl}
+        >
+          <LiveRatesEmptyState />
+        </ScrollView>
       ) : (
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 16 }}
-          refreshControl={
-            <RefreshControl
-              refreshing={isRefreshing}
-              onRefresh={onRefresh}
-              tintColor={palette.nileGreen[500]}
-              colors={[palette.nileGreen[500]]}
-            />
-          }
+          refreshControl={refreshControl}
         >
           {/* Metals Section */}
           <View className="px-5 pt-2">

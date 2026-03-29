@@ -26,6 +26,7 @@ import { CategoriesProvider } from "../context/CategoriesContext";
 import { SmsScanProvider } from "../context/SmsScanContext";
 import { DatabaseProvider } from "../providers/DatabaseProvider";
 import { QueryProvider } from "../providers/QueryProvider";
+import { MarketRatesRealtimeProvider } from "../providers/MarketRatesRealtimeProvider";
 import { SyncProvider } from "../providers/SyncProvider";
 import { initializeNotifications } from "../services/notification-service";
 import {
@@ -123,20 +124,22 @@ export default function RootLayout(): React.ReactNode {
           <DatabaseProvider>
             <AuthProvider>
               <SyncProvider>
-                <CategoriesProvider>
-                  <SmsScanProvider>
-                    <ThemeProvider>
-                      <SafeAreaProvider>
-                        <ToastProvider>
-                          <AuthGuard>
-                            <RootLayoutNav />
-                            <InitialSyncOverlay />
-                          </AuthGuard>
-                        </ToastProvider>
-                      </SafeAreaProvider>
-                    </ThemeProvider>
-                  </SmsScanProvider>
-                </CategoriesProvider>
+                <MarketRatesRealtimeProvider>
+                  <CategoriesProvider>
+                    <SmsScanProvider>
+                      <ThemeProvider>
+                        <SafeAreaProvider>
+                          <ToastProvider>
+                            <AuthGuard>
+                              <RootLayoutNav />
+                              <InitialSyncOverlay />
+                            </AuthGuard>
+                          </ToastProvider>
+                        </SafeAreaProvider>
+                      </ThemeProvider>
+                    </SmsScanProvider>
+                  </CategoriesProvider>
+                </MarketRatesRealtimeProvider>
               </SyncProvider>
             </AuthProvider>
           </DatabaseProvider>

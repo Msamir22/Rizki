@@ -40,12 +40,13 @@ function TrendBadge({
 }: {
   readonly trendPercent: number;
 }): React.JSX.Element | null {
-  if (trendPercent === 0) return null;
+  const roundedTrend = Number(trendPercent.toFixed(1));
+  if (roundedTrend === 0) return null;
 
-  const isUp = trendPercent > 0;
+  const isUp = roundedTrend > 0;
   const color = isUp ? palette.nileGreen[400] : palette.red[400];
   const icon = isUp ? "arrow-drop-up" : "arrow-drop-down";
-  const label = `${isUp ? "▲" : "▼"} ${Math.abs(trendPercent).toFixed(1)}% today`;
+  const label = `${isUp ? "▲" : "▼"} ${Math.abs(roundedTrend).toFixed(1)}% today`;
 
   return (
     <View className="flex-row items-center mt-0.5">
@@ -96,13 +97,7 @@ export function GoldHeroCard({
   currencySymbol,
 }: GoldHeroCardProps): React.JSX.Element {
   return (
-    <View
-      className="bg-slate-800 rounded-2xl p-4 overflow-hidden"
-      style={{
-        borderLeftWidth: 3,
-        borderLeftColor: palette.gold[600],
-      }}
-    >
+    <View className="bg-slate-800 rounded-2xl p-4 overflow-hidden border-l-[3px] border-l-gold-600">
       {/* Gold label */}
       <View className="flex-row items-center mb-1">
         <FontAwesome5 name="coins" size={14} color={palette.gold[400]} />

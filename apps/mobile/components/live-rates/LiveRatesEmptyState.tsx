@@ -86,17 +86,17 @@ export function LiveRatesEmptyState(): React.JSX.Element {
   return (
     <View className="flex-1 items-center justify-center px-8 pb-20">
       {/* Composed illustration */}
-      <View className="mb-8">
+      <View className="mb-5">
         <EmptyIllustration />
       </View>
 
       {/* Heading */}
-      <Text className="text-xl font-semibold text-white text-center">
+      <Text className="text-xl font-semibold text-slate-900 dark:text-white text-center">
         Rates unavailable
       </Text>
 
       {/* Description */}
-      <Text className="mt-3 text-sm text-center leading-5 text-slate-400">
+      <Text className="mt-3 text-sm text-center leading-5 text-slate-600 dark:text-slate-400">
         Pull down to refresh when you&apos;re back online
       </Text>
 
@@ -105,9 +105,9 @@ export function LiveRatesEmptyState(): React.JSX.Element {
         <Ionicons
           name="information-circle-outline"
           size={16}
-          color={palette.slate[300]}
+          color={palette.slate[500]}
         />
-        <Text className="ml-2 text-slate-300 text-[11px] font-bold tracking-wider">
+        <Text className="ml-2 text-slate-700 dark:text-slate-300 text-[11px] font-bold tracking-wider">
           OFFLINE MODE
         </Text>
       </View>
