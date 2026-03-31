@@ -152,6 +152,10 @@ export function useTransactionEditState({
   const [formErrors, setFormErrors] = useState<TransactionValidationErrors>({});
 
   // "+ New" account creation state
+  const preCreateSelectedAccountRef = useRef<{
+    id: string | null;
+    name: string;
+  } | null>(null);
   const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [newAccountName, setNewAccountName] = useState(transaction.originLabel);
   const [newAccountCurrency, setNewAccountCurrency] = useState<CurrencyType>(
@@ -291,6 +295,10 @@ export function useTransactionEditState({
       ? accountOptions.find((o) => o.id === currentAccountId)
       : undefined;
 
+    preCreateSelectedAccountRef.current = matchedOption
+      ? { id: matchedOption.id, name: matchedOption.name }
+      : null;
+
     if (matchedOption) {
       setSelectedAccountId(matchedOption.id);
       setSelectedAccountName(matchedOption.name);
@@ -350,20 +358,34 @@ export function useTransactionEditState({
   // Handlers
 
   const handleStartNew = useCallback(() => {
+    preCreateSelectedAccountRef.current = {
+      id: selectedAccountId,
+      name: selectedAccountName,
+    };
     setIsCreatingNew(true);
     setIsAccountPickerOpen(false);
     setNewAccountName(transaction.originLabel);
     setNewAccountCurrency(transaction.currency);
     setSelectedAccountId(null);
     setSelectedAccountName("");
-  }, [transaction.originLabel, transaction.currency]);
+  }, [
+    transaction.originLabel,
+    transaction.currency,
+    selectedAccountId,
+    selectedAccountName,
+  ]);
 
   const handleCancelNew = useCallback(() => {
     setIsCreatingNew(false);
     setNewAccountError(null);
     setNewAccountCurrency(transaction.currency);
+
     // Revert to previously selected account if one existed
-    if (currentAccountId) {
+    const previousSelection = preCreateSelectedAccountRef.current;
+    if (previousSelection && previousSelection.id !== null) {
+      setSelectedAccountId(previousSelection.id);
+      setSelectedAccountName(previousSelection.name);
+    } else if (currentAccountId) {
       const matchedOption = accountOptions.find(
         (o) => o.id === currentAccountId
       );
