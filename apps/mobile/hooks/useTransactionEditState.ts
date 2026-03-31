@@ -274,7 +274,7 @@ export function useTransactionEditState({
   // Currency is locked (disabled) when an existing account is selected.
   // It is editable only during "Create New" mode or when no account exists.
   const isCurrencyLocked =
-    !isCreatingNew && hasBankAccounts && selectedAccountId !== null;
+    !isCreatingNew && (hasBankAccounts || selectedAccountId !== null);
 
   // Track which transaction identity has been initialized
   const initializedForIdentityRef = useRef<string | null>(null);
