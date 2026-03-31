@@ -49,6 +49,13 @@ export interface UseTransactionEditStateReturn {
     readonly selectedAccountCurrency: CurrencyType;
     readonly hasCurrencyMismatch: boolean;
     readonly formConfig: EditFormConfig;
+    // Currency-grouped account lists for AccountSelector
+    readonly matchingAccounts: readonly AccountOption[];
+    readonly otherAccounts: readonly AccountOption[];
+    readonly showSectionHeaders: boolean;
+    readonly isCurrencyLocked: boolean;
+    readonly isCurrencyPickerOpen: boolean;
+    readonly newAccountCurrency: CurrencyType;
   };
   readonly setters: {
     readonly setAmount: React.Dispatch<React.SetStateAction<string>>;
@@ -78,6 +85,9 @@ export interface UseTransactionEditStateReturn {
     readonly setFormErrors: React.Dispatch<
       React.SetStateAction<TransactionValidationErrors>
     >;
+    readonly setIsCurrencyPickerOpen: React.Dispatch<
+      React.SetStateAction<boolean>
+    >;
   };
   readonly accountHandlers: {
     readonly handleStartNew: () => void;
@@ -86,6 +96,7 @@ export interface UseTransactionEditStateReturn {
     readonly handleCancelNewToAccount: () => void;
     readonly handleSave: () => void;
     readonly handleSelectAccount: (opt: AccountOption) => void;
+    readonly handleCurrencySelect: (currency: CurrencyType) => void;
   };
 }
 
@@ -141,8 +152,15 @@ export function useTransactionEditState({
   const [formErrors, setFormErrors] = useState<TransactionValidationErrors>({});
 
   // "+ New" account creation state
+  const preCreateSelectedAccountRef = useRef<{
+    id: string | null;
+    name: string;
+  } | null>(null);
   const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [newAccountName, setNewAccountName] = useState(transaction.originLabel);
+  const [newAccountCurrency, setNewAccountCurrency] = useState<CurrencyType>(
+    transaction.currency
+  );
   const [newAccountError, setNewAccountError] = useState<string | null>(null);
 
   const [selectedToAccountId, setSelectedToAccountId] = useState<string | null>(
@@ -159,6 +177,9 @@ export function useTransactionEditState({
     transaction.categoryId
   );
 
+  // Currency picker state (for "Create New Account" mode)
+  const [isCurrencyPickerOpen, setIsCurrencyPickerOpen] = useState(false);
+
   const selectedCategoryDisplayName = useMemo((): string | null => {
     const selectedCategory = categoryMap.get(
       selectedCategoryId ?? transaction.categoryId
@@ -171,6 +192,9 @@ export function useTransactionEditState({
   }, [txType, expenseCategories, incomeCategories]);
 
   // Merge real accounts + pending accounts for the dropdown
+  // Voice: all account types | SMS: BANK only
+  const isVoiceSource = transaction.source === "VOICE";
+
   const accountOptions = useMemo<readonly AccountOption[]>(() => {
     const real: AccountOption[] = accounts.map((acc) => ({
       id: acc.id,
@@ -186,8 +210,31 @@ export function useTransactionEditState({
       isPending: true,
       type: "BANK",
     }));
-    return [...real, ...pending].filter((o) => o.type === "BANK");
-  }, [accounts, pendingAccounts]);
+    const all = [...real, ...pending];
+    // Voice flow: show all account types | SMS flow: BANK only
+    return isVoiceSource ? all : all.filter((o) => o.type === "BANK");
+  }, [accounts, pendingAccounts, isVoiceSource]);
+
+  // Currency-grouped sorting for AccountSelector section headers
+  const { matchingAccounts, otherAccounts, showSectionHeaders } =
+    useMemo(() => {
+      if (!isVoiceSource) {
+        return {
+          matchingAccounts: accountOptions,
+          otherAccounts: [] as AccountOption[],
+          showSectionHeaders: false,
+        };
+      }
+      const txCurrency = transaction.currency;
+      const matching = accountOptions.filter((o) => o.currency === txCurrency);
+      const other = accountOptions.filter((o) => o.currency !== txCurrency);
+      const shouldShowHeaders = matching.length > 0 && other.length > 0;
+      return {
+        matchingAccounts: matching,
+        otherAccounts: other,
+        showSectionHeaders: shouldShowHeaders,
+      };
+    }, [accountOptions, transaction.currency, isVoiceSource]);
 
   const hasBankAccounts = accountOptions.length > 0;
 
@@ -206,13 +253,28 @@ export function useTransactionEditState({
 
   const hasCashAccounts = cashAccountOptions.length > 0;
 
-  // Determine selected account's currency for conversion notice
-  const selectedAccountCurrency = useMemo(() => {
+  // Determine selected account's currency for conversion notice.
+  // During "Create New" mode, use the user-selected newAccountCurrency.
+  const selectedAccountCurrency = useMemo((): CurrencyType => {
+    if (isCreatingNew) {
+      return newAccountCurrency;
+    }
     const found = accountOptions.find((opt) => opt.id === selectedAccountId);
     return found?.currency ?? transaction.currency;
-  }, [accountOptions, selectedAccountId, transaction.currency]);
+  }, [
+    accountOptions,
+    selectedAccountId,
+    transaction.currency,
+    isCreatingNew,
+    newAccountCurrency,
+  ]);
 
   const hasCurrencyMismatch = selectedAccountCurrency !== transaction.currency;
+
+  // Currency is locked (disabled) when an existing account is selected.
+  // It is editable only during "Create New" mode or when no account exists.
+  const isCurrencyLocked =
+    !isCreatingNew && (hasBankAccounts || selectedAccountId !== null);
 
   // Track which transaction identity has been initialized
   const initializedForIdentityRef = useRef<string | null>(null);
@@ -232,6 +294,10 @@ export function useTransactionEditState({
     const matchedOption = currentAccountId
       ? accountOptions.find((o) => o.id === currentAccountId)
       : undefined;
+
+    preCreateSelectedAccountRef.current = matchedOption
+      ? { id: matchedOption.id, name: matchedOption.name }
+      : null;
 
     if (matchedOption) {
       setSelectedAccountId(matchedOption.id);
@@ -292,14 +358,47 @@ export function useTransactionEditState({
   // Handlers
 
   const handleStartNew = useCallback(() => {
+    preCreateSelectedAccountRef.current = {
+      id: selectedAccountId,
+      name: selectedAccountName,
+    };
     setIsCreatingNew(true);
     setIsAccountPickerOpen(false);
     setNewAccountName(transaction.originLabel);
-  }, [transaction.originLabel]);
+    setNewAccountCurrency(transaction.currency);
+    setSelectedAccountId(null);
+    setSelectedAccountName("");
+  }, [
+    transaction.originLabel,
+    transaction.currency,
+    selectedAccountId,
+    selectedAccountName,
+  ]);
 
   const handleCancelNew = useCallback(() => {
     setIsCreatingNew(false);
     setNewAccountError(null);
+    setNewAccountCurrency(transaction.currency);
+
+    // Revert to previously selected account if one existed
+    const previousSelection = preCreateSelectedAccountRef.current;
+    if (previousSelection && previousSelection.id !== null) {
+      setSelectedAccountId(previousSelection.id);
+      setSelectedAccountName(previousSelection.name);
+    } else if (currentAccountId) {
+      const matchedOption = accountOptions.find(
+        (o) => o.id === currentAccountId
+      );
+      if (matchedOption) {
+        setSelectedAccountId(matchedOption.id);
+        setSelectedAccountName(matchedOption.name);
+      }
+    }
+  }, [currentAccountId, accountOptions, transaction.currency]);
+
+  const handleCurrencySelect = useCallback((currency: CurrencyType) => {
+    setNewAccountCurrency(currency);
+    setIsCurrencyPickerOpen(false);
   }, []);
 
   const handleSave = useCallback(() => {
@@ -319,13 +418,13 @@ export function useTransactionEditState({
       if (
         isDuplicateAccount(
           trimmedName,
-          transaction.currency,
+          newAccountCurrency,
           accounts,
           pendingAccounts
         )
       ) {
         setNewAccountError(
-          `An account named "${trimmedName}" in ${transaction.currency} already exists`
+          `An account named "${trimmedName}" in ${newAccountCurrency} already exists`
         );
         return;
       }
@@ -333,7 +432,7 @@ export function useTransactionEditState({
       const tempId = generatePendingTempId();
       pendingAccountToCreate = buildPendingAccount(tempId, {
         name: trimmedName,
-        currency: transaction.currency,
+        currency: newAccountCurrency,
         senderDisplayName: transaction.originLabel,
         cardLast4:
           "cardLast4" in transaction
@@ -420,6 +519,7 @@ export function useTransactionEditState({
     selectedToAccountName,
     newToAccountName,
     isCreatingNewToAccount,
+    newAccountCurrency,
   ]);
 
   return {
@@ -451,6 +551,12 @@ export function useTransactionEditState({
       selectedAccountCurrency,
       hasCurrencyMismatch,
       formConfig,
+      matchingAccounts,
+      otherAccounts,
+      showSectionHeaders,
+      isCurrencyLocked,
+      isCurrencyPickerOpen,
+      newAccountCurrency,
     },
     setters: {
       setAmount,
@@ -466,6 +572,7 @@ export function useTransactionEditState({
       setIsToAccountPickerOpen,
       setNewToAccountName,
       setFormErrors,
+      setIsCurrencyPickerOpen,
     },
     accountHandlers: {
       handleStartNew,
@@ -480,10 +587,14 @@ export function useTransactionEditState({
         setFormErrors((prev) => ({ ...prev, toAccountId: undefined }));
       }, []),
       handleSave,
+      handleCurrencySelect,
       handleSelectAccount: useCallback((opt: AccountOption) => {
         setSelectedAccountId(opt.id);
         setSelectedAccountName(opt.name);
         setIsAccountPickerOpen(false);
+        // Exit create-new mode if user selects an existing account
+        setIsCreatingNew(false);
+        setNewAccountError(null);
         setFormErrors((prev) => ({
           ...prev,
           accountId: undefined,

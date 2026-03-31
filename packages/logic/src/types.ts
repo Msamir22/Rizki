@@ -135,4 +135,11 @@ export interface ParsedVoiceTransaction extends ReviewableTransaction {
   readonly originalTranscript: string;
   /** ISO 639-1 language code detected by the AI (e.g., "ar", "en") */
   readonly detectedLanguage: string;
+  /**
+   * Currency detected from the user's speech BEFORE account resolution.
+   * Used by the edit modal to compute auto-conversion when the user
+   * selects an account with a different currency.
+   * `null` when the AI did not detect any explicit currency.
+   */
+  readonly aiDetectedCurrency: CurrencyType | null;
 }

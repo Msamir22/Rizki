@@ -72,7 +72,11 @@ interface FlowConfig {
   /** User's category tree string */
   readonly categories: string;
   /** User's accounts for AI matching */
-  readonly accounts: ReadonlyArray<{ id: string; name: string }>;
+  readonly accounts: ReadonlyArray<{
+    id: string;
+    name: string;
+    currency: string;
+  }>;
   /** User's categories from the database — used for AI category → ID resolution */
   readonly categoryRecords: readonly Category[];
   /** Origin tab index (for post-save navigation) */

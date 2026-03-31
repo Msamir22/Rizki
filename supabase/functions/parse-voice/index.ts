@@ -139,7 +139,12 @@ const RESPONSE_SCHEMA = {
           accountId: {
             type: ["string", "null"],
             description:
-              "The matched account ID from the provided account list. Return null if no account was mentioned or no match found.",
+              "The matched account ID from the provided account list. Return null if no account was mentioned or no match found. IMPORTANT: only assign an account if its currency matches the transaction's currency.",
+          },
+          currency: {
+            type: ["string", "null"],
+            description:
+              "ISO 4217 currency code detected from the user's speech (e.g., 'SAR', 'EGP', 'USD'). Return null if no currency was explicitly mentioned or implied.",
           },
           date: {
             type: "string",
@@ -159,6 +164,7 @@ const RESPONSE_SCHEMA = {
           "categorySystemName",
           "description",
           "accountId",
+          "currency",
           "date",
           "confidenceScore",
         ],
@@ -180,6 +186,7 @@ const RESPONSE_SCHEMA = {
 interface AccountInfo {
   readonly id: string;
   readonly name: string;
+  readonly currency: string;
 }
 
 function buildSystemPrompt(
@@ -189,16 +196,26 @@ function buildSystemPrompt(
   const accountSection =
     accounts.length > 0
       ? `
-ACCOUNT MATCHING:
-The user has the following accounts:
-${accounts.map((a) => `  - Name: "${a.name}" → ID: "${a.id}"`).join("\n")}
+AVAILABLE ACCOUNTS:
+${accounts.map((a) => `  - Name: "${a.name}" (${a.currency}) → ID: "${a.id}"`).join("\n")}
 
+ACCOUNT MATCHING:
 If the user mentions an account by name (e.g., "from my CIB account"), match it to the closest account name above and return the corresponding ID in the accountId field.
 If no account is mentioned or no match found, return null for accountId.
+
+STRICT CURRENCY MATCHING (CRITICAL):
+- Each account has a currency shown in parentheses.
+- You MUST only assign an accountId if the currency mentioned/implied by the user matches that account's currency.
+- If the user says "100 riyals from CIB" but CIB is (EGP), return accountId: null because the currencies don't match.
+- If multiple accounts share a name but differ in currency, pick the one whose currency matches.
+- Return the detected currency code in the "currency" field (e.g., "SAR", "EGP", "USD").
+- If the user does NOT explicitly mention or imply a currency, return currency: null.
+- Common currency hints: "riyals/ريال" → SAR, "dollars/دولار" → USD, "pounds/جنيه" → EGP, "dirhams/درهم" → AED, "euros/يورو" → EUR.
 `
       : `
 ACCOUNT MATCHING:
 No accounts provided. Always return null for accountId.
+Return the detected currency code in the "currency" field if mentioned, otherwise null.
 `;
 
   return `You are Astik AI, a voice-to-transaction parser for an Egyptian personal finance app.
@@ -274,6 +291,7 @@ interface VoiceTransaction {
   readonly categorySystemName: string;
   readonly description: string;
   readonly accountId: string | null;
+  readonly currency: string | null;
   readonly date: string;
   readonly confidenceScore: number;
 }
@@ -475,7 +493,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
                 typeof a === "object" &&
                 a !== null &&
                 typeof (a as AccountInfo).id === "string" &&
-                typeof (a as AccountInfo).name === "string"
+                typeof (a as AccountInfo).name === "string" &&
+                typeof (a as AccountInfo).currency === "string"
             );
           }
         } catch {

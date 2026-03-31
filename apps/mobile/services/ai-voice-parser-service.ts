@@ -19,9 +19,10 @@
 import { supabase } from "./supabase";
 import { z } from "zod";
 
-import type { Category } from "@astik/db";
+import type { Category, CurrencyType } from "@astik/db";
 import {
   normalizeCurrency,
+  normalizeCurrencySafe,
   normalizeType,
   parseAiDate,
   clampConfidence,
@@ -50,6 +51,7 @@ const AI_TIMEOUT_MS = 30_000;
 interface AccountInput {
   readonly id: string;
   readonly name: string;
+  readonly currency: string;
 }
 
 interface ParseVoiceOptions {
@@ -92,6 +94,7 @@ const AiVoiceTransactionSchema = z.object({
   categorySystemName: z.string(),
   description: z.string(),
   accountId: z.string().nullable(),
+  currency: z.string().nullable(),
   date: z.string(),
   confidenceScore: z.number(),
 });
@@ -283,9 +286,28 @@ export async function parseVoiceWithAi(
           categoryMap
         );
 
+        // ---------------------------------------------------------------
+        // Currency fallback chain (Issue #156):
+        // 1. AI matched an account → use that account's currency
+        // 2. AI detected a currency explicitly → validate and use it
+        // 3. Neither → fall back to user's preferred currency
+        // ---------------------------------------------------------------
+        const matchedAccount = aiTx.accountId
+          ? options.accounts.find((a) => a.id === aiTx.accountId)
+          : undefined;
+
+        // AI-detected currency BEFORE account resolution
+        const aiDetectedCurrency: CurrencyType | null = aiTx.currency
+          ? normalizeCurrencySafe(aiTx.currency, validatedCurrency)
+          : null;
+
+        const resolvedCurrency: CurrencyType = matchedAccount
+          ? normalizeCurrencySafe(matchedAccount.currency, validatedCurrency)
+          : (aiDetectedCurrency ?? validatedCurrency);
+
         results.push({
           amount: Math.abs(aiTx.amount),
-          currency: validatedCurrency,
+          currency: resolvedCurrency,
           type: normalizeType(aiTx.type),
           counterparty: aiTx.counterparty ?? undefined,
           date: parseAiDate(aiTx.date),
@@ -298,6 +320,7 @@ export async function parseVoiceWithAi(
           note: aiTx.description,
           originalTranscript,
           detectedLanguage,
+          aiDetectedCurrency,
         });
       } catch (error) {
         console.warn(

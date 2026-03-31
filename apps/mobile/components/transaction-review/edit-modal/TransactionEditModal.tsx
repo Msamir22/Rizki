@@ -23,6 +23,7 @@ import {
   formatConversionPreview,
   formatAmountInput,
   parseAmountInput,
+  CURRENCY_INFO_MAP,
   type ReviewableTransaction,
 } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
@@ -40,6 +41,7 @@ import {
 import { CategorySelectorModal } from "../../modals/CategorySelectorModal";
 import { TypeTabs } from "../../add-transaction/TypeTabs";
 import { AccountSelector } from "./AccountSelector";
+import { CurrencyPicker } from "../../currency/CurrencyPicker";
 import { useTransactionEditState } from "@/hooks/useTransactionEditState";
 
 export interface TransactionEditModalProps {
@@ -199,9 +201,11 @@ export function TransactionEditModal(
                     : "border-slate-200 dark:border-slate-700/50"
                 }`}
               >
-                <Text className="text-slate-800 dark:text-white font-bold text-base mr-3">
-                  {transaction.currency}
-                </Text>
+                <View className="bg-slate-200 dark:bg-slate-700/60 rounded-lg px-2.5 py-1 mr-3">
+                  <Text className="text-slate-800 dark:text-white font-bold text-xs">
+                    {state.selectedAccountCurrency}
+                  </Text>
+                </View>
                 <TextInput
                   value={formatAmountInput(state.amount)}
                   onChangeText={(text) => {
@@ -330,7 +334,7 @@ export function TransactionEditModal(
                   ? "Select source bank account"
                   : "Select an account"
               }
-              hintMessage={`We'll create an account named '${state.newAccountName.trim() || "New Account"}' in ${transaction.currency}.`}
+              hintMessage={`We'll create an account named '${state.newAccountName.trim() || "New Account"}' in ${state.selectedAccountCurrency}.`}
               themeColor="emerald"
               isSecondary={false}
               selectedId={state.selectedAccountId}
@@ -354,7 +358,60 @@ export function TransactionEditModal(
               newAccountError={state.newAccountError}
               onStartNew={accountHandlers.handleStartNew}
               onCancelNew={accountHandlers.handleCancelNew}
+              matchingAccounts={state.matchingAccounts}
+              otherAccounts={state.otherAccounts}
+              showSectionHeaders={state.showSectionHeaders}
+              matchingSectionLabel={`${transaction.currency} accounts`}
             />
+
+            {/* ── Currency Field ──────────────────────────────────────── */}
+            <View className="mb-4">
+              <Text className="text-xs text-slate-500 mb-2 font-bold uppercase tracking-wider">
+                Currency
+              </Text>
+              {state.isCurrencyLocked ? (
+                /* Locked: show as a static read-only badge */
+                <View className="bg-slate-100 dark:bg-slate-800/60 rounded-xl px-4 py-3 flex-row items-center border border-slate-200 dark:border-slate-700/50 opacity-60">
+                  <Text className="text-lg mr-2">
+                    {CURRENCY_INFO_MAP[state.selectedAccountCurrency]?.flag ??
+                      "💱"}
+                  </Text>
+                  <Text className="text-base font-semibold text-slate-800 dark:text-white">
+                    {state.selectedAccountCurrency}
+                  </Text>
+                  <Ionicons
+                    name="lock-closed"
+                    size={14}
+                    color={palette.slate[400]}
+                  />
+                  <Text className="text-xs text-slate-400 ml-auto">
+                    Determined by account
+                  </Text>
+                </View>
+              ) : (
+                /* Editable: tappable to open CurrencyPicker */
+                <TouchableOpacity
+                  onPress={() => setters.setIsCurrencyPickerOpen(true)}
+                  activeOpacity={0.7}
+                  className="bg-slate-100 dark:bg-slate-800/60 rounded-xl px-4 py-3 flex-row items-center justify-between border border-nileGreen-500/40"
+                >
+                  <View className="flex-row items-center">
+                    <Text className="text-lg mr-2">
+                      {CURRENCY_INFO_MAP[state.selectedAccountCurrency]?.flag ??
+                        "💱"}
+                    </Text>
+                    <Text className="text-base font-semibold text-slate-800 dark:text-white">
+                      {state.selectedAccountCurrency}
+                    </Text>
+                  </View>
+                  <Ionicons
+                    name="chevron-down"
+                    size={20}
+                    color={palette.nileGreen[500]}
+                  />
+                </TouchableOpacity>
+              )}
+            </View>
 
             {/* ── Cash Withdrawal TO account selector ──────────────────────────────────── */}
             {state.formConfig.showToAccount && (
@@ -401,6 +458,14 @@ export function TransactionEditModal(
           type={state.txType}
           onSelect={setters.setSelectedCategoryId}
           onClose={() => setters.setIsCategoryPickerOpen(false)}
+        />
+
+        {/* ── Currency picker modal ─────────────────────────────── */}
+        <CurrencyPicker
+          visible={state.isCurrencyPickerOpen}
+          selectedCurrency={state.selectedAccountCurrency}
+          onSelect={accountHandlers.handleCurrencySelect}
+          onClose={() => setters.setIsCurrencyPickerOpen(false)}
         />
       </KeyboardAvoidingView>
     </Modal>
