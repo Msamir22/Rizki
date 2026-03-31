@@ -65,14 +65,14 @@ function makeDefaultOptions(overrides: Record<string, unknown> = {}): {
   audioUri: string;
   preferredCurrency: string;
   categories: string;
-  accounts: ReadonlyArray<{ id: string; name: string }>;
+  accounts: ReadonlyArray<{ id: string; name: string; currency: string }>;
   categoryRecords: readonly Category[];
 } {
   return {
     audioUri: "file:///tmp/recording.m4a",
     preferredCurrency: "EGP",
     categories: "Food > Coffee",
-    accounts: [{ id: "acc-1", name: "Cash EGP" }],
+    accounts: [{ id: "acc-1", name: "Cash EGP", currency: "EGP" }],
     categoryRecords: [] as Category[],
     ...overrides,
   };
@@ -106,6 +106,7 @@ function makeValidTransaction(
     categorySystemName: "coffee_tea",
     description: "Morning coffee",
     accountId: "acc-1",
+    currency: "EGP",
     date: "2026-01-15",
     confidenceScore: 0.9,
     ...overrides,

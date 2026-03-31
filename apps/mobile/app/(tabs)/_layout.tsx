@@ -25,7 +25,8 @@ export default function TabLayout(): React.ReactElement {
   );
 
   const accountInputs = useMemo(
-    () => accounts.map((a) => ({ id: a.id, name: a.name })),
+    () =>
+      accounts.map((a) => ({ id: a.id, name: a.name, currency: a.currency })),
     [accounts]
   );
 

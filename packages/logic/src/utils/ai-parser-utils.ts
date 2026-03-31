@@ -152,6 +152,33 @@ export function normalizeCurrency(raw: string): CurrencyType {
 }
 
 /**
+ * Lenient currency normalization for AI-detected currencies.
+ *
+ * Unlike `normalizeCurrency`, this variant returns a fallback value
+ * instead of throwing when the input is invalid or unrecognised.
+ * This is critical for voice parsing where the AI may return
+ * free-form currency names (e.g., "Egyptian Pounds") rather than
+ * ISO 4217 codes.
+ *
+ * @param raw - Raw currency string from AI response
+ * @param fallback - Default currency to return on invalid input
+ * @returns Validated CurrencyType or fallback
+ */
+export function normalizeCurrencySafe(
+  raw: string,
+  fallback: CurrencyType
+): CurrencyType {
+  if (!raw || raw.trim().length === 0) {
+    return fallback;
+  }
+  const upper = raw.trim().toUpperCase();
+  if (VALID_CURRENCIES.has(upper)) {
+    return upper as CurrencyType;
+  }
+  return fallback;
+}
+
+/**
  * Validate and normalize an AI-returned category system_name.
  *
  * Looks up the category in the user's CategoryMap. Falls back to "other"

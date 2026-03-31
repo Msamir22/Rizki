@@ -42,6 +42,15 @@ export interface AccountSelectorProps {
   readonly newAccountError?: string | null;
   readonly onStartNew: () => void;
   readonly onCancelNew: () => void;
+
+  // Currency-aware sorted account groups (optional)
+  /** Matching-currency accounts shown first, then others. If not provided, all options shown flat. */
+  readonly matchingAccounts?: readonly AccountOption[];
+  readonly otherAccounts?: readonly AccountOption[];
+  /** Whether to show section headers */
+  readonly showSectionHeaders?: boolean;
+  /** Label for the matching section header */
+  readonly matchingSectionLabel?: string;
 }
 
 export function AccountSelector({
@@ -65,6 +74,10 @@ export function AccountSelector({
   newAccountError,
   onStartNew,
   onCancelNew,
+  matchingAccounts,
+  otherAccounts,
+  showSectionHeaders = false,
+  matchingSectionLabel,
 }: AccountSelectorProps): React.JSX.Element {
   const hasOptions = options.length > 0;
 
@@ -116,21 +129,6 @@ export function AccountSelector({
         <Text className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
           {label}
         </Text>
-
-        {allowCreateNew && !isCreatingNew && hasOptions && (
-          <TouchableOpacity
-            onPress={onStartNew}
-            activeOpacity={0.7}
-            className={`flex-row items-center px-2.5 py-1 rounded-full ${themeClasses.pillBg}`}
-          >
-            <Ionicons name="add" size={14} color={themeClasses.hintIcon} />
-            <Text
-              className={`text-xs font-semibold ml-0.5 ${themeClasses.pillText}`}
-            >
-              New
-            </Text>
-          </TouchableOpacity>
-        )}
 
         {allowCreateNew && isCreatingNew && (
           <TouchableOpacity
@@ -236,10 +234,20 @@ export function AccountSelector({
             <Text className="text-xs text-red-400 mt-1.5 ml-1">{errorMsg}</Text>
           )}
 
-          {/* Inline Picker List */}
           {isPickerOpen && (
             <View className="mt-2 bg-slate-800/80 rounded-xl overflow-hidden border border-slate-700/40">
-              {options.map((opt) => {
+              {/* Section headers + grouped accounts (when available) */}
+              {showSectionHeaders &&
+                matchingAccounts &&
+                matchingAccounts.length > 0 && (
+                  <Text className="px-4 pt-2 pb-1 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                    {matchingSectionLabel ?? "Matching currency"}
+                  </Text>
+                )}
+              {(showSectionHeaders && matchingAccounts
+                ? matchingAccounts
+                : options
+              ).map((opt) => {
                 const isSelected = opt.id === selectedId;
                 return (
                   <TouchableOpacity
@@ -294,6 +302,97 @@ export function AccountSelector({
                   </TouchableOpacity>
                 );
               })}
+
+              {/* Other accounts section (when section headers enabled) */}
+              {showSectionHeaders &&
+                otherAccounts &&
+                otherAccounts.length > 0 && (
+                  <>
+                    <Text className="px-4 pt-3 pb-1 text-[10px] font-bold text-slate-500 uppercase tracking-wider border-t border-slate-700/40">
+                      Other accounts
+                    </Text>
+                    {otherAccounts.map((opt) => {
+                      const isSelected = opt.id === selectedId;
+                      return (
+                        <TouchableOpacity
+                          key={opt.id}
+                          onPress={() => onSelect(opt)}
+                          activeOpacity={0.7}
+                          className={`px-4 py-3 flex-row items-center justify-between border-b border-slate-700/30 ${
+                            isSelected ? themeClasses.selectedRowBg : ""
+                          }`}
+                        >
+                          <View className="flex-row items-center flex-1">
+                            {iconName && (
+                              <View
+                                className={`w-5 h-5 rounded-full items-center justify-center mr-2 ${themeClasses.pillBg}`}
+                              >
+                                <Ionicons
+                                  name={iconName}
+                                  size={10}
+                                  color={themeClasses.hintIcon}
+                                />
+                              </View>
+                            )}
+                            <Text
+                              className={`text-sm font-medium flex-shrink ${
+                                isSelected
+                                  ? themeClasses.selectedRowText
+                                  : "text-white"
+                              }`}
+                              numberOfLines={1}
+                            >
+                              {opt.name}
+                            </Text>
+                            <Text className="text-slate-500 text-xs ml-1.5">
+                              ({opt.currency})
+                            </Text>
+                            {opt.isPending && (
+                              <View className="bg-amber-500/20 px-1.5 py-0.5 rounded ml-2">
+                                <Text className="text-[10px] font-bold text-amber-400">
+                                  NEW
+                                </Text>
+                              </View>
+                            )}
+                          </View>
+                          {isSelected && (
+                            <Ionicons
+                              name={
+                                isSecondary ? "checkmark-circle" : "checkmark"
+                              }
+                              size={18}
+                              color={themeClasses.hintIcon}
+                            />
+                          )}
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </>
+                )}
+
+              {/* "Create a new account" button — last item in dropdown */}
+              {allowCreateNew && (
+                <TouchableOpacity
+                  onPress={onStartNew}
+                  activeOpacity={0.7}
+                  className="px-4 py-3 flex-row items-center border-t border-slate-700/40"
+                >
+                  <View
+                    className={`w-5 h-5 rounded-full items-center justify-center mr-2 ${themeClasses.pillBg}`}
+                  >
+                    <Ionicons
+                      name="add"
+                      size={12}
+                      color={themeClasses.hintIcon}
+                    />
+                  </View>
+                  <Text
+                    className={`text-sm font-semibold ${themeClasses.pillText}`}
+                  >
+                    Create a new account
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
           )}
         </View>
