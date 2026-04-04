@@ -1,0 +1,21 @@
+{
+  "add_account": "Add Account",
+  "edit_account": "Edit Account",
+  "account_count": {
+    "_one": "{{count}} account",
+    "_two": "{{count}} accounts",
+    "_other": "{{count}} accounts"
+  },
+  "balance": "Balance",
+  "account_name": "Account Name",
+  "account_type": "Account Type",
+  "type_cash": "Cash",
+  "type_bank": "Bank Account",
+  "type_digital_wallet": "Digital Wallet",
+  "net_worth": "Net Worth",
+  "total_balance": "Total Balance",
+  "no_accounts": "No accounts yet. Add your first account to get started.",
+  "initial_balance": "Initial Balance",
+  "account_number": "Account Number",
+  "bank_name": "Bank Name"
+}

@@ -1,0 +1,29 @@
+{
+  "add_transaction": "Add Transaction",
+  "edit_transaction": "Edit Transaction",
+  "transaction_count": {
+    "_one": "{{count}} transaction",
+    "_two": "{{count}} transactions",
+    "_other": "{{count}} transactions"
+  },
+  "expense": "Expense",
+  "income": "Income",
+  "transfer": "Transfer",
+  "amount": "Amount",
+  "description": "Description",
+  "category": "Category",
+  "date": "Date",
+  "from_account": "From Account",
+  "to_account": "To Account",
+  "no_transactions": "No transactions yet",
+  "confirm_delete": "Are you sure you want to delete this transaction?",
+  "voice_prompt": "Say something like \"Spent 50 pounds on groceries\"",
+  "voice_listening": "Listening...",
+  "voice_processing": "Processing...",
+  "voice_error": "Could not understand. Please try again.",
+  "sms_review_title": "Review SMS Transaction",
+  "sms_scan_title": "Scan SMS for Transactions",
+  "sms_scan_instructions": "Grant SMS permission to automatically detect transactions from SMS messages",
+  "transfer_from": "Transfer from",
+  "transfer_to": "Transfer to"
+}

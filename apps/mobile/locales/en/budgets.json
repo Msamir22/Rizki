@@ -1,0 +1,24 @@
+{
+  "create_budget": "Create Budget",
+  "edit_budget": "Edit Budget",
+  "budget_count": {
+    "_one": "{{count}} budget",
+    "_two": "{{count}} budgets",
+    "_other": "{{count}} budgets"
+  },
+  "budget_name": "Budget Name",
+  "budget_amount": "Budget Amount",
+  "period": "Period",
+  "daily": "Daily",
+  "weekly": "Weekly",
+  "monthly": "Monthly",
+  "quarterly": "Quarterly",
+  "yearly": "Yearly",
+  "spent": "Spent",
+  "remaining": "Remaining",
+  "over_budget": "Over Budget",
+  "no_budgets": "No budgets yet. Create a budget to track your spending.",
+  "budget_alert": "Budget Alert",
+  "budget_threshold": "Alert when I spend over",
+  "categories": "Categories"
+}

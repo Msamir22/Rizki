@@ -1,0 +1,29 @@
+{
+  "add_transaction": "إضافة معاملة",
+  "edit_transaction": "تعديل المعاملة",
+  "transaction_count": {
+    "_one": "{{count}} معاملة",
+    "_two": "{{count}} معاملتان",
+    "_other": "{{count}} معاملات"
+  },
+  "expense": "مصروف",
+  "income": "دخل",
+  "transfer": "تحويل",
+  "amount": "المبلغ",
+  "description": "الوصف",
+  "category": "الفئة",
+  "date": "التاريخ",
+  "from_account": "من حساب",
+  "to_account": "إلى حساب",
+  "no_transactions": "لا توجد معاملات بعد",
+  "confirm_delete": "هل أنت متأكد من حذف هذه المعاملة؟",
+  "voice_prompt": "قل شيئاً مثل \"أنفقت 50 جنيه على البقالة\"",
+  "voice_listening": "جاري الاستماع...",
+  "voice_processing": "جاري المعالجة...",
+  "voice_error": "لم أستطع الفهم. يرجى المحاولة مرة أخرى.",
+  "sms_review_title": "مراجعة معاملة الرسائل النصية",
+  "sms_scan_title": "مسح الرسائل النصية للمعاملات",
+  "sms_scan_instructions": "منح إذن الرسائل النصية للكشف التلقائي عن المعاملات من الرسائل",
+  "transfer_from": "تحويل من",
+  "transfer_to": "تحويل إلى"
+}

@@ -1,0 +1,45 @@
+{
+  "save": "Save",
+  "cancel": "Cancel",
+  "delete": "Delete",
+  "edit": "Edit",
+  "add": "Add",
+  "done": "Done",
+  "skip": "Skip",
+  "next": "Next",
+  "back": "Back",
+  "confirm": "Confirm",
+  "retry": "Retry",
+  "close": "Close",
+  "loading": "Loading...",
+  "error": "Error",
+  "success": "Success",
+  "empty_state": "No data available",
+  "search": "Search",
+  "no_results": "No results found",
+  "home": "Home",
+  "accounts": "Accounts",
+  "transactions": "Transactions",
+  "metals": "Metals",
+  "stats": "Stats",
+  "settings": "Settings",
+  "error_generic": "Something went wrong. Please try again.",
+  "error_network": "Network error. Please check your connection.",
+  "currency": "Currency",
+  "just_now": "Just now",
+  "minutes_ago": {
+    "_one": "1 minute ago",
+    "_two": "2 minutes ago",
+    "_other": "{{count}} minutes ago"
+  },
+  "hours_ago": {
+    "_one": "1 hour ago",
+    "_two": "2 hours ago",
+    "_other": "{{count}} hours ago"
+  },
+  "days_ago": {
+    "_one": "1 day ago",
+    "_two": "2 days ago",
+    "_other": "{{count}} days ago"
+  }
+}

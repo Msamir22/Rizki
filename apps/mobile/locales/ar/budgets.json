@@ -1,0 +1,24 @@
+{
+  "create_budget": "إنشاء ميزانية",
+  "edit_budget": "تعديل الميزانية",
+  "budget_count": {
+    "_one": "{{count}} ميزانية",
+    "_two": "{{count}} ميزانيتان",
+    "_other": "{{count}} ميزانيات"
+  },
+  "budget_name": "اسم الميزانية",
+  "budget_amount": "مبلغ الميزانية",
+  "period": "الفترة",
+  "daily": "يومي",
+  "weekly": "أسبوعي",
+  "monthly": "شهري",
+  "quarterly": "ربع سنوي",
+  "yearly": "سنوي",
+  "spent": "تم إنفاق",
+  "remaining": "المتبقي",
+  "over_budget": "تجاوز الميزانية",
+  "no_budgets": "لا توجد ميزانيات بعد. أنشئ ميزانية لتتبع إنفاقك.",
+  "budget_alert": "تنبيه الميزانية",
+  "budget_threshold": "تنبيه عندما أنفق أكثر من",
+  "categories": "الفئات"
+}

@@ -1,0 +1,23 @@
+{
+  "title": "Settings",
+  "language": "Language",
+  "language_arabic": "Arabic",
+  "language_english": "English",
+  "appearance": "Appearance",
+  "dark_mode": "Dark Mode",
+  "currency": "Currency",
+  "preferred_currency": "Preferred Currency",
+  "profile": "Profile",
+  "notifications": "Notifications",
+  "logout": "Logout",
+  "sms_sync": "SMS Sync",
+  "sync_new": "Sync New SMS",
+  "full_rescan": "Full Rescan",
+  "live_detection": "Live SMS Detection",
+  "auto_confirm": "Auto Confirm Transactions",
+  "account": "Account",
+  "about": "About",
+  "version": "Version",
+  "delete_account": "Delete Account",
+  "confirm_logout": "Are you sure you want to logout?"
+}

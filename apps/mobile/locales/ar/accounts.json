@@ -1,0 +1,21 @@
+{
+  "add_account": "إضافة حساب",
+  "edit_account": "تعديل الحساب",
+  "account_count": {
+    "_one": "{{count}} حساب",
+    "_two": "{{count}} حسابان",
+    "_other": "{{count}} حسابات"
+  },
+  "balance": "الرصيد",
+  "account_name": "اسم الحساب",
+  "account_type": "نوع الحساب",
+  "type_cash": "كاش",
+  "type_bank": "حساب بنكي",
+  "type_digital_wallet": "محفظة إلكترونية",
+  "net_worth": "صافي الثروة",
+  "total_balance": "إجمالي الرصيد",
+  "no_accounts": "لا توجد حسابات بعد. أضف حسابك الأول للبدء.",
+  "initial_balance": "الرصيد الأولي",
+  "account_number": "رقم الحساب",
+  "bank_name": "اسم البنك"
+}

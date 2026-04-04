@@ -13,6 +13,9 @@ export const HAS_ONBOARDED_KEY = "hasOnboarded";
 /** ISO timestamp when the user first launched the app. */
 export const FIRST_USE_DATE_KEY = "@astik/first-use-date";
 
+/** User's preferred language: "en" or "ar". */
+export const LANGUAGE_KEY = "@astik/language";
+
 // =============================================================================
 // Logout Keys
 // =============================================================================
@@ -27,4 +30,5 @@ export const LOGOUT_IN_PROGRESS_KEY = "@astik/logout-in-progress";
  */
 export const CLEARABLE_USER_KEYS: readonly string[] = [
   FIRST_USE_DATE_KEY,
+  LANGUAGE_KEY,
 ] as const;

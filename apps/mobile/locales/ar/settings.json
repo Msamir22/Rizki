@@ -1,0 +1,23 @@
+{
+  "title": "الإعدادات",
+  "language": "اللغة",
+  "language_arabic": "العربية",
+  "language_english": "English",
+  "appearance": "المظهر",
+  "dark_mode": "الوضع الداكن",
+  "currency": "العملة",
+  "preferred_currency": "العملة المفضلة",
+  "profile": "الملف الشخصي",
+  "notifications": "الإشعارات",
+  "logout": "تسجيل الخروج",
+  "sms_sync": "مزامنة الرسائل",
+  "sync_new": "مزامنة رسائل جديدة",
+  "full_rescan": "إعادة مسح شاملة",
+  "live_detection": "الكشف المباشر للرسائل",
+  "auto_confirm": "تأكيد المعاملات تلقائياً",
+  "account": "الحساب",
+  "about": "حول التطبيق",
+  "version": "الإصدار",
+  "delete_account": "حذف الحساب",
+  "confirm_logout": "هل أنت متأكد من تسجيل الخروج؟"
+}
