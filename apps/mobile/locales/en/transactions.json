@@ -16,6 +16,7 @@
   "from_account": "From Account",
   "to_account": "To Account",
   "no_transactions": "No transactions yet",
+  "start_tracking_spending": "Start tracking your spending by adding your first transaction.",
   "confirm_delete": "Are you sure you want to delete this transaction?",
   "voice_prompt": "Say something like \"Spent 50 pounds on groceries\"",
   "voice_listening": "Listening...",
@@ -25,5 +26,14 @@
   "sms_scan_title": "Scan SMS for Transactions",
   "sms_scan_instructions": "Grant SMS permission to automatically detect transactions from SMS messages",
   "transfer_from": "Transfer from",
-  "transfer_to": "Transfer to"
+  "transfer_to": "Transfer to",
+  "update_success": "Updated",
+  "update_success_message": "Transaction updated successfully",
+  "update_error": "Error",
+  "update_error_message": "Failed to update transaction",
+  "delete_success": "Deleted Successfully",
+  "delete_failed": "Delete Failed",
+  "delete_success_message": "{{count}} transaction(s) deleted successfully",
+  "delete_error_message": "Something went wrong. Please try again.",
+  "edit_template_not_supported": "Editing template is not yet supported in Quick Edit"
 }

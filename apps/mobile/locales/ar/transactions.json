@@ -16,6 +16,7 @@
   "from_account": "من حساب",
   "to_account": "إلى حساب",
   "no_transactions": "لا توجد معاملات بعد",
+  "start_tracking_spending": "ابدأ في تتبع إنفاقك عن طريق إضافة معاملتك الأولى.",
   "confirm_delete": "هل أنت متأكد من حذف هذه المعاملة؟",
   "voice_prompt": "قل شيئاً مثل \"أنفقت 50 جنيه على البقالة\"",
   "voice_listening": "جاري الاستماع...",
@@ -25,5 +26,14 @@
   "sms_scan_title": "مسح الرسائل النصية للمعاملات",
   "sms_scan_instructions": "منح إذن الرسائل النصية للكشف التلقائي عن المعاملات من الرسائل",
   "transfer_from": "تحويل من",
-  "transfer_to": "تحويل إلى"
+  "transfer_to": "تحويل إلى",
+  "update_success": "تم التحديث",
+  "update_success_message": "تم تحديث المعاملة بنجاح",
+  "update_error": "خطأ",
+  "update_error_message": "فشل تحديث المعاملة",
+  "delete_success": "تم الحذف بنجاح",
+  "delete_failed": "فشل الحذف",
+  "delete_success_message": "تم حذف {{count}} معاملة بنجاح",
+  "delete_error_message": "حدث خطأ ما. يرجى المحاولة مرة أخرى.",
+  "edit_template_not_supported": "تعديل القالب غير مدعوم بعد في التعديل السريع"
 }
