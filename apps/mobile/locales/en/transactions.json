@@ -2,11 +2,8 @@
   "add_transaction": "Add Transaction",
   "edit_transaction": "Edit Transaction",
   "edit_transfer": "Edit Transfer",
-  "transaction_count": {
-    "_one": "{{count}} transaction",
-    "_two": "{{count}} transactions",
-    "_other": "{{count}} transactions"
-  },
+  "transaction_count_one": "{{count}} transaction",
+  "transaction_count_other": "{{count}} transactions",
   "expense": "Expense",
   "income": "Income",
   "transfer": "Transfer",
@@ -38,7 +35,8 @@
   "update_error_message": "Failed to update transaction",
   "delete_success": "Deleted Successfully",
   "delete_failed": "Delete Failed",
-  "delete_success_message": "{{count}} transaction(s) deleted successfully",
+  "delete_success_message_one": "{{count}} transaction deleted successfully",
+  "delete_success_message_other": "{{count}} transactions deleted successfully",
   "delete_error_message": "Something went wrong. Please try again.",
   "delete_transaction_title": "Delete Transaction",
   "delete_transaction_message": "Are you sure you want to delete this transaction? This action cannot be undone.",
@@ -111,5 +109,6 @@
   "cancel": "Cancel",
   "save_partial": "Saved {{saved}} of {{failed}} transactions. Errors: {{errors}}",
   "saved_from_sms": "{{count}} transaction(s) saved from SMS",
-  "failed_to_save_transactions": "Failed to save transactions: {{message}}"
+  "failed_to_save_transactions": "Failed to save transactions: {{message}}",
+  "received_currency": "Received ({{currency}})"
 }

@@ -102,7 +102,7 @@ export default function BudgetDetailScreen(): React.JSX.Element {
         });
       }
     },
-    [budget, showToast]
+    [budget, showToast, t, tCommon]
   );
 
   // ── Loading state ──

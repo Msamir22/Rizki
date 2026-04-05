@@ -231,18 +231,13 @@ export default function OnboardingScreen(): React.JSX.Element | null {
   }, []);
 
   /** Called when user selects a language in the language picker phase. */
-  const handleLanguageSelected = useCallback(
-    async (language: "en" | "ar"): Promise<void> => {
-      try {
-        await changeLanguage(language);
-      } catch {
-        // TODO: Replace with structured logging (e.g., Sentry)
-        // Continue to carousel even if language change fails — English fallback
-      }
-      setPhase("carousel");
-    },
-    []
-  );
+  const handleLanguageSelected = useCallback((language: "en" | "ar"): void => {
+    void changeLanguage(language).catch(() => {
+      // TODO: Replace with structured logging (e.g., Sentry)
+      // Continue even if language change fails — English fallback
+    });
+    setPhase("carousel");
+  }, []);
 
   const handleNext = useCallback((): void => {
     if (currentIndex === slides.length - 1) {

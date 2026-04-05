@@ -18,6 +18,7 @@ import { useTheme } from "@/context/ThemeContext";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useCategories } from "@/hooks/useCategories";
 import { createRecurringPayment } from "@/services/recurring-payment-service";
+import { formatDate as formatLocalizedDate } from "@/utils/dateHelpers";
 import {
   RecurringPaymentValidationErrors,
   validateRecurringPaymentForm,
@@ -204,11 +205,7 @@ export default function CreateRecurringPaymentScreen(): React.JSX.Element {
   };
 
   const formatDate = (date: Date): string => {
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
+    return formatLocalizedDate(date, "MMM d, yyyy");
   };
 
   const handleSubmit = async (): Promise<void> => {
