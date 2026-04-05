@@ -1,3 +1,4 @@
+import { formatToLocalDateString } from "@/utils/dateHelpers";
 import { palette } from "@/constants/colors";
 import type { CurrencyType } from "@astik/db";
 import { CURRENCY_INFO_MAP } from "@astik/logic";
@@ -351,9 +352,9 @@ export default function SettingsScreen(): React.JSX.Element {
                   <Text className="text-xs text-slate-500 dark:text-slate-400">
                     {hasSynced && lastSyncTimestamp
                       ? t("last_synced", {
-                          date: new Date(
-                            lastSyncTimestamp
-                          ).toLocaleDateString(),
+                          date: formatToLocalDateString(
+                            new Date(lastSyncTimestamp)
+                          ),
                         })
                       : smsPermissionStatus === "granted"
                         ? t("scan_inbox")
