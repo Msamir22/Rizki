@@ -17,5 +17,10 @@
   "no_accounts": "لا توجد حسابات بعد. أضف حسابك الأول للبدء.",
   "initial_balance": "الرصيد الأولي",
   "account_number": "رقم الحساب",
-  "bank_name": "اسم البنك"
+  "bank_name": "اسم البنك",
+  "add_new_account": "إضافة حساب جديد",
+  "no_accounts_title": "لا توجد حسابات بعد",
+  "no_accounts_message": "ابدأ في تتبع ثروتك عن طريق إضافة حسابك الأول.",
+  "no_accounts_type_title": "لا توجد حسابات {{type}}",
+  "no_accounts_type_message": "لم تقم بإضافة أي حسابات {{type}} بعد."
 }

@@ -17,5 +17,10 @@
   "no_accounts": "No accounts yet. Add your first account to get started.",
   "initial_balance": "Initial Balance",
   "account_number": "Account Number",
-  "bank_name": "Bank Name"
+  "bank_name": "Bank Name",
+  "add_new_account": "Add New Account",
+  "no_accounts_title": "No accounts yet",
+  "no_accounts_message": "Start tracking your wealth by adding your first account.",
+  "no_accounts_type_title": "No {{type}} accounts",
+  "no_accounts_type_message": "You haven't added any {{type}} accounts yet."
 }

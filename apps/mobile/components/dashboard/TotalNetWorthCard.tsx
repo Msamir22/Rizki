@@ -3,6 +3,7 @@ import { CurrencyType } from "@astik/db";
 import { formatCurrency } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Dimensions, Text, View } from "react-native";
 import Svg, { Defs, RadialGradient, Rect, Stop } from "react-native-svg";
 
@@ -35,6 +36,8 @@ export function TotalNetWorthCard({
   monthlyPercentageChange,
   isLoading,
 }: Props): React.JSX.Element {
+  const { t } = useTranslation("common");
+
   // Determine arrow icon and color based on percentage change
   const isPositive =
     monthlyPercentageChange !== null && monthlyPercentageChange >= 0;
@@ -107,7 +110,7 @@ export function TotalNetWorthCard({
         <View className="z-10 items-center gap-1">
           {/* Label */}
           <Text className="text-sm font-medium tracking-wide text-slate-300 opacity-90">
-            Total Net Worth
+            {t("total_net_worth")}
           </Text>
           {/* Main Amount */}
           {isLoading ? (
@@ -142,7 +145,7 @@ export function TotalNetWorthCard({
                 color={arrowColor}
               />
               <Text className="text-xs font-bold" style={{ color: arrowColor }}>
-                {monthlyPercentageChangeFormatted} Month
+                {monthlyPercentageChangeFormatted} {t("month")}
               </Text>
             </View>
           )}

@@ -41,5 +41,13 @@
     "_one": "1 day ago",
     "_two": "2 days ago",
     "_other": "{{count}} days ago"
-  }
+  },
+  "good_morning": "Good Morning",
+  "good_afternoon": "Good Afternoon",
+  "good_evening": "Good Evening",
+  "open_menu": "Open menu",
+  "change_currency": "Change currency",
+  "notifications": "Notifications",
+  "total_net_worth": "Total Net Worth",
+  "month": "Month"
 }

@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import { useTranslation } from "react-i18next";
 import React from "react";
 import { Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -36,12 +37,13 @@ export function TopNav({
   isCurrencyLoading = false,
 }: TopNavProps): React.ReactElement {
   const { theme } = useTheme();
+  const { t } = useTranslation("common");
 
   const getGreeting = (): string => {
     const hours = new Date().getHours();
-    if (hours < 12) return "Good Morning";
-    if (hours < 18) return "Good Afternoon";
-    return "Good Evening";
+    if (hours < 12) return t("good_morning");
+    if (hours < 18) return t("good_afternoon");
+    return t("good_evening");
   };
 
   return (
@@ -51,7 +53,7 @@ export function TopNav({
         {onMenuPress && (
           <TouchableOpacity
             onPress={onMenuPress}
-            accessibilityLabel="Open menu"
+            accessibilityLabel={t("open_menu")}
             accessibilityRole="button"
             className="mr-3"
           >
@@ -97,7 +99,7 @@ export function TopNav({
             <TouchableOpacity
               onPress={onCurrencyPress}
               disabled={isCurrencyLoading}
-              accessibilityLabel="Change currency"
+              accessibilityLabel={t("change_currency")}
               accessibilityRole="button"
               style={{ backgroundColor: theme.surfaceHighlight }}
               className={`flex-row items-center gap-1 px-2.5 py-1.5 rounded-full ${isCurrencyLoading ? "opacity-50" : ""}`}
@@ -124,7 +126,7 @@ export function TopNav({
             }}
             className="w-10 h-10 rounded-full items-center justify-center"
             onPress={() => router.push("/settings")}
-            accessibilityLabel="Settings"
+            accessibilityLabel={t("settings")}
             accessibilityRole="button"
           >
             <Ionicons
@@ -136,11 +138,13 @@ export function TopNav({
 
           {/* Notification Button */}
           <TouchableOpacity
-            accessibilityLabel="Notifications"
+            accessibilityLabel={t("notifications")}
             accessibilityRole="button"
             style={{ backgroundColor: theme.surfaceHighlight }}
             className="w-10 h-10 rounded-full items-center justify-center relative"
-            onPress={() => console.log("Notifications pressed")}
+            onPress={() => {
+              // TODO: Implement notifications navigation
+            }}
           >
             <Ionicons
               name="notifications-outline"

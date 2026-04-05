@@ -13,6 +13,7 @@ import type { CurrencyType } from "@astik/db";
 import { formatCurrency } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { ReactElement, useCallback, useMemo, useState } from "react";
 import { FlatList, type ListRenderItem, Text, View } from "react-native";
 
@@ -30,12 +31,13 @@ function AddAccountButton({
   onPress: () => void;
   variant?: ButtonVariant;
 }): ReactElement {
+  const { t } = useTranslation("accounts");
   return (
     <View className="mx-5 mb-10">
       <Button
         variant={variant}
         icon="add"
-        title="Add New Account"
+        title={t("add_new_account")}
         onPress={onPress}
         size="md"
       />
@@ -57,10 +59,11 @@ function TotalBalanceCard({
   balance: number;
   currencyCode: CurrencyType;
 }): ReactElement {
+  const { t } = useTranslation("accounts");
   return (
     <View className="p-6 rounded-3xl border-b-4 bg-white dark:bg-slate-800 border-nileGreen-600 dark:border-nileGreen-500 shadow-xl dark:shadow-none">
       <Text className="text-sm font-bold mb-1 text-slate-500 dark:text-slate-400 uppercase tracking-widest">
-        Total Balance
+        {t("total_balance")}
       </Text>
       <Text className="text-3xl font-black text-slate-900 dark:text-white">
         {formatCurrency({ amount: balance, currency: currencyCode })}
@@ -79,6 +82,8 @@ function TotalBalanceCard({
  */
 export default function Accounts(): ReactElement {
   const router = useRouter();
+  const { t } = useTranslation("accounts");
+  const { t: tCommon } = useTranslation("common");
   const { latestRates } = useMarketRates();
 
   const [selectedFilter, setSelectedFilter] = useState<FilterType>("ALL");
@@ -129,13 +134,15 @@ export default function Accounts(): ReactElement {
       </View>
       <Text className="text-lg font-bold text-center mb-2 text-slate-800 dark:text-white">
         {selectedFilter === "ALL"
-          ? "No accounts yet"
-          : `No ${selectedFilter.toLowerCase()} accounts`}
+          ? t("no_accounts_title")
+          : t("no_accounts_type_title", { type: selectedFilter.toLowerCase() })}
       </Text>
       <Text className="text-sm text-slate-400 text-center mb-10">
         {selectedFilter === "ALL"
-          ? "Start tracking your wealth by adding your first account."
-          : `You haven't added any ${selectedFilter.toLowerCase()} accounts yet.`}
+          ? t("no_accounts_message")
+          : t("no_accounts_type_message", {
+              type: selectedFilter.toLowerCase(),
+            })}
       </Text>
 
       {selectedFilter === "ALL" && (
@@ -147,7 +154,7 @@ export default function Accounts(): ReactElement {
   return (
     <View className="flex-1">
       <PageHeader
-        title="Accounts"
+        title={tCommon("accounts")}
         rightAction={{
           icon: "add",
           onPress: handleAddAccount,

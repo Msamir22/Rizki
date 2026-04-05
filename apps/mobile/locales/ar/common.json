@@ -41,5 +41,13 @@
     "_one": "منذ يوم",
     "_two": "منذ يومين",
     "_other": "منذ {{count}} أيام"
-  }
+  },
+  "good_morning": "صباح الخير",
+  "good_afternoon": "طاب مساؤك",
+  "good_evening": "مساء الخير",
+  "open_menu": "فتح القائمة",
+  "change_currency": "تغيير العملة",
+  "notifications": "الإشعارات",
+  "total_net_worth": "إجمالي صافي الثروة",
+  "month": "شهر"
 }
