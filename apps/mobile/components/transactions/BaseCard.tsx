@@ -1,5 +1,6 @@
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
+import { formatDate } from "@/utils/dateHelpers";
 import type { CurrencyType } from "@astik/db";
 import { formatCurrency } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
@@ -112,7 +113,7 @@ export const BaseCard = React.memo(function BaseCard({
       <View className="flex-row items-center">
         {/* Selection Checkbox */}
         {isSelectionMode && (
-          <View className="mr-3">
+          <View className="me-3">
             <Ionicons
               name={isSelected ? "checkbox" : "square-outline"}
               size={24}
@@ -133,7 +134,7 @@ export const BaseCard = React.memo(function BaseCard({
           activeOpacity={0.7}
           onPress={() => onCategoryPress?.(id)}
           disabled={!onCategoryPress || isSelectionMode}
-          className="w-10 h-10 rounded-full items-center justify-center mr-3 relative"
+          className="w-10 h-10 rounded-full items-center justify-center me-3 relative"
           style={{ backgroundColor: `${mainColor}20` }}
         >
           <CategoryIcon
@@ -143,7 +144,7 @@ export const BaseCard = React.memo(function BaseCard({
             color={mainColor}
           />
           {!isSelectionMode && onCategoryPress && (
-            <View className="absolute -bottom-1 -right-1 bg-white dark:bg-slate-800 rounded-full p-0.5 border border-slate-200 dark:border-slate-700">
+            <View className="absolute -bottom-1 -end-1 bg-white dark:bg-slate-800 rounded-full p-0.5 border border-slate-200 dark:border-slate-700">
               <Ionicons
                 name="pencil"
                 size={8}
@@ -158,7 +159,7 @@ export const BaseCard = React.memo(function BaseCard({
           {/* Title Row */}
           <View className="flex-row justify-between items-center mb-1">
             <Text
-              className="text-[15px] font-semibold text-slate-800 dark:text-slate-50 flex-1 mr-2"
+              className="text-[15px] font-semibold text-slate-800 dark:text-slate-50 flex-1 me-2"
               numberOfLines={1}
             >
               {title}
@@ -177,7 +178,7 @@ export const BaseCard = React.memo(function BaseCard({
                 {amount}
               </Text>
               {!isSelectionMode && onAmountPress && (
-                <View className="ml-1">
+                <View className="ms-1">
                   <Ionicons
                     name="pencil"
                     size={10}
@@ -190,14 +191,14 @@ export const BaseCard = React.memo(function BaseCard({
 
           {/* Equivalent amount in preferred currency */}
           {equivalentAmountText ? (
-            <Text className="text-[11px] text-slate-400 dark:text-slate-500 text-right mb-0.5">
+            <Text className="text-[11px] text-slate-400 dark:text-slate-500 text-end mb-0.5">
               {equivalentAmountText}
             </Text>
           ) : null}
 
           {/* Details Row */}
           <View className="flex-row justify-between items-center">
-            <View className="flex-1 mr-2">
+            <View className="flex-1 me-2">
               {/* Subtitle (Account name) */}
               <Text
                 className="text-xs font-medium text-slate-500 dark:text-slate-300 mb-0.5"
@@ -241,10 +242,7 @@ export const BaseCard = React.memo(function BaseCard({
                 </Text>
               </View>
               <Text className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
-                {date.toLocaleDateString("en-US", {
-                  day: "numeric",
-                  month: "short",
-                })}
+                {formatDate(date, "MMM d")}
               </Text>
             </View>
           </View>

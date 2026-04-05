@@ -183,7 +183,7 @@ export function TransactionReview({
               }
             />
             {hasActiveFilters && !isFiltersVisible && (
-              <View className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-nileGreen-400" />
+              <View className="absolute -top-1 -end-1 w-2.5 h-2.5 rounded-full bg-nileGreen-400" />
             )}
           </TouchableOpacity>
 
@@ -200,7 +200,7 @@ export function TransactionReview({
                 state.allSelected ? palette.nileGreen[400] : palette.slate[400]
               }
             />
-            <Text className="text-xs text-slate-400 ml-1.5">
+            <Text className="text-xs text-slate-400 ms-1.5">
               {state.allSelected ? "Deselect All" : "Select All"}
             </Text>
           </TouchableOpacity>

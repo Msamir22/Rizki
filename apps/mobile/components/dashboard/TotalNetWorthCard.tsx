@@ -3,6 +3,7 @@ import { CurrencyType } from "@astik/db";
 import { formatCurrency } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Dimensions, Text, View } from "react-native";
 import Svg, { Defs, RadialGradient, Rect, Stop } from "react-native-svg";
 
@@ -35,6 +36,8 @@ export function TotalNetWorthCard({
   monthlyPercentageChange,
   isLoading,
 }: Props): React.JSX.Element {
+  const { t } = useTranslation("common");
+
   // Determine arrow icon and color based on percentage change
   const isPositive =
     monthlyPercentageChange !== null && monthlyPercentageChange >= 0;
@@ -98,16 +101,16 @@ export function TotalNetWorthCard({
         className="relative min-h-[180px] w-full items-center overflow-hidden rounded-2xl border border-white/10 p-6 shadow-lg"
       >
         {/* Geometric Background Pattern */}
-        <View className="absolute bottom-0 left-0 right-0 top-0 overflow-hidden rounded-[24px]">
-          <View className="absolute -bottom-20 -right-10 h-64 w-64 rotate-45 transform bg-white/5" />
-          <View className="absolute bottom-10 -right-4 h-32 w-32 rotate-12 transform bg-white/5" />
-          <View className="absolute -bottom-10 right-20 h-32 w-32 -rotate-12 transform bg-white/5" />
+        <View className="absolute bottom-0 start-0 end-0 top-0 overflow-hidden rounded-[24px]">
+          <View className="absolute -bottom-20 -end-10 h-64 w-64 rotate-45 transform bg-white/5" />
+          <View className="absolute bottom-10 -end-4 h-32 w-32 rotate-12 transform bg-white/5" />
+          <View className="absolute -bottom-10 end-20 h-32 w-32 -rotate-12 transform bg-white/5" />
         </View>
 
         <View className="z-10 items-center gap-1">
           {/* Label */}
           <Text className="text-sm font-medium tracking-wide text-slate-300 opacity-90">
-            Total Net Worth
+            {t("total_net_worth")}
           </Text>
           {/* Main Amount */}
           {isLoading ? (
@@ -142,7 +145,7 @@ export function TotalNetWorthCard({
                 color={arrowColor}
               />
               <Text className="text-xs font-bold" style={{ color: arrowColor }}>
-                {monthlyPercentageChangeFormatted} Month
+                {monthlyPercentageChangeFormatted} {t("month")}
               </Text>
             </View>
           )}

@@ -34,7 +34,7 @@ function EmptyIllustration(): React.JSX.Element {
       {/* Background card shell with green left border */}
       <View className="absolute inset-0 rounded-2xl overflow-hidden bg-slate-800 border-l-2 border-l-nileGreen-500">
         {/* Abstract bar chart at bottom — low opacity */}
-        <View className="absolute bottom-0 left-0 right-0 p-4 opacity-20">
+        <View className="absolute bottom-0 start-0 end-0 p-4 opacity-20">
           <View className="flex-row items-end gap-2 h-12">
             <View className="w-4 h-6 rounded-t-sm bg-nileGreen-500" />
             <View className="w-4 h-9 rounded-t-sm bg-nileGreen-500" />
@@ -67,7 +67,7 @@ function EmptyIllustration(): React.JSX.Element {
       </View>
 
       {/* Signal-off icon at top-right corner */}
-      <View className="absolute top-4 right-4 opacity-60">
+      <View className="absolute top-4 end-4 opacity-60">
         <Ionicons
           name="cellular-outline"
           size={24}
@@ -107,7 +107,7 @@ export function LiveRatesEmptyState(): React.JSX.Element {
           size={16}
           color={palette.slate[500]}
         />
-        <Text className="ml-2 text-slate-700 dark:text-slate-300 text-[11px] font-bold tracking-wider">
+        <Text className="ms-2 text-slate-700 dark:text-slate-300 text-[11px] font-bold tracking-wider">
           OFFLINE MODE
         </Text>
       </View>

@@ -116,12 +116,12 @@ export function QuickActionMenu({
             <View key={action.id} className="items-center mb-5">
               <Pressable
                 onPress={() => handlePress(action.route)}
-                className="flex-row items-center bg-slate-800 rounded-full pl-4 pr-1 py-1 shadow-lg shadow-black/40 border border-slate-700"
+                className="flex-row items-center bg-slate-800 rounded-full ps-4 pe-1 py-1 shadow-lg shadow-black/40 border border-slate-700"
                 style={({ pressed }) => ({
                   transform: [{ scale: pressed ? 0.96 : 1 }],
                 })}
               >
-                <Text className="text-white font-medium mr-3 text-sm">
+                <Text className="text-white font-medium me-3 text-sm">
                   {action.label}
                 </Text>
                 <View

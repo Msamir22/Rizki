@@ -15,10 +15,12 @@
  */
 
 import { palette } from "@/constants/colors";
-import { HAS_ONBOARDED_KEY } from "@/constants/storage-keys";
+import { HAS_ONBOARDED_KEY, LANGUAGE_KEY } from "@/constants/storage-keys";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import { getCurrentUserId } from "@/services/supabase";
+import { changeLanguage } from "@/i18n/changeLanguage";
+import { useTranslation } from "react-i18next";
 import type { CurrencyType } from "@astik/db";
 import {
   FontAwesome5,
@@ -28,7 +30,13 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Dimensions,
   StyleSheet,
@@ -40,6 +48,7 @@ import Carousel, { ICarouselInstance } from "react-native-reanimated-carousel";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { CurrencyPickerStep } from "@/components/onboarding/CurrencyPickerStep";
+import { LanguagePickerStep } from "@/components/onboarding/LanguagePickerStep";
 import { WalletCreationStep } from "@/components/onboarding/WalletCreationStep";
 
 // ---------------------------------------------------------------------------
@@ -47,7 +56,11 @@ import { WalletCreationStep } from "@/components/onboarding/WalletCreationStep";
 // ---------------------------------------------------------------------------
 
 /** Determines which screen to render during onboarding. */
-type OnboardingPhase = "carousel" | "currency-picker" | "wallet-creation";
+type OnboardingPhase =
+  | "language-picker"
+  | "carousel"
+  | "currency-picker"
+  | "wallet-creation";
 
 interface OnboardingSlide {
   readonly id: string;
@@ -63,46 +76,46 @@ interface OnboardingSlide {
 
 const { width: PAGE_WIDTH, height: PAGE_HEIGHT } = Dimensions.get("window");
 
-const ONBOARDING_DATA: OnboardingSlide[] = [
-  {
-    id: "1",
-    title: "Track Your Net Worth",
-    description:
-      "Consolidate all your assets—cash, bank accounts, and investments—in one secure dashboard.",
-    icon: (color: string) => (
-      <FontAwesome5 name="wallet" size={80} color={color} />
-    ),
-  },
-  {
-    id: "2",
-    title: "Gold & Silver Analytics",
-    description:
-      "Monitor real-time prices of precious metals and track the value of your physical holdings.",
-    icon: (color: string) => (
-      <MaterialCommunityIcons name="gold" size={90} color={color} />
-    ),
-  },
-  {
-    id: "3",
-    title: "Voice-Powered Tracking",
-    description:
-      "Simply speak to add transactions. AI automatically categorizes and updates your accounts.",
-    icon: (color: string) => (
-      <View
-        className="w-[120px] h-[120px] rounded-full elevation-[10] items-center justify-center shadow-[0_10px_20px]"
-        // eslint-disable-next-line react-native/no-inline-styles
-        style={{
-          backgroundColor: color,
-          shadowColor: color,
-          shadowOpacity: 0.5,
-        }}
-      >
-        <FontAwesome5 name="microphone" size={50} color="white" />
-      </View>
-    ),
-    isSpecial: true,
-  },
-];
+/** Build onboarding slide data with translated strings */
+function getOnboardingSlides(t: (key: string) => string): OnboardingSlide[] {
+  return [
+    {
+      id: "1",
+      title: t("slide_1_title"),
+      description: t("slide_1_description"),
+      icon: (color: string) => (
+        <FontAwesome5 name="wallet" size={80} color={color} />
+      ),
+    },
+    {
+      id: "2",
+      title: t("slide_2_title"),
+      description: t("slide_2_description"),
+      icon: (color: string) => (
+        <MaterialCommunityIcons name="gold" size={90} color={color} />
+      ),
+    },
+    {
+      id: "3",
+      title: t("slide_3_title"),
+      description: t("slide_3_description"),
+      icon: (color: string) => (
+        <View
+          className="w-[120px] h-[120px] rounded-full elevation-[10] items-center justify-center shadow-[0_10px_20px]"
+          // eslint-disable-next-line react-native/no-inline-styles
+          style={{
+            backgroundColor: color,
+            shadowColor: color,
+            shadowOpacity: 0.5,
+          }}
+        >
+          <FontAwesome5 name="microphone" size={50} color="white" />
+        </View>
+      ),
+      isSpecial: true,
+    },
+  ];
+}
 
 // ---------------------------------------------------------------------------
 // Component
@@ -112,11 +125,14 @@ export default function OnboardingScreen(): React.JSX.Element | null {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { theme, isDark } = useTheme();
+  const { t: tOnboarding } = useTranslation("onboarding");
+  const { t: tCommon } = useTranslation("common");
   const carouselRef = useRef<ICarouselInstance>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const slides = useMemo(() => getOnboardingSlides(tOnboarding), [tOnboarding]);
 
   // Phase state machine
-  const [phase, setPhase] = useState<OnboardingPhase>("carousel");
+  const [phase, setPhase] = useState<OnboardingPhase>("language-picker");
   const [selectedCurrency, setSelectedCurrency] = useState<CurrencyType | null>(
     null
   );
@@ -196,13 +212,40 @@ export default function OnboardingScreen(): React.JSX.Element | null {
     }
   }, [isAuthLoading, navigateAfterOnboarding]);
 
+  // Check if language preference exists — skip language picker if so
+  useEffect(() => {
+    const checkLanguagePreference = async (): Promise<void> => {
+      try {
+        const storedLanguage = await AsyncStorage.getItem(LANGUAGE_KEY);
+        if (storedLanguage === "en" || storedLanguage === "ar") {
+          // Language already set, skip to carousel
+          setPhase("carousel");
+        }
+      } catch {
+        // TODO: Replace with structured logging (e.g., Sentry)
+        // On error, default to showing language picker
+      }
+    };
+
+    checkLanguagePreference();
+  }, []);
+
+  /** Called when user selects a language in the language picker phase. */
+  const handleLanguageSelected = useCallback((language: "en" | "ar"): void => {
+    void changeLanguage(language).catch(() => {
+      // TODO: Replace with structured logging (e.g., Sentry)
+      // Continue even if language change fails — English fallback
+    });
+    setPhase("carousel");
+  }, []);
+
   const handleNext = useCallback((): void => {
-    if (currentIndex === ONBOARDING_DATA.length - 1) {
+    if (currentIndex === slides.length - 1) {
       handleCarouselFinish().catch(console.error);
     } else {
       carouselRef.current?.next();
     }
-  }, [currentIndex, handleCarouselFinish]);
+  }, [currentIndex, slides.length, handleCarouselFinish]);
 
   const renderCarouselItem = useCallback(
     ({ item }: { item: OnboardingSlide; index: number }): React.JSX.Element => {
@@ -240,6 +283,13 @@ export default function OnboardingScreen(): React.JSX.Element | null {
       router.replace("/(tabs)");
     }
   }, [phase, selectedCurrency, userId, router]);
+
+  // -----------------------------------------------------------------------
+  // Phase: Language Picker
+  // -----------------------------------------------------------------------
+  if (phase === "language-picker") {
+    return <LanguagePickerStep onLanguageSelected={handleLanguageSelected} />;
+  }
 
   // -----------------------------------------------------------------------
   // Phase: Currency Picker
@@ -285,14 +335,14 @@ export default function OnboardingScreen(): React.JSX.Element | null {
 
       {/* Skip Button */}
       <TouchableOpacity
-        className="absolute p-2 right-6 z-10"
+        className="absolute p-2 end-6 z-10"
         onPress={() => {
           handleCarouselFinish().catch(console.error);
         }}
         style={{ top: insets.top + 16 }}
       >
         <Text className="text-text-secondary dark:text-text-secondary-dark text-base">
-          Skip
+          {tOnboarding("skip")}
         </Text>
       </TouchableOpacity>
 
@@ -303,7 +353,7 @@ export default function OnboardingScreen(): React.JSX.Element | null {
         width={PAGE_WIDTH}
         height={PAGE_HEIGHT * 0.75}
         autoPlay={false}
-        data={ONBOARDING_DATA}
+        data={slides}
         scrollAnimationDuration={500}
         onSnapToItem={(index) => setCurrentIndex(index)}
         renderItem={renderCarouselItem}
@@ -317,14 +367,14 @@ export default function OnboardingScreen(): React.JSX.Element | null {
       >
         {/* Pagination Dots */}
         <View className="flex-row gap-2">
-          {ONBOARDING_DATA.map((_, index) => (
+          {slides.map((_, index) => (
             <View
               className={`h-2 rounded ${
                 currentIndex === index
                   ? "w-6 bg-nileGreen-500"
                   : "w-2 bg-black/10 dark:bg-white/20"
               }`}
-              key={`dot-${ONBOARDING_DATA[index].id}`}
+              key={`dot-${slides[index].id}`}
             />
           ))}
         </View>
@@ -344,11 +394,11 @@ export default function OnboardingScreen(): React.JSX.Element | null {
           activeOpacity={0.8}
         >
           <Text className="text-white font-semibold text-lg">
-            {currentIndex === ONBOARDING_DATA.length - 1
-              ? "Get Started"
-              : "Next"}
+            {currentIndex === slides.length - 1
+              ? tOnboarding("get_started")
+              : tCommon("next")}
           </Text>
-          {currentIndex !== ONBOARDING_DATA.length - 1 && (
+          {currentIndex !== slides.length - 1 && (
             <Ionicons
               name="arrow-forward"
               size={20}

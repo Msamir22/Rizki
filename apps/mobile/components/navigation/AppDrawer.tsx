@@ -42,6 +42,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useDatabase } from "@/providers/DatabaseProvider";
 import { performLogout } from "@/services/logout-service";
+import { useTranslation } from "react-i18next";
 
 // =============================================================================
 // Types
@@ -143,6 +144,8 @@ export function AppDrawer({
   const { isDark, toggleTheme } = useTheme();
   const { user } = useAuth();
   const { profile, isLoading: isProfileLoading } = useProfile();
+  const { t } = useTranslation("settings");
+  const { t: tCommon } = useTranslation("common");
 
   // Derive display properties from raw profile using pure helpers
   const displayName = useMemo(
@@ -194,7 +197,6 @@ export function AppDrawer({
 
       if (result.success) {
         onClose();
-        router.replace("/auth");
         return;
       }
 
@@ -221,7 +223,6 @@ export function AppDrawer({
 
       if (result.success) {
         onClose();
-        router.replace("/auth");
       }
       // If force logout fails, there's not much we can do in the drawer
       // TODO: Replace with structured logging (e.g., Sentry)
@@ -322,7 +323,7 @@ export function AppDrawer({
                         size={22}
                         color={isDark ? palette.slate[300] : palette.slate[600]}
                       />
-                      <Text className="ml-4 text-base text-slate-800 dark:text-white">
+                      <Text className="ms-4 text-base text-slate-800 dark:text-white">
                         {item.label}
                       </Text>
                     </TouchableOpacity>
@@ -344,7 +345,7 @@ export function AppDrawer({
                     size={22}
                     color={isDark ? palette.slate[300] : palette.slate[600]}
                   />
-                  <Text className="ml-4 text-base text-slate-800 dark:text-white">
+                  <Text className="ms-4 text-base text-slate-800 dark:text-white">
                     Dark Mode
                   </Text>
                 </View>
@@ -374,7 +375,7 @@ export function AppDrawer({
                     color={palette.red[400]}
                   />
                 )}
-                <Text className="ml-4 text-base text-red-400">
+                <Text className="ms-4 text-base text-red-400">
                   {isLoggingOut ? "Logging out..." : "Logout"}
                 </Text>
               </TouchableOpacity>
@@ -388,10 +389,10 @@ export function AppDrawer({
         visible={showSyncWarning}
         variant="warning"
         icon="cloud-offline-outline"
-        title="Sync Failed"
-        message="Some data may not have been saved to the cloud. If you proceed, any unsynced data will be lost."
-        confirmLabel="Proceed Anyway"
-        cancelLabel="Cancel"
+        title={t("sync_failed_title")}
+        message={t("sync_failed_message")}
+        confirmLabel={t("proceed_anyway")}
+        cancelLabel={tCommon("cancel")}
         onConfirm={() => {
           handleForceLogout().catch(() => {
             // TODO: Replace with structured logging (e.g., Sentry)

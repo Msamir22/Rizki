@@ -29,6 +29,7 @@ import {
 import { useSync } from "@/providers/SyncProvider";
 import { updateTransaction, updateTransfer } from "@/services";
 import { Ionicons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
@@ -45,6 +46,8 @@ import { ActivityIndicator, SectionList, Text, View } from "react-native";
  */
 export default function TransactionsPlaceholder(): React.JSX.Element {
   const { isDark } = useTheme();
+  const { t } = useTranslation("transactions");
+  const { t: tCommon } = useTranslation("common");
   const [period, setPeriod] = useState<GroupingPeriod>("this_month");
   const [selectedTypes, setSelectedTypes] = useState<TransactionTypeFilter[]>([
     "Income",
@@ -186,16 +189,16 @@ export default function TransactionsPlaceholder(): React.JSX.Element {
       refetch();
       showToast({
         type: "success",
-        title: "Updated",
-        message: "Transaction updated successfully",
+        title: t("update_success"),
+        message: t("update_success_message"),
       });
     } catch (e) {
       console.error(e);
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       showToast({
         type: "error",
-        title: "Error",
-        message: "Failed to update transaction",
+        title: t("update_error"),
+        message: t("update_error_message"),
       });
     }
   };
@@ -276,8 +279,8 @@ export default function TransactionsPlaceholder(): React.JSX.Element {
       // So checking "Edit This" allows proceeding.
       showToast({
         type: "info",
-        title: "Info",
-        message: "Editing template is not yet supported in Quick Edit",
+        title: tCommon("info"),
+        message: t("edit_template_not_supported"),
       });
     } else {
       // Proceed with Quick Edit for "THIS" instance
@@ -469,15 +472,15 @@ export default function TransactionsPlaceholder(): React.JSX.Element {
       refetch();
       showToast({
         type: "success",
-        title: "Deleted Successfully",
-        message: `${selectedItems.length} transaction${selectedItems.length > 1 ? "s" : ""} deleted successfully`,
+        title: t("delete_success"),
+        message: t("delete_success_message", { count: selectedItems.length }),
       });
     } catch (error) {
       console.error("Failed to delete transactions:", error);
       showToast({
         type: "error",
-        title: "Delete Failed",
-        message: "Something went wrong. Please try again.",
+        title: t("delete_failed"),
+        message: t("delete_error_message"),
       });
     }
   };
@@ -498,7 +501,7 @@ export default function TransactionsPlaceholder(): React.JSX.Element {
       <View className="flex-1">
         {/* Header Section */}
         <PageHeader
-          title="Transactions"
+          title={tCommon("transactions")}
           selectionMode={
             isSelectionMode
               ? {
@@ -548,13 +551,13 @@ export default function TransactionsPlaceholder(): React.JSX.Element {
               />
             </View>
             <Text className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2 text-center">
-              No transactions yet
+              {t("no_transactions")}
             </Text>
             <Text className="text-base text-slate-500 dark:text-slate-400 text-center mb-8">
-              Start tracking your spending by adding your first transaction.
+              {t("start_tracking_spending")}
             </Text>
             <Button
-              title="Add Transaction"
+              title={t("add_transaction")}
               onPress={() => router.push("/add-transaction")}
             />
           </View>

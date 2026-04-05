@@ -13,6 +13,7 @@
  */
 
 import { palette } from "@/constants/colors";
+import { getLocaleFontFamily } from "@/constants/typography";
 import { useSync } from "@/providers/SyncProvider";
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
@@ -22,9 +23,11 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from "react-native-reanimated";
+import { useTranslation } from "react-i18next";
 
 export function InitialSyncOverlay(): React.ReactNode {
   const { isInitialSync } = useSync();
+  const { t } = useTranslation("common");
   const opacity = useSharedValue(0);
   const [visible, setVisible] = useState(isInitialSync);
 
@@ -58,8 +61,19 @@ export function InitialSyncOverlay(): React.ReactNode {
     >
       <View style={styles.card}>
         <ActivityIndicator size="large" color={palette.nileGreen[500]} />
-        <Text style={styles.title}>Syncing your data...</Text>
-        <Text style={styles.subtitle}>This may take a few seconds</Text>
+        <Text
+          style={[styles.title, { fontFamily: getLocaleFontFamily().semiBold }]}
+        >
+          {t("syncing_your_data")}
+        </Text>
+        <Text
+          style={[
+            styles.subtitle,
+            { fontFamily: getLocaleFontFamily().regular },
+          ]}
+        >
+          {t("syncing_subtitle")}
+        </Text>
       </View>
     </Animated.View>
   );

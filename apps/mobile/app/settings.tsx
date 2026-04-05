@@ -1,8 +1,10 @@
+import { formatToLocalDateString } from "@/utils/dateHelpers";
 import { palette } from "@/constants/colors";
 import type { CurrencyType } from "@astik/db";
 import { CURRENCY_INFO_MAP } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import { useTranslation } from "react-i18next";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -12,6 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useLocale } from "../context/LocaleContext";
 
 import { CurrencyPicker } from "../components/currency/CurrencyPicker";
 import { GradientBackground } from "../components/ui/GradientBackground";
@@ -20,6 +23,7 @@ import { useTheme } from "../context/ThemeContext";
 import { usePreferredCurrency } from "../hooks/usePreferredCurrency";
 import { useDatabase } from "../providers/DatabaseProvider";
 import { performLogout } from "../services/logout-service";
+import { changeLanguage } from "../i18n/changeLanguage";
 import { useSmsPermission } from "../hooks/useSmsPermission";
 import { useSmsSync } from "../hooks/useSmsSync";
 import { useSmsScanContext } from "../context/SmsScanContext";
@@ -34,6 +38,7 @@ import {
   stopSmsListener,
 } from "../services/sms-live-listener-service";
 import { ConfirmationModal } from "@/components/modals/ConfirmationModal";
+import { Dropdown, type DropdownItem } from "@/components/ui/Dropdown";
 import { useToast } from "@/components/ui/Toast";
 
 /**
@@ -47,7 +52,11 @@ export default function SettingsScreen(): React.JSX.Element {
   const { theme, isDark, toggleTheme } = useTheme();
   const { user } = useAuth();
   const { preferredCurrency, setPreferredCurrency } = usePreferredCurrency();
+  const { t } = useTranslation("settings");
+  const { t: tCommon } = useTranslation("common");
+  const { language } = useLocale();
   const [isCurrencyPickerVisible, setIsCurrencyPickerVisible] = useState(false);
+  const [isLanguageDropdownOpen, setIsLanguageDropdownOpen] = useState(false);
   const {
     status: smsPermissionStatus,
     isAndroid,
@@ -109,7 +118,7 @@ export default function SettingsScreen(): React.JSX.Element {
       if (!isAndroid) {
         showToast({
           type: "info",
-          title: "SMS transaction sync is only available on Android devices.",
+          title: t("sms_android_only"),
         });
         return;
       }
@@ -126,7 +135,14 @@ export default function SettingsScreen(): React.JSX.Element {
         router.push("/sms-scan");
       }
     },
-    [isAndroid, smsPermissionStatus, requestPermission, setScanMode, showToast]
+    [
+      isAndroid,
+      smsPermissionStatus,
+      requestPermission,
+      setScanMode,
+      showToast,
+      t,
+    ]
   );
 
   const handleIncrementalSync = useCallback(async (): Promise<void> => {
@@ -157,8 +173,7 @@ export default function SettingsScreen(): React.JSX.Element {
     if (result.error === "no_network") {
       showToast({
         type: "error",
-        title:
-          "No internet connection. Please check your network and try again.",
+        title: t("no_network_logout"),
       });
       return;
     }
@@ -171,9 +186,9 @@ export default function SettingsScreen(): React.JSX.Element {
     // "unknown" or any other unhandled error
     showToast({
       type: "error",
-      title: "Something went wrong while logging out. Please try again.",
+      title: t("logout_error"),
     });
-  }, [database, showToast]);
+  }, [database, showToast, t]);
 
   const handleForceLogout = useCallback(async (): Promise<void> => {
     setShowSyncWarning(false);
@@ -192,6 +207,13 @@ export default function SettingsScreen(): React.JSX.Element {
     setShowForceLogoutError(true);
   }, [database]);
 
+  const handleLanguageChange = useCallback(
+    async (lang: "en" | "ar"): Promise<void> => {
+      await changeLanguage(lang);
+    },
+    []
+  );
+
   return (
     <GradientBackground className="flex-1">
       {/* Header */}
@@ -200,15 +222,47 @@ export default function SettingsScreen(): React.JSX.Element {
           <Ionicons name="arrow-back" size={24} color={theme.text.primary} />
         </TouchableOpacity>
         <Text className="text-xl font-bold text-slate-900 dark:text-slate-50">
-          Settings
+          {t("title")}
         </Text>
         <View className="w-6" />
       </View>
       <ScrollView contentContainerClassName="px-5">
+        {/* Language Section */}
+        <View className="mb-8">
+          <Text className="text-[13px] font-semibold mb-3 ms-1 uppercase text-slate-500 dark:text-slate-400">
+            {t("language")}
+          </Text>
+
+          <View className="p-4 rounded-2xl bg-white dark:bg-slate-800">
+            <View className="flex-row items-center gap-3">
+              <View className="w-8 bg-blue-600 dark:bg-blue-500 h-8 rounded-lg justify-center items-center">
+                <Ionicons name="language" size={20} color="#FFF" />
+              </View>
+              <View className="flex-1">
+                <Dropdown<string>
+                  label=""
+                  items={
+                    [
+                      { value: "en", label: t("language_english") },
+                      { value: "ar", label: t("language_arabic") },
+                    ] as ReadonlyArray<DropdownItem<string>>
+                  }
+                  value={language}
+                  onChange={(val) => {
+                    handleLanguageChange(val as "en" | "ar").catch(() => {});
+                  }}
+                  isOpen={isLanguageDropdownOpen}
+                  onToggle={() => setIsLanguageDropdownOpen((prev) => !prev)}
+                />
+              </View>
+            </View>
+          </View>
+        </View>
+
         {/* Appearance Section */}
         <View className="mb-8">
-          <Text className="text-[13px] font-semibold mb-3 ml-1 uppercase text-slate-500 dark:text-slate-400">
-            Appearance
+          <Text className="text-[13px] font-semibold mb-3 ms-1 uppercase text-slate-500 dark:text-slate-400">
+            {t("appearance")}
           </Text>
 
           <View className="flex-row items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-800">
@@ -221,7 +275,7 @@ export default function SettingsScreen(): React.JSX.Element {
                 />
               </View>
               <Text className="text-base font-medium text-slate-900 dark:text-slate-50">
-                Dark Mode
+                {t("dark_mode")}
               </Text>
             </View>
             <Switch
@@ -235,8 +289,8 @@ export default function SettingsScreen(): React.JSX.Element {
 
         {/* Currency Section */}
         <View className="mb-8">
-          <Text className="text-[13px] font-semibold mb-3 ml-1 uppercase text-slate-500 dark:text-slate-400">
-            Currency
+          <Text className="text-[13px] font-semibold mb-3 ms-1 uppercase text-slate-500 dark:text-slate-400">
+            {t("currency")}
           </Text>
 
           <TouchableOpacity
@@ -249,7 +303,7 @@ export default function SettingsScreen(): React.JSX.Element {
               </View>
               <View>
                 <Text className="text-base font-medium text-slate-900 dark:text-slate-50">
-                  Preferred Currency
+                  {t("preferred_currency")}
                 </Text>
                 <Text className="text-xs text-slate-500 dark:text-slate-400">
                   {currencyInfo?.name ?? preferredCurrency}
@@ -272,8 +326,8 @@ export default function SettingsScreen(): React.JSX.Element {
         {/* SMS Sync Section (Android only) */}
         {isAndroid && (
           <View className="mb-8">
-            <Text className="text-[13px] font-semibold mb-3 ml-1 uppercase text-slate-500 dark:text-slate-400">
-              SMS Sync
+            <Text className="text-[13px] font-semibold mb-3 ms-1 uppercase text-slate-500 dark:text-slate-400">
+              {t("sms_sync")}
             </Text>
 
             {/* Sync New Messages (incremental) */}
@@ -293,14 +347,18 @@ export default function SettingsScreen(): React.JSX.Element {
                 </View>
                 <View>
                   <Text className="text-base font-medium text-slate-900 dark:text-slate-50">
-                    Sync New Messages
+                    {t("sync_new")}
                   </Text>
                   <Text className="text-xs text-slate-500 dark:text-slate-400">
                     {hasSynced && lastSyncTimestamp
-                      ? `Last synced ${new Date(lastSyncTimestamp).toLocaleDateString()}`
+                      ? t("last_synced", {
+                          date: formatToLocalDateString(
+                            new Date(lastSyncTimestamp)
+                          ),
+                        })
                       : smsPermissionStatus === "granted"
-                        ? "Scan inbox for financial SMS"
-                        : "Grant permission to read SMS"}
+                        ? t("scan_inbox")
+                        : t("grant_sms_permission")}
                   </Text>
                 </View>
               </View>
@@ -317,25 +375,15 @@ export default function SettingsScreen(): React.JSX.Element {
                 onPress={() => {
                   setIsFullRescanModalOpen(true);
                 }}
-                className="flex-row items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-800 mt-0.5"
+                className="flex-row items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-800"
               >
                 <View className="flex-row items-center gap-3">
-                  <View className="w-8 bg-amber-600 dark:bg-amber-500 h-8 rounded-lg justify-center items-center">
-                    <Ionicons
-                      name="refresh"
-                      size={20}
-                      color={palette.slate[25]}
-                    />
+                  <View className="w-8 bg-orange-600 dark:bg-orange-500 h-8 rounded-lg justify-center items-center">
+                    <Ionicons name="refresh" size={20} color="#FFF" />
                   </View>
-                  <View>
-                    <Text className="text-base font-medium text-slate-900 dark:text-slate-50">
-                      Full Re-scan
-                    </Text>
-                    <Text className="text-xs text-slate-500 dark:text-slate-400">
-                      Scan all messages (Previously scanned messages
-                      auto-skipped)
-                    </Text>
-                  </View>
+                  <Text className="text-base font-medium text-slate-900 dark:text-slate-50">
+                    {t("full_rescan")}
+                  </Text>
                 </View>
                 <Ionicons
                   name="chevron-forward"
@@ -350,8 +398,8 @@ export default function SettingsScreen(): React.JSX.Element {
         {/* Live SMS Detection Section (Android only) */}
         {isAndroid && (
           <View className="mb-8">
-            <Text className="text-[13px] font-semibold mb-3 ml-1 uppercase text-slate-500 dark:text-slate-400">
-              Live Detection
+            <Text className="text-[13px] font-semibold mb-3 ms-1 uppercase text-slate-500 dark:text-slate-400">
+              {t("live_detection")}
             </Text>
 
             {/* Live Detection Toggle */}
@@ -362,69 +410,49 @@ export default function SettingsScreen(): React.JSX.Element {
                 </View>
                 <View className="flex-1">
                   <Text className="text-base font-medium text-slate-900 dark:text-slate-50">
-                    Live SMS Detection
+                    {t("live_detection")}
                   </Text>
                   <Text className="text-xs text-slate-500 dark:text-slate-400">
-                    Detect transactions from incoming SMS
+                    {t("auto_detect_description")}
                   </Text>
                 </View>
               </View>
               <Switch
                 value={liveDetection}
-                onValueChange={(v) => {
-                  // TODO: Replace with structured logging (e.g., Sentry)
-                  handleToggleLiveDetection(v).catch(console.error);
-                }}
+                onValueChange={handleToggleLiveDetection}
                 trackColor={{ false: "#767577", true: palette.nileGreen[500] }}
                 thumbColor={liveDetection ? "#FFF" : "#f4f3f4"}
               />
             </View>
 
-            {/* Auto-confirm Toggle (only when live detection is on) */}
-            {liveDetection && (
-              <View className="flex-row items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-800 mt-0.5">
-                <View className="flex-row items-center gap-3 flex-1">
-                  <View className="w-8 bg-sky-600 dark:bg-sky-500 h-8 rounded-lg justify-center items-center">
-                    <Ionicons
-                      name="checkmark-done"
-                      size={20}
-                      color={palette.slate[25]}
-                    />
-                  </View>
-                  <View className="flex-1">
-                    <Text className="text-base font-medium text-slate-900 dark:text-slate-50">
-                      Auto-confirm
-                    </Text>
-                    <Text className="text-xs text-slate-500 dark:text-slate-400">
-                      {autoConfirmSms
-                        ? "Transactions saved automatically"
-                        : "Ask me each time (notification)"}
-                    </Text>
-                  </View>
+            {/* Auto Confirm Toggle */}
+            <View className="flex-row items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-800 mt-0.5">
+              <View className="flex-row items-center gap-3 flex-1">
+                <View className="w-8 bg-indigo-600 dark:bg-indigo-500 h-8 rounded-lg justify-center items-center">
+                  <Ionicons name="checkmark-circle" size={20} color="#FFF" />
                 </View>
-                <Switch
-                  value={autoConfirmSms}
-                  onValueChange={(v) => {
-                    // TODO: Replace with structured logging (e.g., Sentry)
-                    handleToggleAutoConfirm(v).catch(console.error);
-                  }}
-                  trackColor={{
-                    false: "#767577",
-                    true: palette.nileGreen[500],
-                  }}
-                  thumbColor={autoConfirmSms ? "#FFF" : "#f4f3f4"}
-                />
+                <View className="flex-1">
+                  <Text className="text-base font-medium text-slate-900 dark:text-slate-50">
+                    {t("auto_confirm")}
+                  </Text>
+                  <Text className="text-xs text-slate-500 dark:text-slate-400">
+                    {t("auto_confirm_description")}
+                  </Text>
+                </View>
               </View>
-            )}
+              <Switch
+                value={autoConfirmSms}
+                onValueChange={handleToggleAutoConfirm}
+                trackColor={{ false: "#767577", true: palette.nileGreen[500] }}
+                thumbColor={autoConfirmSms ? "#FFF" : "#f4f3f4"}
+              />
+            </View>
           </View>
         )}
 
-        {/* General Section */}
+        {/* Profile & Notifications Section */}
         <View className="mb-8">
-          <Text className="text-[13px] font-semibold mb-3 ml-1 uppercase text-slate-500 dark:text-slate-400">
-            General
-          </Text>
-
+          {/* Profile */}
           <TouchableOpacity className="flex-row items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-800">
             <View className="flex-row items-center gap-3">
               <View className="w-8 dark:bg-[#3b82f6] bg-[#fb923c] h-8 rounded-lg justify-center items-center">
@@ -432,7 +460,7 @@ export default function SettingsScreen(): React.JSX.Element {
               </View>
               <View className="flex-1">
                 <Text className="text-base font-medium text-slate-900 dark:text-slate-50">
-                  Profile
+                  {t("profile")}
                 </Text>
                 {user?.email && (
                   <Text
@@ -452,38 +480,14 @@ export default function SettingsScreen(): React.JSX.Element {
             />
           </TouchableOpacity>
 
+          {/* Notifications */}
           <TouchableOpacity className="flex-row items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-800 mt-0.5">
             <View className="flex-row items-center gap-3">
               <View className="w-8 dark:bg-[#f43f5e] bg-[#fb923c] h-8 rounded-lg justify-center items-center">
                 <Ionicons name="notifications" size={20} color="#FFF" />
               </View>
               <Text className="text-base font-medium text-slate-900 dark:text-slate-50">
-                Notifications
-              </Text>
-            </View>
-            <Ionicons
-              name="chevron-forward"
-              size={20}
-              color={theme.text.secondary}
-            />
-          </TouchableOpacity>
-
-          {/* Logout */}
-          <TouchableOpacity
-            onPress={handleLogoutPress}
-            disabled={isLoggingOut}
-            className="flex-row items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-800 mt-0.5"
-          >
-            <View className="flex-row items-center gap-3">
-              <View className="w-8 bg-red-600 dark:bg-red-500 h-8 rounded-lg justify-center items-center">
-                {isLoggingOut ? (
-                  <ActivityIndicator size={16} color="#FFF" />
-                ) : (
-                  <Ionicons name="log-out-outline" size={20} color="#FFF" />
-                )}
-              </View>
-              <Text className="text-base font-medium text-red-600 dark:text-red-400">
-                {isLoggingOut ? "Logging out..." : "Logout"}
+                {t("notifications")}
               </Text>
             </View>
             <Ionicons
@@ -493,8 +497,32 @@ export default function SettingsScreen(): React.JSX.Element {
             />
           </TouchableOpacity>
         </View>
+
+        {/* Logout */}
+        <TouchableOpacity
+          onPress={handleLogoutPress}
+          className="flex-row items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-800"
+        >
+          <View className="flex-row items-center gap-3">
+            <View className="w-8 dark:bg-red-700 bg-red-600 h-8 rounded-lg justify-center items-center">
+              {isLoggingOut ? (
+                <ActivityIndicator size={16} color="#FFF" />
+              ) : (
+                <Ionicons name="log-out-outline" size={20} color="#FFF" />
+              )}
+            </View>
+            <Text className="text-base font-medium text-red-600 dark:text-red-400">
+              {isLoggingOut ? tCommon("loading") : t("logout")}
+            </Text>
+          </View>
+          <Ionicons
+            name="chevron-forward"
+            size={20}
+            color={theme.text.secondary}
+          />
+        </TouchableOpacity>
       </ScrollView>
-      {/* Full Rescan Confirmation Modal */}
+      {/* {t("full_rescan")} Confirmation Modal */}
       <ConfirmationModal
         visible={isFullRescanModalOpen}
         onConfirm={() => {
@@ -502,9 +530,9 @@ export default function SettingsScreen(): React.JSX.Element {
           navigateToScan("full").catch(console.error);
         }}
         onCancel={() => setIsFullRescanModalOpen(false)}
-        title="Full Re-scan"
-        message="This will scan all SMS messages from scratch. Previously scanned messages will be automatically skipped."
-        confirmLabel="Re-scan"
+        title={t("rescan_title")}
+        message={t("rescan_message")}
+        confirmLabel={t("rescan_confirm")}
         variant="warning"
       />
 
@@ -513,10 +541,10 @@ export default function SettingsScreen(): React.JSX.Element {
         visible={showSyncWarning}
         variant="warning"
         icon="cloud-offline-outline"
-        title="Sync Failed"
-        message="Some data may not have been saved to the cloud. If you proceed, any unsynced data will be lost."
-        confirmLabel="Proceed Anyway"
-        cancelLabel="Cancel"
+        title={t("sync_failed_title")}
+        message={t("sync_failed_message")}
+        confirmLabel={t("proceed_anyway")}
+        cancelLabel={tCommon("cancel")}
         onConfirm={() => {
           // TODO: Replace with structured logging (e.g., Sentry)
           handleForceLogout().catch(console.error);
@@ -528,10 +556,10 @@ export default function SettingsScreen(): React.JSX.Element {
         visible={showForceLogoutError}
         variant="warning"
         icon="alert-circle-outline"
-        title="Logout Failed"
-        message="Could not complete logout. Your data may still be on this device."
-        confirmLabel="Retry"
-        cancelLabel="Cancel"
+        title={t("logout_failed")}
+        message={t("logout_failed_message")}
+        confirmLabel={tCommon("retry")}
+        cancelLabel={tCommon("cancel")}
         onConfirm={() => {
           setShowForceLogoutError(false);
           handleForceLogout().catch(console.error);

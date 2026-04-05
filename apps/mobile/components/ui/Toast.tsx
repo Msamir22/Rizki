@@ -100,7 +100,7 @@ function Toast({ config, onHide }: ToastProps): React.JSX.Element {
     <Animated.View
       entering={SlideInUp.springify().damping(15)}
       exiting={SlideOutUp.springify().damping(15)}
-      className="absolute top-14 left-5 right-5 z-50"
+      className="absolute top-14 start-5 end-5 z-50"
     >
       <View
         className="flex-row items-center px-4 py-3 rounded-2xl border"
@@ -116,7 +116,7 @@ function Toast({ config, onHide }: ToastProps): React.JSX.Element {
         }}
       >
         {/* Icon */}
-        <View className="mr-3">
+        <View className="me-3">
           <Ionicons name={icon} size={24} color={colors.icon} />
         </View>
 

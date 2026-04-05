@@ -25,6 +25,7 @@ import {
   useColorScheme,
   View,
 } from "react-native";
+import { useTranslation } from "react-i18next";
 import { palette } from "@/constants/colors";
 
 // ---------------------------------------------------------------------------
@@ -88,6 +89,7 @@ export function BalanceChangedSheet({
 }: BalanceChangedSheetProps): React.JSX.Element {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
+  const { t } = useTranslation("accounts");
   const [selectedOption, setSelectedOption] =
     useState<BalanceChangeOption>("silent");
 
@@ -102,10 +104,10 @@ export function BalanceChangedSheet({
   const isIncrease = difference > 0;
   const isDecrease = difference < 0;
   const changeLabel = isIncrease
-    ? "Increase"
+    ? t("increase")
     : isDecrease
-      ? "Decrease"
-      : "No Change";
+      ? t("decrease")
+      : t("no_change");
   const changeColor = isIncrease
     ? palette.nileGreen[500]
     : isDecrease
@@ -215,7 +217,7 @@ export function BalanceChangedSheet({
                     }`}
                   >
                     <View
-                      className={`w-5 h-5 rounded-full border-2 mr-3 items-center justify-center ${
+                      className={`w-5 h-5 rounded-full border-2 me-3 items-center justify-center ${
                         selectedOption === "silent"
                           ? "border-nileGreen-500"
                           : "border-slate-300 dark:border-slate-600"
@@ -251,7 +253,7 @@ export function BalanceChangedSheet({
                     }`}
                   >
                     <View
-                      className={`w-5 h-5 rounded-full border-2 mr-3 items-center justify-center ${
+                      className={`w-5 h-5 rounded-full border-2 me-3 items-center justify-center ${
                         selectedOption === "tracked"
                           ? "border-nileGreen-500"
                           : "border-slate-300 dark:border-slate-600"

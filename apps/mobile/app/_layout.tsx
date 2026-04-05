@@ -5,17 +5,27 @@ import {
   Inter_600SemiBold,
   Inter_700Bold,
 } from "@expo-google-fonts/inter";
+import {
+  NotoSansArabic_400Regular,
+  NotoSansArabic_500Medium,
+  NotoSansArabic_600SemiBold,
+  NotoSansArabic_700Bold,
+} from "@expo-google-fonts/noto-sans-arabic";
 import { useFonts } from "expo-font";
-import { router, Stack, useSegments } from "expo-router";
+import { I18nextProvider } from "react-i18next";
+import { router, Stack, useRootNavigation, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState, Platform, type AppStateStatus } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ErrorBoundary } from "../components/ErrorBoundary";
 import { ThemeProvider, useTheme } from "../context/ThemeContext";
+import { LocaleProvider } from "../context/LocaleContext";
+import i18n, { initI18n } from "../i18n";
+
 import "../global.css";
 
 import { ToastProvider } from "../components/ui/Toast";
@@ -50,15 +60,32 @@ export default function RootLayout(): React.ReactNode {
     Inter_500Medium,
     Inter_600SemiBold,
     Inter_700Bold,
+    NotoSansArabic_400Regular,
+    NotoSansArabic_500Medium,
+    NotoSansArabic_600SemiBold,
+    NotoSansArabic_700Bold,
   });
 
-  // Hide splash screen once fonts are loaded
+  const [i18nInitialized, setI18nInitialized] = useState(false);
+
+  // Initialize i18n on mount
   useEffect(() => {
-    if (fontsLoaded || fontError) {
+    initI18n()
+      .then(() => setI18nInitialized(true))
+      .catch((error) => {
+        // TODO: Replace with structured logging (e.g., Sentry)
+        console.error("Failed to initialize i18n:", error);
+        setI18nInitialized(true); // Continue even if i18n fails
+      });
+  }, []);
+
+  // Hide splash screen once fonts and i18n are loaded
+  useEffect(() => {
+    if ((fontsLoaded || fontError) && i18nInitialized) {
       // TODO: Replace with structured logging (e.g., Sentry)
       SplashScreen.hideAsync().catch(console.error);
     }
-  }, [fontsLoaded, fontError]);
+  }, [fontsLoaded, fontError, i18nInitialized]);
 
   // Initialize notifications and live detection lifecycle
   const cleanupRef = useRef<(() => void) | null>(null);
@@ -112,39 +139,46 @@ export default function RootLayout(): React.ReactNode {
     };
   }, [startDetectionIfEnabled]);
 
-  // Don't render until fonts are loaded
-  if (!fontsLoaded && !fontError) {
+  // Don't render until fonts and i18n are loaded
+  if ((!fontsLoaded && !fontError) || !i18nInitialized) {
     return null;
   }
 
   return (
     <ErrorBoundary>
-      <GestureHandlerRootView className="flex-1">
-        <QueryProvider>
-          <DatabaseProvider>
-            <AuthProvider>
-              <SyncProvider>
-                <MarketRatesRealtimeProvider>
-                  <CategoriesProvider>
-                    <SmsScanProvider>
-                      <ThemeProvider>
-                        <SafeAreaProvider>
-                          <ToastProvider>
-                            <AuthGuard>
-                              <RootLayoutNav />
-                              <InitialSyncOverlay />
-                            </AuthGuard>
-                          </ToastProvider>
-                        </SafeAreaProvider>
-                      </ThemeProvider>
-                    </SmsScanProvider>
-                  </CategoriesProvider>
-                </MarketRatesRealtimeProvider>
-              </SyncProvider>
-            </AuthProvider>
-          </DatabaseProvider>
-        </QueryProvider>
-      </GestureHandlerRootView>
+      <I18nextProvider i18n={i18n}>
+        <GestureHandlerRootView
+          className="flex-1"
+          accessibilityLanguage={i18n.language === "ar" ? "ar" : "en"}
+        >
+          <QueryProvider>
+            <DatabaseProvider>
+              <AuthProvider>
+                <SyncProvider>
+                  <MarketRatesRealtimeProvider>
+                    <CategoriesProvider>
+                      <SmsScanProvider>
+                        <LocaleProvider>
+                          <ThemeProvider>
+                            <SafeAreaProvider>
+                              <ToastProvider>
+                                <AuthGuard>
+                                  <RootLayoutNav />
+                                  <InitialSyncOverlay />
+                                </AuthGuard>
+                              </ToastProvider>
+                            </SafeAreaProvider>
+                          </ThemeProvider>
+                        </LocaleProvider>
+                      </SmsScanProvider>
+                    </CategoriesProvider>
+                  </MarketRatesRealtimeProvider>
+                </SyncProvider>
+              </AuthProvider>
+            </DatabaseProvider>
+          </QueryProvider>
+        </GestureHandlerRootView>
+      </I18nextProvider>
     </ErrorBoundary>
   );
 }
@@ -167,26 +201,26 @@ function AuthGuard({
 }): React.ReactNode {
   const { isAuthenticated, isLoading } = useAuth();
   const segments = useSegments();
+  const rootNavigation = useRootNavigation();
   const isPublicRoute = PUBLIC_ROUTES.has(segments[0] ?? "");
 
   useEffect(() => {
-    if (isLoading) {
+    // Wait until auth is resolved AND the navigator is mounted
+    if (isLoading || !rootNavigation?.isReady()) {
       return;
     }
 
     if (!isAuthenticated && !isPublicRoute) {
       router.replace("/auth");
     }
-  }, [isAuthenticated, isLoading, isPublicRoute]);
+  }, [isAuthenticated, isLoading, isPublicRoute, rootNavigation]);
 
   if (isLoading) {
     return null;
   }
 
-  if (!isAuthenticated && !isPublicRoute) {
-    return null;
-  }
-
+  // Always render children so the Stack navigator stays mounted.
+  // The useEffect above handles the redirect once navigation is ready.
   return <>{children}</>;
 }
 

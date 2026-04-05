@@ -1,0 +1,586 @@
+/**
+ * Translation Schema Contract
+ *
+ * Defines the expected shape of translation files for type-safe i18n.
+ * Each namespace has its own interface. The root TranslationResources
+ * interface maps namespace names to their shapes.
+ *
+ * This file serves as a contract — all JSON translation files must
+ * conform to these interfaces.
+ */
+
+/** Supported languages */
+type SupportedLanguage = "en" | "ar";
+
+/**
+ * Plural key suffixes for Arabic (simplified: singular, dual, other).
+ *
+ * NOTE: In the actual JSON files, these are flattened per i18next v4 convention:
+ * `key_one`, `key_two`, `key_other` (NOT nested objects).
+ * This interface documents the expected plural variants for each key.
+ */
+interface PluralKeys {
+  readonly _one: string;
+  readonly _two: string;
+  readonly _other: string;
+}
+
+/** Common namespace — shared across all screens */
+interface CommonTranslations {
+  // Buttons
+  readonly save: string;
+  readonly cancel: string;
+  readonly delete: string;
+  readonly edit: string;
+  readonly add: string;
+  readonly done: string;
+  readonly skip: string;
+  readonly next: string;
+  readonly back: string;
+  readonly confirm: string;
+  readonly retry: string;
+  readonly close: string;
+
+  // Labels
+  readonly loading: string;
+  readonly error: string;
+  readonly success: string;
+  readonly empty_state: string;
+  readonly search: string;
+  readonly no_results: string;
+
+  // Navigation
+  readonly home: string;
+  readonly accounts: string;
+  readonly transactions: string;
+  readonly metals: string;
+  readonly stats: string;
+  readonly settings: string;
+
+  // Errors
+  readonly error_generic: string;
+  readonly error_network: string;
+
+  // Currency
+  readonly currency: string;
+  readonly change_currency: string;
+
+  // Dates (relative)
+  readonly just_now: string;
+  readonly minutes_ago: PluralKeys;
+  readonly hours_ago: PluralKeys;
+  readonly days_ago: PluralKeys;
+
+  // Greetings
+  readonly good_morning: string;
+  readonly good_afternoon: string;
+  readonly good_evening: string;
+
+  // UI
+  readonly open_menu: string;
+  readonly notifications: string;
+  readonly total_net_worth: string;
+  readonly month: string;
+  readonly info: string;
+  readonly select_language: string;
+  readonly select_language_description: string;
+  readonly continue: string;
+  readonly select: string;
+  readonly coming_soon: string;
+  readonly charts_subtitle: string;
+}
+
+/** Transactions namespace */
+interface TransactionsTranslations {
+  readonly add_transaction: string;
+  readonly edit_transaction: string;
+  readonly edit_transfer: string;
+  readonly transaction_count: PluralKeys;
+  readonly delete_success_message: PluralKeys;
+  readonly expense: string;
+  readonly income: string;
+  readonly transfer: string;
+  readonly amount: string;
+  readonly description: string;
+  readonly category: string;
+  readonly date: string;
+  readonly account: string;
+  readonly from_account: string;
+  readonly to_account: string;
+  readonly no_transactions: string;
+  readonly start_tracking_spending: string;
+  readonly confirm_delete: string;
+
+  // Voice input
+  readonly voice_prompt: string;
+  readonly voice_listening: string;
+  readonly voice_processing: string;
+  readonly voice_error: string;
+  readonly voice_review_title: string;
+  readonly voice_what_i_heard: string;
+  readonly voice_retry: string;
+
+  // SMS scanning
+  readonly sms_review_title: string;
+  readonly sms_scan_title: string;
+  readonly sms_scan_instructions: string;
+
+  // Transfers
+  readonly transfer_from: string;
+  readonly transfer_to: string;
+
+  // Update feedback
+  readonly update_success: string;
+  readonly update_success_message: string;
+  readonly update_error: string;
+  readonly update_error_message: string;
+
+  // Delete feedback
+  readonly delete_success: string;
+  readonly delete_failed: string;
+  readonly delete_error_message: string;
+  readonly delete_transaction_title: string;
+  readonly delete_transaction_message: string;
+  readonly delete_transfer_title: string;
+  readonly delete_transfer_message: string;
+
+  // Form
+  readonly edit_template_not_supported: string;
+  readonly new_transaction: string;
+  readonly save: string;
+  readonly save_changes: string;
+  readonly select: string;
+  readonly select_category: string;
+  readonly need_more_accounts: string;
+  readonly need_more_accounts_description: string;
+  readonly no_accounts_found: string;
+  readonly tap_here_to_add_one: string;
+  readonly warning_negative_balance: string;
+  readonly transaction_created: string;
+  readonly transaction_created_message: string;
+  readonly transaction_creation_failed: string;
+  readonly please_select_destination_account: string;
+  readonly please_select_source_account: string;
+  readonly please_select_an_account: string;
+  readonly add_more_details: string;
+  readonly optional_details: string;
+  readonly invalid_amount: string;
+  readonly accounts_must_be_different: string;
+  readonly transaction_not_found: string;
+  readonly transfer_not_found: string;
+
+  // Discard / navigation
+  readonly discard: string;
+  readonly discard_changes_title: string;
+  readonly discard_changes_message: string;
+  readonly back_to_dashboard: string;
+  readonly discard_all: string;
+  readonly discard_all_confirm: string;
+  readonly discard_voice_title: string;
+  readonly discard_voice_message: string;
+  readonly keep_reviewing: string;
+  readonly no_transactions_to_review: string;
+
+  // Convert to transfer
+  readonly converted_to_transfer: string;
+  readonly convert_anyway: string;
+  readonly convert_to_transfer_error: string;
+  readonly convert_error: string;
+
+  // Linked data warnings
+  readonly linked_data_warning_title: string;
+  readonly linked_data_warning_converting: string;
+  readonly linked_data_warning_preserved: string;
+  readonly linked_data_asset: string;
+  readonly linked_data_debt: string;
+  readonly linked_data_recurring: string;
+
+  // Save feedback
+  readonly saved: string;
+  readonly save_error: string;
+  readonly save_partial: string;
+  readonly saved_from_sms: string;
+  readonly failed_to_save_transactions: string;
+
+  // Recurring payments / bills
+  readonly my_bills: string;
+  readonly upcoming_expenses: string;
+  readonly next_7_days: string;
+  readonly this_month: string;
+  readonly tap_to_add_recurring: string;
+  readonly no_status_payments: string;
+  readonly new_recurring_payment: string;
+  readonly add_recurring_payment: string;
+  readonly payment_details: string;
+  readonly schedule: string;
+  readonly frequency: string;
+  readonly linked_account: string;
+  readonly name: string;
+  readonly name_placeholder: string;
+  readonly notes_optional: string;
+  readonly add_notes_placeholder: string;
+  readonly start_date: string;
+  readonly failed_to_create_payment: string;
+  readonly account_not_found: string;
+  readonly cancel: string;
+  readonly received_currency: string;
+}
+
+/** Accounts namespace */
+interface AccountsTranslations {
+  readonly add_account: string;
+  readonly edit_account: string;
+  readonly account_count: PluralKeys;
+  readonly balance: string;
+  readonly account_name: string;
+  readonly account_name_placeholder_cash: string;
+  readonly account_name_placeholder_bank: string;
+  readonly account_name_placeholder_wallet: string;
+  readonly account_type: string;
+  readonly type_cash: string;
+  readonly type_bank: string;
+  readonly type_digital_wallet: string;
+  readonly net_worth: string;
+  readonly total_balance: string;
+  readonly no_accounts: string;
+  readonly initial_balance: string;
+  readonly account_number: string;
+  readonly bank_name: string;
+  readonly add_new_account: string;
+  readonly no_accounts_title: string;
+  readonly no_accounts_message: string;
+  readonly no_accounts_type_title: string;
+  readonly no_accounts_type_message: string;
+  readonly add_account_hero_title: string;
+  readonly add_account_hero_subtitle: string;
+  readonly creating: string;
+  readonly currency: string;
+  readonly account_not_found: string;
+  readonly save_changes: string;
+  readonly saving: string;
+  readonly danger_zone: string;
+  readonly default_account: string;
+  readonly default_account_description: string;
+  readonly delete_account: string;
+  readonly delete_account_warning: string;
+}
+
+/** Settings namespace */
+interface SettingsTranslations {
+  readonly title: string;
+  readonly language: string;
+  readonly language_arabic: string;
+  readonly language_english: string;
+  readonly appearance: string;
+  readonly dark_mode: string;
+  readonly currency: string;
+  readonly preferred_currency: string;
+  readonly profile: string;
+  readonly notifications: string;
+  readonly logout: string;
+  readonly sms_sync: string;
+  readonly sync_new: string;
+  readonly full_rescan: string;
+  readonly live_detection: string;
+  readonly auto_confirm: string;
+  readonly account: string;
+  readonly about: string;
+  readonly version: string;
+  readonly delete_account: string;
+  readonly confirm_logout: string;
+  readonly logout_failed: string;
+  readonly logout_failed_message: string;
+  readonly last_synced: string;
+  readonly scan_inbox: string;
+  readonly grant_sms_permission: string;
+  readonly sms_android_only: string;
+  readonly no_network_logout: string;
+  readonly logout_error: string;
+  readonly auto_detect_description: string;
+  readonly auto_confirm_description: string;
+  readonly rescan_title: string;
+  readonly rescan_message: string;
+  readonly rescan_confirm: string;
+  readonly sync_failed_title: string;
+  readonly sync_failed_message: string;
+  readonly proceed_anyway: string;
+}
+
+/** Onboarding namespace */
+interface OnboardingTranslations {
+  readonly select_language: string;
+  readonly welcome: string;
+  readonly slide_1_title: string;
+  readonly slide_1_description: string;
+  readonly slide_2_title: string;
+  readonly slide_2_description: string;
+  readonly slide_3_title: string;
+  readonly slide_3_description: string;
+  readonly get_started: string;
+  readonly select_currency: string;
+  readonly create_wallet: string;
+  readonly skip: string;
+}
+
+/** Categories namespace — keyed by system_name */
+interface CategoriesTranslations {
+  // Food & Drinks
+  readonly food_drinks: string;
+  readonly groceries: string;
+  readonly restaurant: string;
+  readonly coffee_tea: string;
+  readonly snacks: string;
+  readonly drinks: string;
+  readonly food_other: string;
+
+  // Transportation
+  readonly transportation: string;
+  readonly public_transport: string;
+  readonly private_transport: string;
+  readonly transport_other: string;
+
+  // Vehicle
+  readonly vehicle: string;
+  readonly fuel: string;
+  readonly parking: string;
+  readonly rental: string;
+  readonly license_fees: string;
+  readonly vehicle_tax: string;
+  readonly traffic_fine: string;
+  readonly vehicle_buy: string;
+  readonly vehicle_sell: string;
+  readonly vehicle_maintenance: string;
+  readonly vehicle_other: string;
+
+  // Shopping
+  readonly shopping: string;
+  readonly clothes: string;
+  readonly electronics_appliances: string;
+  readonly accessories: string;
+  readonly footwear: string;
+  readonly bags: string;
+  readonly kids_baby: string;
+  readonly beauty: string;
+  readonly home_garden: string;
+  readonly pets: string;
+  readonly sports_fitness: string;
+  readonly toys_games: string;
+  readonly wedding: string;
+  readonly detergents: string;
+  readonly decorations: string;
+  readonly personal_care: string;
+  readonly shopping_other: string;
+
+  // Health & Medical
+  readonly health_medical: string;
+  readonly doctor: string;
+  readonly medicine: string;
+  readonly surgery: string;
+  readonly dental: string;
+  readonly health_other: string;
+
+  // Utilities & Bills
+  readonly utilities_bills: string;
+  readonly electricity: string;
+  readonly water: string;
+  readonly internet: string;
+  readonly phone: string;
+  readonly gas: string;
+  readonly trash: string;
+  readonly online_subscription: string;
+  readonly streaming: string;
+  readonly taxes: string;
+  readonly utilities_other: string;
+
+  // Entertainment
+  readonly entertainment: string;
+  readonly trips_holidays: string;
+  readonly events: string;
+  readonly tickets: string;
+  readonly entertainment_other: string;
+
+  // Charity
+  readonly charity: string;
+  readonly donations: string;
+  readonly fundraising: string;
+  readonly charity_gifts: string;
+  readonly charity_other: string;
+
+  // Education
+  readonly education: string;
+  readonly books: string;
+  readonly tuition: string;
+  readonly education_fees: string;
+  readonly education_other: string;
+
+  // Housing
+  readonly housing: string;
+  readonly rent: string;
+  readonly housing_maintenance: string;
+  readonly housing_tax: string;
+  readonly housing_buy: string;
+  readonly housing_sell: string;
+  readonly housing_other: string;
+
+  // Travel
+  readonly travel: string;
+  readonly vacation: string;
+  readonly business_travel: string;
+  readonly holiday: string;
+  readonly travel_other: string;
+
+  // Income
+  readonly income: string;
+  readonly salary: string;
+  readonly bonus: string;
+  readonly commission: string;
+  readonly refund: string;
+  readonly loan_income: string;
+  readonly gift_income: string;
+  readonly check: string;
+  readonly rental_income: string;
+  readonly income_other: string;
+
+  // Debt & Loans
+  readonly debt_loans: string;
+  readonly lent_money: string;
+  readonly borrowed_money: string;
+  readonly debt_repayment_paid: string;
+  readonly debt_repayment_received: string;
+  readonly debt_other: string;
+
+  // Assets & Other
+  readonly asset_purchase: string;
+  readonly asset_sale: string;
+  readonly other: string;
+  readonly uncategorized: string;
+
+  // Allow custom categories added by users in future
+  readonly [customCategory: string]: string;
+}
+
+/** Budgets namespace */
+interface BudgetsTranslations {
+  readonly create_budget: string;
+  readonly edit_budget: string;
+  readonly new_budget: string;
+  readonly budgets: string;
+  readonly budget_detail: string;
+  readonly budget_count: PluralKeys;
+  readonly budget_name: string;
+  readonly budget_amount: string;
+  readonly period: string;
+  readonly daily: string;
+  readonly weekly: string;
+  readonly monthly: string;
+  readonly quarterly: string;
+  readonly yearly: string;
+  readonly spent: string;
+  readonly remaining: string;
+  readonly over_budget: string;
+  readonly no_budgets: string;
+  readonly budget_alert: string;
+  readonly budget_threshold: string;
+  readonly categories: string;
+  readonly budget_deleted: string;
+  readonly budget_deleted_hint: string;
+  readonly budget_not_found: string;
+  readonly budget_paused: string;
+  readonly budget_resumed: string;
+  readonly paused: string;
+  readonly resumed: string;
+  readonly load_budget_error: string;
+}
+
+/** Auth namespace */
+interface AuthTranslations {
+  readonly sign_in: string;
+  readonly sign_up: string;
+  readonly email: string;
+  readonly password: string;
+  readonly forgot_password: string;
+  readonly forgot_password_hint: string;
+  readonly continue_as_guest: string;
+  readonly magic_link_sent: string;
+  readonly sign_in_title: string;
+  readonly sign_in_subtitle: string;
+  readonly sign_up_title: string;
+  readonly sign_up_subtitle: string;
+  readonly email_placeholder: string;
+  readonly password_placeholder: string;
+  readonly sign_in_button: string;
+  readonly sign_up_button: string;
+  readonly guest_button: string;
+  readonly account_created: string;
+  readonly signed_in_success: string;
+  readonly verification_email_sent: string;
+  readonly resend_verification_failed: string;
+  readonly reset_email_failed: string;
+}
+
+/** Metals namespace */
+interface MetalsTranslations {
+  readonly live_rates: string;
+  readonly gold: string;
+  readonly silver: string;
+  readonly platinum: string;
+  readonly palladium: string;
+  readonly purity: string;
+  readonly weight: string;
+  readonly value: string;
+  readonly no_rates: string;
+  readonly gram: string;
+  readonly kilogram: string;
+  readonly ounce: string;
+  readonly price_per_gram: string;
+  readonly total_value: string;
+  readonly holdings: string;
+  readonly my_metals: string;
+  readonly add_gold: string;
+  readonly add_silver: string;
+  readonly no_gold_holdings: string;
+  readonly no_silver_holdings: string;
+  readonly add_new_holding: string;
+  readonly name: string;
+  readonly name_placeholder: string;
+  readonly weight_grams: string;
+  readonly weight_placeholder: string;
+  readonly purchase_price_currency: string;
+  readonly purchase_price_placeholder: string;
+  readonly purchase_date: string;
+  readonly form_optional: string;
+  readonly form_coin: string;
+  readonly form_bar: string;
+  readonly form_jewelry: string;
+  readonly error_save_failed: string;
+  readonly add_to_savings: string;
+  readonly holding: PluralKeys;
+}
+
+/** Root translation resources type */
+interface TranslationResources {
+  readonly common: CommonTranslations;
+  readonly transactions: TransactionsTranslations;
+  readonly accounts: AccountsTranslations;
+  readonly settings: SettingsTranslations;
+  readonly onboarding: OnboardingTranslations;
+  readonly categories: CategoriesTranslations;
+  readonly budgets: BudgetsTranslations;
+  readonly auth: AuthTranslations;
+  readonly metals: MetalsTranslations;
+}
+
+export type {
+  SupportedLanguage,
+  PluralKeys,
+  TranslationResources,
+  CommonTranslations,
+  TransactionsTranslations,
+  AccountsTranslations,
+  SettingsTranslations,
+  OnboardingTranslations,
+  CategoriesTranslations,
+  BudgetsTranslations,
+  AuthTranslations,
+  MetalsTranslations,
+};

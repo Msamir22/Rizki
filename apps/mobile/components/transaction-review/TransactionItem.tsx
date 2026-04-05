@@ -25,6 +25,7 @@
 
 import { palette } from "@/constants/colors";
 import type { MatchReason } from "@/services/sms-account-matcher";
+import { formatDate as formatDateHelper } from "@/utils/dateHelpers";
 import { formatCurrency, type ReviewableTransaction } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
 import React, { memo, useCallback, useState } from "react";
@@ -65,12 +66,9 @@ interface TransactionItemProps {
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Format a Date as "dd MMM" */
+/** Format a Date as "dd MMM" using locale-aware helper */
 function formatDate(date: Date): string {
-  return date.toLocaleDateString("en-EG", {
-    day: "2-digit",
-    month: "short",
-  });
+  return formatDateHelper(date, "MMM d");
 }
 
 const BADGE_BG_COLORS: Record<BadgeColor, string> = {
@@ -94,7 +92,7 @@ function TransactionBadge({
 }): React.JSX.Element {
   return (
     <View
-      className={`${BADGE_BG_COLORS[data.color]} px-1.5 py-0.5 rounded ml-2`}
+      className={`${BADGE_BG_COLORS[data.color]} px-1.5 py-0.5 rounded ms-2`}
     >
       <Text
         className={`text-[10px] font-bold ${BADGE_TEXT_COLORS[data.color]}`}
@@ -153,7 +151,7 @@ function TransactionItemInner({
         <TouchableOpacity
           onPress={handleToggle}
           hitSlop={8}
-          className="mr-3"
+          className="me-3"
           activeOpacity={0.7}
         >
           <View
@@ -170,7 +168,7 @@ function TransactionItemInner({
         </TouchableOpacity>
 
         {/* Content */}
-        <View className="flex-1 mr-3">
+        <View className="flex-1 me-3">
           {/* Top row: origin label + amount */}
           <View className="flex-row items-center justify-between mb-1">
             <View className="flex-row items-center flex-shrink">

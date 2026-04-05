@@ -55,7 +55,7 @@ function ActiveSelection({
 
   return (
     <>
-      <TouchableOpacity onPress={selectionMode.onClear} className="mr-3 p-1">
+      <TouchableOpacity onPress={selectionMode.onClear} className="me-3 p-1">
         <Ionicons
           name="close-outline"
           size={28}
@@ -66,7 +66,7 @@ function ActiveSelection({
         {selectionMode.count} Selected
       </Text>
       {selectionMode.onSelectAll && (
-        <TouchableOpacity onPress={selectionMode.onSelectAll} className="mr-4">
+        <TouchableOpacity onPress={selectionMode.onSelectAll} className="me-4">
           <Text className="text-sm font-bold text-nileGreen-600 dark:text-nileGreen-400">
             {isAllSelected ? "Deselect All" : "Select All"}
           </Text>
@@ -88,7 +88,7 @@ function BackButton({
     <TouchableOpacity
       onPress={() => router.back()}
       testID="header-back"
-      className="mr-2 p-1"
+      className="me-2 p-1"
     >
       <Ionicons
         name={backIcon === "close" ? "close-outline" : "arrow-back-outline"}
@@ -110,7 +110,7 @@ function HamburgerButton({
     <TouchableOpacity
       onPress={() => setIsDrawerOpen(true)}
       activeOpacity={0.7}
-      className="mr-3 p-1"
+      className="me-3 p-1"
     >
       <Ionicons
         name="menu-outline"
@@ -198,7 +198,7 @@ export function PageHeader({
           {/* Centered Title */}
           {centerTitle && !shouldShowSelectionMode && (
             <View
-              className="absolute left-0 right-0 h-full items-center justify-center"
+              className="absolute start-0 end-0 h-full items-center justify-center"
               pointerEvents="none"
               style={{ zIndex: -1 }}
             >

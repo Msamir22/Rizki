@@ -18,6 +18,7 @@ import { useTheme } from "@/context/ThemeContext";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useCategories } from "@/hooks/useCategories";
 import { createRecurringPayment } from "@/services/recurring-payment-service";
+import { formatDate as formatLocalizedDate } from "@/utils/dateHelpers";
 import {
   RecurringPaymentValidationErrors,
   validateRecurringPaymentForm,
@@ -29,6 +30,7 @@ import type { DateTimePickerEvent } from "@react-native-community/datetimepicker
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { router } from "expo-router";
 import React, { useCallback, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -62,11 +64,11 @@ interface FormData {
 
 const TYPE_OPTIONS: ReadonlyArray<{
   value: TransactionType;
-  label: string;
+  labelKey: "expense" | "income";
   icon: keyof typeof Ionicons.glyphMap;
 }> = [
-  { value: "EXPENSE", label: "Expense", icon: "receipt-outline" },
-  { value: "INCOME", label: "Income", icon: "cash-outline" },
+  { value: "EXPENSE", labelKey: "expense", icon: "receipt-outline" },
+  { value: "INCOME", labelKey: "income", icon: "cash-outline" },
 ];
 
 const ACTIVE_SHADOW = {
@@ -88,6 +90,7 @@ interface TypeToggleProps {
 
 function TypeToggle({ value, onChange }: TypeToggleProps): React.JSX.Element {
   const { isDark } = useTheme();
+  const { t } = useTranslation("transactions");
 
   return (
     <View className="flex-row mb-6">
@@ -98,7 +101,7 @@ function TypeToggle({ value, onChange }: TypeToggleProps): React.JSX.Element {
             key={option.value}
             onPress={() => onChange(option.value)}
             className={`flex-1 py-3 rounded-full flex-row items-center justify-center border ${
-              index === 0 ? "mr-2" : ""
+              index === 0 ? "me-2" : ""
             } ${
               isSelected
                 ? "bg-nileGreen-700/80 border-nileGreen-500"
@@ -118,11 +121,11 @@ function TypeToggle({ value, onChange }: TypeToggleProps): React.JSX.Element {
               }
             />
             <Text
-              className={`ml-2 font-semibold text-sm ${
+              className={`ms-2 font-semibold text-sm ${
                 isSelected ? "text-white" : "text-slate-400 dark:text-slate-400"
               }`}
             >
-              {option.label}
+              {t(option.labelKey)}
             </Text>
           </TouchableOpacity>
         );
@@ -136,6 +139,8 @@ function TypeToggle({ value, onChange }: TypeToggleProps): React.JSX.Element {
 // =============================================================================
 
 export default function CreateRecurringPaymentScreen(): React.JSX.Element {
+  const { t } = useTranslation("transactions");
+  const { t: tCommon } = useTranslation("common");
   const { isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const { accounts } = useAccounts();
@@ -200,11 +205,7 @@ export default function CreateRecurringPaymentScreen(): React.JSX.Element {
   };
 
   const formatDate = (date: Date): string => {
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
+    return formatLocalizedDate(date, "MMM d, yyyy");
   };
 
   const handleSubmit = async (): Promise<void> => {
@@ -224,8 +225,8 @@ export default function CreateRecurringPaymentScreen(): React.JSX.Element {
     try {
       if (!selectedAccount) {
         showToast({
-          title: "Error",
-          message: "Account not found",
+          title: tCommon("error"),
+          message: t("account_not_found"),
           type: "error",
         });
         return;
@@ -245,10 +246,10 @@ export default function CreateRecurringPaymentScreen(): React.JSX.Element {
       router.back();
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "An unexpected error occurred";
+        error instanceof Error ? error.message : tCommon("error_generic");
       showToast({
         type: "error",
-        title: "Failed to create payment",
+        title: t("failed_to_create_payment"),
         message,
       });
     } finally {
@@ -271,7 +272,7 @@ export default function CreateRecurringPaymentScreen(): React.JSX.Element {
       >
         {/* Header */}
         <PageHeader
-          title="New Recurring Payment"
+          title={t("new_recurring_payment")}
           showBackButton
           backIcon="close"
         />
@@ -294,23 +295,23 @@ export default function CreateRecurringPaymentScreen(): React.JSX.Element {
 
             {/* Payment Details Section */}
             <Text className={`text-base font-semibold mb-3 ${textColor}`}>
-              Payment Details
+              {t("payment_details")}
             </Text>
             <View className="flex-row gap-3 mb-2">
               {/* Name Input */}
               <View className="flex-1">
                 <TextField
-                  label="Name"
+                  label={t("name")}
                   value={formData.name}
                   onChangeText={(name) => updateField("name", name)}
-                  placeholder="Netflix, Spotify..."
+                  placeholder={t("name_placeholder")}
                   error={formErrors.name}
                 />
               </View>
               {/* Amount Input */}
               <View className="w-[130px]">
                 <TextField
-                  label="Amount"
+                  label={t("amount")}
                   value={formData.amount}
                   onChangeText={(amount) => updateField("amount", amount)}
                   placeholder="0.00"
@@ -323,17 +324,19 @@ export default function CreateRecurringPaymentScreen(): React.JSX.Element {
             {/* Currency indicator */}
             {selectedAccount && (
               <Text className={`text-xs mb-4 ${labelColor}`}>
-                Currency: {selectedAccount.currency}
+                {tCommon("currency")}: {selectedAccount.currency}
               </Text>
             )}
 
             {/* Schedule Section */}
             <Text className={`text-base font-semibold mb-3 ${textColor}`}>
-              Schedule
+              {t("schedule")}
             </Text>
 
             {/* Frequency Dropdown */}
-            <Text className={`text-xs mb-2 ${labelColor}`}>Frequency</Text>
+            <Text className={`text-xs mb-2 ${labelColor}`}>
+              {t("frequency")}
+            </Text>
             <TouchableOpacity
               onPress={() => setShowFrequencyModal(true)}
               className={`flex-row items-center justify-between px-4 py-3.5 rounded-xl border mb-4 ${inputBg} ${inputBorder}`}
@@ -349,7 +352,9 @@ export default function CreateRecurringPaymentScreen(): React.JSX.Element {
             </TouchableOpacity>
 
             {/* Start Date */}
-            <Text className={`text-xs mb-2 ${labelColor}`}>Start Date</Text>
+            <Text className={`text-xs mb-2 ${labelColor}`}>
+              {t("start_date")}
+            </Text>
             <TouchableOpacity
               onPress={() => setShowDatePicker(true)}
               className={`flex-row items-center justify-between px-4 py-3.5 rounded-xl border mb-6 ${inputBg} ${inputBorder}`}
@@ -376,7 +381,7 @@ export default function CreateRecurringPaymentScreen(): React.JSX.Element {
 
             {/* Linked Account Section */}
             <Text className={`text-base font-semibold mb-3 ${textColor}`}>
-              Linked Account
+              {t("linked_account")}
             </Text>
             <TouchableOpacity
               onPress={() => setShowAccountModal(true)}
@@ -385,7 +390,7 @@ export default function CreateRecurringPaymentScreen(): React.JSX.Element {
               }`}
             >
               <View className="flex-row items-center">
-                <View className="w-10 h-10 rounded-lg items-center justify-center mr-3 bg-slate-200 dark:bg-slate-700">
+                <View className="w-10 h-10 rounded-lg items-center justify-center me-3 bg-slate-200 dark:bg-slate-700">
                   <Ionicons
                     name="card-outline"
                     size={20}
@@ -394,7 +399,7 @@ export default function CreateRecurringPaymentScreen(): React.JSX.Element {
                 </View>
                 <View>
                   <Text className={`text-sm font-medium ${textColor}`}>
-                    {selectedAccount?.name || "Select Account"}
+                    {selectedAccount?.name || tCommon("select")}
                   </Text>
                   {selectedAccount && (
                     <Text className={`text-xs ${labelColor}`}>
@@ -410,7 +415,7 @@ export default function CreateRecurringPaymentScreen(): React.JSX.Element {
               />
             </TouchableOpacity>
             {formErrors.accountId && (
-              <Text className="text-red-500 text-xs mb-4 ml-1">
+              <Text className="text-red-500 text-xs mb-4 ms-1">
                 {formErrors.accountId}
               </Text>
             )}
@@ -418,7 +423,7 @@ export default function CreateRecurringPaymentScreen(): React.JSX.Element {
 
             {/* Category Section */}
             <Text className={`text-base font-semibold mb-3 ${textColor}`}>
-              Category
+              {t("category")}
             </Text>
             <TouchableOpacity
               onPress={() => setShowCategoryModal(true)}
@@ -427,7 +432,7 @@ export default function CreateRecurringPaymentScreen(): React.JSX.Element {
               }`}
             >
               <Text className={textColor}>
-                {selectedCategory?.displayName || "Select Category"}
+                {selectedCategory?.displayName || t("select_category")}
               </Text>
               <Ionicons
                 name="chevron-down"
@@ -436,7 +441,7 @@ export default function CreateRecurringPaymentScreen(): React.JSX.Element {
               />
             </TouchableOpacity>
             {formErrors.categoryId && (
-              <Text className="text-red-500 text-xs mb-4 ml-1">
+              <Text className="text-red-500 text-xs mb-4 ms-1">
                 {formErrors.categoryId}
               </Text>
             )}
@@ -444,10 +449,10 @@ export default function CreateRecurringPaymentScreen(): React.JSX.Element {
 
             {/* Optional Notes */}
             <TextField
-              label="Notes (Optional)"
+              label={t("notes_optional")}
               value={formData.notes}
               onChangeText={(notes) => updateField("notes", notes)}
-              placeholder="Add notes..."
+              placeholder={t("add_notes_placeholder")}
               multiline
               numberOfLines={3}
               textAlignVertical="top"
@@ -478,7 +483,7 @@ export default function CreateRecurringPaymentScreen(): React.JSX.Element {
               <ActivityIndicator color="white" />
             ) : (
               <Text className="text-white text-base font-bold">
-                Add Recurring Payment
+                {t("add_recurring_payment")}
               </Text>
             )}
           </TouchableOpacity>

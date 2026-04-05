@@ -1,4 +1,4 @@
-import { TextStyle } from "react-native";
+import { TextStyle, I18nManager } from "react-native";
 
 /**
  * Inter Font Family Configuration (using @expo-google-fonts/inter)
@@ -15,6 +15,40 @@ export const fontFamily = {
   semiBold: "Inter_600SemiBold",
   bold: "Inter_700Bold",
 } as const;
+
+/**
+ * Noto Sans Arabic Font Family Configuration (using @expo-google-fonts/noto-sans-arabic)
+ *
+ * Usage: Same weight categories as Inter, but for Arabic text
+ */
+export const arabicFontFamily = {
+  regular: "NotoSansArabic_400Regular",
+  medium: "NotoSansArabic_500Medium",
+  semiBold: "NotoSansArabic_600SemiBold",
+  bold: "NotoSansArabic_700Bold",
+} as const;
+
+/**
+ * Shared font family shape for locale-specific font selection.
+ */
+export interface FontFamily {
+  readonly regular: string;
+  readonly medium: string;
+  readonly semiBold: string;
+  readonly bold: string;
+}
+
+/**
+ * Get locale-appropriate font family based on current RTL state.
+ *
+ * This function automatically returns the correct font family (Inter for LTR,
+ * Noto Sans Arabic for RTL) based on the current I18nManager state.
+ *
+ * @returns Font family object for the current locale
+ */
+export function getLocaleFontFamily(): FontFamily {
+  return I18nManager.isRTL ? arabicFontFamily : fontFamily;
+}
 
 /**
  * Font Weights mapped to Inter font family names
