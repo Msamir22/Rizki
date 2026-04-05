@@ -1,4 +1,16 @@
-const SHORT_MONTHS = [
+import i18n from "../i18n";
+
+/**
+ * Get the current language from i18next instance.
+ * Returns 'en' or 'ar' with proper type safety.
+ */
+function getCurrentLanguage(): "en" | "ar" {
+  const instance = i18n as unknown as { language: string };
+  const lang = instance.language;
+  return lang === "ar" ? "ar" : "en";
+}
+
+const SHORT_MONTHS_EN = [
   "Jan",
   "Feb",
   "Mar",
@@ -13,7 +25,7 @@ const SHORT_MONTHS = [
   "Dec",
 ];
 
-const FULL_MONTHS = [
+const FULL_MONTHS_EN = [
   "January",
   "February",
   "March",
@@ -28,7 +40,7 @@ const FULL_MONTHS = [
   "December",
 ];
 
-const DAYS = [
+const DAYS_EN = [
   "Sunday",
   "Monday",
   "Tuesday",
@@ -38,11 +50,72 @@ const DAYS = [
   "Saturday",
 ];
 
+const SHORT_MONTHS_AR = [
+  "يناير",
+  "فبراير",
+  "مارس",
+  "أبريل",
+  "مايو",
+  "يونيو",
+  "يوليو",
+  "أغسطس",
+  "سبتمبر",
+  "أكتوبر",
+  "نوفمبر",
+  "ديسمبر",
+];
+
+const FULL_MONTHS_AR = [
+  "يناير",
+  "فبراير",
+  "مارس",
+  "أبريل",
+  "مايو",
+  "يونيو",
+  "يوليو",
+  "أغسطس",
+  "سبتمبر",
+  "أكتوبر",
+  "نوفمبر",
+  "ديسمبر",
+];
+
+const DAYS_AR = [
+  "الأحد",
+  "الإثنين",
+  "الثلاثاء",
+  "الأربعاء",
+  "الخميس",
+  "الجمعة",
+  "السبت",
+];
+
+// Get localized month and day names based on current language
+function getShortMonths(): string[] {
+  return getCurrentLanguage() === "ar" ? SHORT_MONTHS_AR : SHORT_MONTHS_EN;
+}
+
+function getFullMonths(): string[] {
+  return getCurrentLanguage() === "ar" ? FULL_MONTHS_AR : FULL_MONTHS_EN;
+}
+
+function getDays(): string[] {
+  return getCurrentLanguage() === "ar" ? DAYS_AR : DAYS_EN;
+}
+
 const DEFAULT_DATE_LOCALE = "en-EG";
-const LOCAL_DATE_FORMAT_OPTIONS: Intl.DateTimeFormatOptions = {
+const ARABIC_DATE_LOCALE = "ar-EG";
+const LOCAL_DATE_FORMAT_OPTIONS_EN: Intl.DateTimeFormatOptions = {
   weekday: "short",
   day: "2-digit",
   month: "short",
+  year: "numeric",
+};
+
+const LOCAL_DATE_FORMAT_OPTIONS_AR: Intl.DateTimeFormatOptions = {
+  weekday: "long",
+  day: "2-digit",
+  month: "long",
   year: "numeric",
 };
 
@@ -127,10 +200,20 @@ export function getDaysUntil(date: Date): number {
 
 export function getDueText(date: Date): string {
   const days = getDaysUntil(date);
-  if (days < 0) return `${Math.abs(days)}d overdue`;
-  if (days === 0) return "Due today";
-  if (days === 1) return "Due tomorrow";
-  return `Due in ${days} days`;
+  const isArabic = getCurrentLanguage() === "ar";
+
+  if (days < 0) {
+    return isArabic
+      ? `متأخر ${Math.abs(days)} أيام`
+      : `${Math.abs(days)}d overdue`;
+  }
+  if (days === 0) {
+    return isArabic ? "اليوم" : "Due today";
+  }
+  if (days === 1) {
+    return isArabic ? "غداً" : "Due tomorrow";
+  }
+  return isArabic ? `خلال ${days} أيام` : `Due in ${days} days`;
 }
 
 export function calculateDaysUntilDue(dueDate: Date): number {
@@ -155,35 +238,53 @@ export function isDateInCurrentMonth(date: Date): boolean {
 }
 
 export function formatDate(date: Date, format: DateFormat): string {
+  const shortMonths = getShortMonths();
+  const fullMonths = getFullMonths();
+  const days = getDays();
+
   switch (format) {
     case "MMM d, yyyy":
-      return `${SHORT_MONTHS[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+      return `${shortMonths[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
     case "EEEE, MMM d":
-      return `${DAYS[date.getDay()]}, ${SHORT_MONTHS[date.getMonth()]} ${date.getDate()}`;
+      return `${days[date.getDay()]}, ${shortMonths[date.getMonth()]} ${date.getDate()}`;
     case "MMM d":
-      return `${SHORT_MONTHS[date.getMonth()]} ${date.getDate()}`;
+      return `${shortMonths[date.getMonth()]} ${date.getDate()}`;
     case "MMMM yyyy":
-      return `${FULL_MONTHS[date.getMonth()]} ${date.getFullYear()}`;
+      return `${fullMonths[date.getMonth()]} ${date.getFullYear()}`;
     default:
       return date.toDateString();
   }
 }
 
 /** Format a Date as a readable string */
-export function formatToLocalDateString(
-  date: Date,
-  locale: string = DEFAULT_DATE_LOCALE
-): string {
-  return date.toLocaleDateString(locale, LOCAL_DATE_FORMAT_OPTIONS);
+export function formatToLocalDateString(date: Date, locale?: string): string {
+  const currentLocale =
+    locale ||
+    (getCurrentLanguage() === "ar" ? ARABIC_DATE_LOCALE : DEFAULT_DATE_LOCALE);
+  const formatOptions =
+    getCurrentLanguage() === "ar"
+      ? LOCAL_DATE_FORMAT_OPTIONS_AR
+      : LOCAL_DATE_FORMAT_OPTIONS_EN;
+  return date.toLocaleDateString(currentLocale, formatOptions);
 }
 
 export function formatTimeAgo(date: Date): string {
   const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+  const isArabic = getCurrentLanguage() === "ar";
 
-  if (seconds < 60) return "just now";
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-  return `${Math.floor(seconds / 86400)}d ago`;
+  if (seconds < 60) {
+    return isArabic ? "الآن" : "just now";
+  }
+  if (seconds < 3600) {
+    const minutes = Math.floor(seconds / 60);
+    return isArabic ? `منذ ${minutes} د` : `${minutes}m ago`;
+  }
+  if (seconds < 86400) {
+    const hours = Math.floor(seconds / 3600);
+    return isArabic ? `منذ ${hours} س` : `${hours}h ago`;
+  }
+  const days = Math.floor(seconds / 86400);
+  return isArabic ? `منذ ${days} يوم` : `${days}d ago`;
 }
 
 /**
