@@ -15,10 +15,11 @@
  */
 
 import { palette } from "@/constants/colors";
-import { HAS_ONBOARDED_KEY } from "@/constants/storage-keys";
+import { HAS_ONBOARDED_KEY, LANGUAGE_KEY } from "@/constants/storage-keys";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import { getCurrentUserId } from "@/services/supabase";
+import { changeLanguage } from "@/i18n/changeLanguage";
 import type { CurrencyType } from "@astik/db";
 import {
   FontAwesome5,
@@ -40,6 +41,7 @@ import Carousel, { ICarouselInstance } from "react-native-reanimated-carousel";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { CurrencyPickerStep } from "@/components/onboarding/CurrencyPickerStep";
+import { LanguagePickerStep } from "@/components/onboarding/LanguagePickerStep";
 import { WalletCreationStep } from "@/components/onboarding/WalletCreationStep";
 
 // ---------------------------------------------------------------------------
@@ -47,7 +49,11 @@ import { WalletCreationStep } from "@/components/onboarding/WalletCreationStep";
 // ---------------------------------------------------------------------------
 
 /** Determines which screen to render during onboarding. */
-type OnboardingPhase = "carousel" | "currency-picker" | "wallet-creation";
+type OnboardingPhase =
+  | "language-picker"
+  | "carousel"
+  | "currency-picker"
+  | "wallet-creation";
 
 interface OnboardingSlide {
   readonly id: string;
@@ -116,7 +122,7 @@ export default function OnboardingScreen(): React.JSX.Element | null {
   const [currentIndex, setCurrentIndex] = useState(0);
 
   // Phase state machine
-  const [phase, setPhase] = useState<OnboardingPhase>("carousel");
+  const [phase, setPhase] = useState<OnboardingPhase>("language-picker");
   const [selectedCurrency, setSelectedCurrency] = useState<CurrencyType | null>(
     null
   );
@@ -196,6 +202,34 @@ export default function OnboardingScreen(): React.JSX.Element | null {
     }
   }, [isAuthLoading, navigateAfterOnboarding]);
 
+  // Check if language preference exists — skip language picker if so
+  useEffect(() => {
+    const checkLanguagePreference = async (): Promise<void> => {
+      try {
+        const storedLanguage = await AsyncStorage.getItem(LANGUAGE_KEY);
+        if (storedLanguage === "en" || storedLanguage === "ar") {
+          // Language already set, skip to carousel
+          setPhase("carousel");
+        }
+      } catch (error) {
+        // TODO: Replace with structured logging (e.g., Sentry)
+        console.error("Failed to check language preference:", error);
+        // On error, default to showing language picker
+      }
+    };
+
+    checkLanguagePreference();
+  }, []);
+
+  /** Called when user selects a language in the language picker phase. */
+  const handleLanguageSelected = useCallback(
+    async (language: "en" | "ar"): Promise<void> => {
+      await changeLanguage(language);
+      setPhase("carousel");
+    },
+    []
+  );
+
   const handleNext = useCallback((): void => {
     if (currentIndex === ONBOARDING_DATA.length - 1) {
       handleCarouselFinish().catch(console.error);
@@ -242,6 +276,13 @@ export default function OnboardingScreen(): React.JSX.Element | null {
   }, [phase, selectedCurrency, userId, router]);
 
   // -----------------------------------------------------------------------
+  // Phase: Language Picker
+  // -----------------------------------------------------------------------
+  if (phase === "language-picker") {
+    return <LanguagePickerStep onLanguageSelected={handleLanguageSelected} />;
+  }
+
+  // -----------------------------------------------------------------------
   // Phase: Currency Picker
   // -----------------------------------------------------------------------
   if (phase === "currency-picker") {
@@ -285,7 +326,7 @@ export default function OnboardingScreen(): React.JSX.Element | null {
 
       {/* Skip Button */}
       <TouchableOpacity
-        className="absolute p-2 right-6 z-10"
+        className="absolute p-2 end-6 z-10"
         onPress={() => {
           handleCarouselFinish().catch(console.error);
         }}

@@ -50,5 +50,8 @@
   "notifications": "Notifications",
   "total_net_worth": "Total Net Worth",
   "month": "Month",
-  "info": "Info"
+  "info": "Info",
+  "select_language": "Select Your Language",
+  "select_language_description": "Choose your preferred language to continue",
+  "continue": "Continue"
 }

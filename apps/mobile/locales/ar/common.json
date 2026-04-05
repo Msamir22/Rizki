@@ -50,5 +50,8 @@
   "notifications": "الإشعارات",
   "total_net_worth": "إجمالي صافي الثروة",
   "month": "شهر",
-  "info": "معلومات"
+  "info": "معلومات",
+  "select_language": "اختر لغتك",
+  "select_language_description": "اختر لغتك المفضلة للمتابعة",
+  "continue": "متابعة"
 }
