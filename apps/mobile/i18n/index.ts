@@ -1,5 +1,4 @@
-/* eslint-disable import/no-named-as-default-member */
-import i18next, { type InitOptions } from "i18next";
+import i18next, { type InitOptions, type Resource } from "i18next";
 import { initReactI18next } from "react-i18next";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Localization from "expo-localization";
@@ -35,7 +34,7 @@ import arCategories from "../locales/ar/categories.json";
  * - Type-safe translation keys via TypeScript module augmentation
  * - Fallback to English for missing keys
  */
-const resources = {
+const resources: Resource = {
   en: {
     common: enCommon,
     transactions: enTransactions,
