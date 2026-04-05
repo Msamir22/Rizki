@@ -27,21 +27,15 @@
   "error_network": "خطأ في الشبكة. يرجى التحقق من اتصالك.",
   "currency": "العملة",
   "just_now": "الآن",
-  "minutes_ago": {
-    "_one": "منذ دقيقة",
-    "_two": "منذ دقيقتين",
-    "_other": "منذ {{count}} دقائق"
-  },
-  "hours_ago": {
-    "_one": "منذ ساعة",
-    "_two": "منذ ساعتين",
-    "_other": "منذ {{count}} ساعات"
-  },
-  "days_ago": {
-    "_one": "منذ يوم",
-    "_two": "منذ يومين",
-    "_other": "منذ {{count}} أيام"
-  },
+  "minutes_ago_one": "منذ دقيقة",
+  "minutes_ago_two": "منذ دقيقتين",
+  "minutes_ago_other": "منذ {{count}} دقائق",
+  "hours_ago_one": "منذ ساعة",
+  "hours_ago_two": "منذ ساعتين",
+  "hours_ago_other": "منذ {{count}} ساعات",
+  "days_ago_one": "منذ يوم",
+  "days_ago_two": "منذ يومين",
+  "days_ago_other": "منذ {{count}} أيام",
   "good_morning": "صباح الخير",
   "good_afternoon": "طاب مساؤك",
   "good_evening": "مساء الخير",

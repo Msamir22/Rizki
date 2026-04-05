@@ -15,6 +15,7 @@
 import type { SupportedLanguage } from "@/i18n/changeLanguage";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { getLocales } from "expo-localization";
 import { useTranslation } from "react-i18next";
 import React, { useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -64,7 +65,10 @@ export function LanguagePickerStep({
   const insets = useSafeAreaInsets();
   const { theme, isDark } = useTheme();
   const { t } = useTranslation("common");
-  const [selectedCode, setSelectedCode] = useState<SupportedLanguage>("en");
+  const deviceLanguage = getLocales()[0]?.languageCode;
+  const [selectedCode, setSelectedCode] = useState<SupportedLanguage>(
+    deviceLanguage === "ar" ? "ar" : "en"
+  );
 
   const handleSelect = (code: SupportedLanguage): void => {
     setSelectedCode(code);

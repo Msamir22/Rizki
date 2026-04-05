@@ -254,21 +254,20 @@ export function formatToLocalDateString(date: Date, locale?: string): string {
 
 export function formatTimeAgo(date: Date): string {
   const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
-  const isArabic = getCurrentLanguage() === "ar";
 
   if (seconds < 60) {
-    return isArabic ? "الآن" : "just now";
+    return i18n.t("common:just_now");
   }
   if (seconds < 3600) {
     const minutes = Math.floor(seconds / 60);
-    return isArabic ? `منذ ${minutes} د` : `${minutes}m ago`;
+    return i18n.t("common:minutes_ago", { count: minutes });
   }
   if (seconds < 86400) {
     const hours = Math.floor(seconds / 3600);
-    return isArabic ? `منذ ${hours} س` : `${hours}h ago`;
+    return i18n.t("common:hours_ago", { count: hours });
   }
   const days = Math.floor(seconds / 86400);
-  return isArabic ? `منذ ${days} يوم` : `${days}d ago`;
+  return i18n.t("common:days_ago", { count: days });
 }
 
 /**

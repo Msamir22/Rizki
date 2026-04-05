@@ -12,7 +12,13 @@
 /** Supported languages */
 type SupportedLanguage = "en" | "ar";
 
-/** Plural key suffixes for Arabic (simplified: singular, dual, other) */
+/**
+ * Plural key suffixes for Arabic (simplified: singular, dual, other).
+ *
+ * NOTE: In the actual JSON files, these are flattened per i18next v4 convention:
+ * `key_one`, `key_two`, `key_other` (NOT nested objects).
+ * This interface documents the expected plural variants for each key.
+ */
 interface PluralKeys {
   readonly _one: string;
   readonly _two: string;

@@ -27,21 +27,12 @@
   "error_network": "Network error. Please check your connection.",
   "currency": "Currency",
   "just_now": "Just now",
-  "minutes_ago": {
-    "_one": "1 minute ago",
-    "_two": "2 minutes ago",
-    "_other": "{{count}} minutes ago"
-  },
-  "hours_ago": {
-    "_one": "1 hour ago",
-    "_two": "2 hours ago",
-    "_other": "{{count}} hours ago"
-  },
-  "days_ago": {
-    "_one": "1 day ago",
-    "_two": "2 days ago",
-    "_other": "{{count}} days ago"
-  },
+  "minutes_ago_one": "1 minute ago",
+  "minutes_ago_other": "{{count}} minutes ago",
+  "hours_ago_one": "1 hour ago",
+  "hours_ago_other": "{{count}} hours ago",
+  "days_ago_one": "1 day ago",
+  "days_ago_other": "{{count}} days ago",
   "good_morning": "Good Morning",
   "good_afternoon": "Good Afternoon",
   "good_evening": "Good Evening",
