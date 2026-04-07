@@ -40,6 +40,11 @@ export function DrilldownCategoryItem({
       onPress={onPress}
       disabled={!hasChildren}
       className="flex-row items-center py-2"
+      accessible
+      accessibilityRole={hasChildren ? "button" : "text"}
+      accessibilityLabel={`${category.displayName}, ${formatCurrency({ amount: category.amount, currency: preferredCurrency })}, ${category.percentage.toFixed(1)}%`}
+      accessibilityHint={hasChildren ? "Tap to drill down" : undefined}
+      accessibilityState={{ disabled: !hasChildren }}
     >
       <View
         className="w-3 h-3 rounded-full me-3"

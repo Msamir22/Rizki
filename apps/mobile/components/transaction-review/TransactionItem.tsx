@@ -146,6 +146,11 @@ function TransactionItemInner({
         onPress={handlePress}
         className="flex-row items-center p-4"
         activeOpacity={0.7}
+        accessible
+        accessibilityRole="button"
+        accessibilityLabel={`${transaction.originLabel}, ${isExpense ? "expense" : "income"} ${transaction.amount} ${transaction.currency}, ${counterpartyText ?? ""}, ${transaction.categoryDisplayName}${accountName ? `, ${accountName}` : ""}`}
+        accessibilityHint="Tap to edit this transaction"
+        accessibilityState={{ selected: isSelected }}
       >
         {/* Checkbox */}
         <TouchableOpacity
