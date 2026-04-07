@@ -23,6 +23,7 @@
   "budget_threshold": "تنبيه عندما أنفق أكثر من",
   "categories": "الفئات",
   "budget_deleted": "تم حذف الميزانية",
+  "budget_delete_failed": "فشل حذف الميزانية. يرجى المحاولة مرة أخرى.",
   "budget_deleted_hint": "تمت إزالة الميزانية",
   "budget_not_found": "لم يتم العثور على الميزانية",
   "budget_paused": "تم إيقاف الميزانية",

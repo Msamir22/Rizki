@@ -84,13 +84,25 @@ export default function BudgetDetailScreen(): React.JSX.Element {
             });
             break;
           case "delete":
-            await deleteBudget(budget.id);
-            showToast({
-              type: "success",
-              title: tCommon("delete"),
-              message: t("budget_deleted"),
-            });
-            router.back();
+            try {
+              await deleteBudget(budget.id);
+              showToast({
+                type: "success",
+                title: tCommon("delete"),
+                message: t("budget_deleted"),
+              });
+              router.back();
+            } catch (deleteErr) {
+              // Close the actions sheet so the error toast is clearly visible
+              setShowActions(false);
+              showToast({
+                type: "error",
+                title: tCommon("error"),
+                message: t("budget_delete_failed"),
+              });
+              // TODO: Replace with structured logging (e.g., Sentry)
+              console.error("Failed to delete budget:", deleteErr);
+            }
             break;
         }
       } catch (err) {
