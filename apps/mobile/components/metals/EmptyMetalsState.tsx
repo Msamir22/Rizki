@@ -23,7 +23,7 @@ import {
 } from "react-native";
 
 import { palette } from "@/constants/colors";
-import EMPTY_ILLUSTRATION from "@/assets/images/empty-metals.png";
+import EMPTY_ILLUSTRATION from "@/assets/images/empty-metals.jpg";
 
 // ---------------------------------------------------------------------------
 // Types
