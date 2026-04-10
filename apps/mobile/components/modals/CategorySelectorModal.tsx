@@ -30,6 +30,7 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from "react-native-reanimated";
+import { useTranslation } from "react-i18next";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -79,6 +80,7 @@ export function CategorySelectorModal({
 }: CategorySelectorModalProps): React.JSX.Element {
   const { isDark } = useTheme();
   const { width, height } = useWindowDimensions();
+  const { t } = useTranslation("common");
 
   // Navigation state machine
   const navigation = useCategoryNavigation();
@@ -226,7 +228,7 @@ export function CategorySelectorModal({
               {/* Header */}
               <View className="flex-row justify-between items-center px-6 py-5 border-b border-slate-200 dark:border-slate-800">
                 <Text className="text-xl font-bold text-slate-800 dark:text-slate-100">
-                  Select Category
+                  {t("select_category_modal")}
                 </Text>
                 <TouchableOpacity onPress={handleClose} className="p-1">
                   <Ionicons

@@ -38,5 +38,13 @@
 
   "start_tracking_metals": "Start Tracking Your Metals",
   "empty_metals_description": "Add your gold and silver holdings to track their value in real-time.",
-  "empty_illustration_label": "Empty metals illustration"
+  "empty_illustration_label": "Empty metals illustration",
+
+  "gold_label": "Gold",
+  "rates_unavailable": "Rates unavailable",
+  "pull_to_refresh_offline": "Pull down to refresh when you're back online",
+  "offline_mode": "OFFLINE MODE",
+  "live_badge": "Live",
+  "silver_label": "Silver:",
+  "total_metals_value": "Total Metals Value"
 }

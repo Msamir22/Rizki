@@ -17,6 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import React, { useCallback, useState } from "react";
 import { Pressable, Text, View } from "react-native";
+import { useTranslation } from "react-i18next";
 
 import type { CurrencyType } from "@astik/db";
 import { formatCurrency } from "@astik/logic";
@@ -74,6 +75,7 @@ export function MetalsHeroCard({
   profitLossPercent,
   currency,
 }: MetalsHeroCardProps): React.JSX.Element {
+  const { t } = useTranslation("metals");
   const { isDark } = useTheme();
   const [showTooltip, setShowTooltip] = useState(false);
 
@@ -119,7 +121,7 @@ export function MetalsHeroCard({
       <View className="items-center py-8 px-6">
         {/* Label */}
         <Text className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">
-          Total Metals Value
+          {t("total_metals_value")}
         </Text>
 
         {/* Total Value */}

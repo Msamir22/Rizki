@@ -12,6 +12,7 @@ import {
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
 import { Account } from "@astik/db";
+import { useTranslation } from "react-i18next";
 
 interface AccountSelectorModalProps {
   visible: boolean;
@@ -29,6 +30,7 @@ export function AccountSelectorModal({
   onClose,
 }: AccountSelectorModalProps): React.JSX.Element {
   const { isDark } = useTheme();
+  const { t } = useTranslation("common");
 
   return (
     <Modal
@@ -51,7 +53,7 @@ export function AccountSelectorModal({
               {/* Header */}
               <View className="flex-row justify-between items-center px-6 py-5 border-b border-slate-200 dark:border-slate-800">
                 <Text className="text-xl font-bold text-slate-800 dark:text-slate-100">
-                  Select Account
+                  {t("select_account_modal")}
                 </Text>
                 <TouchableOpacity onPress={onClose} className="p-1">
                   <Ionicons

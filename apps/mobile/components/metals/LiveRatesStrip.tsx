@@ -16,6 +16,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { Text, View, type ViewStyle } from "react-native";
+import { useTranslation } from "react-i18next";
 
 import { getChangeColor, getChangeIcon } from "@/utils/profit-loss-helpers";
 
@@ -65,6 +66,7 @@ export function LiveRatesStrip({
   silverChangePercent,
   bottomInset = 0,
 }: LiveRatesStripProps): React.JSX.Element {
+  const { t } = useTranslation("metals");
   const goldPerOz = goldPricePerGramUsd * TROY_OUNCE_GRAMS;
   const goldColor = getChangeColor(goldChangePercent);
   const silverColor = getChangeColor(silverChangePercent);
@@ -98,7 +100,7 @@ export function LiveRatesStrip({
       {/* Silver Price */}
       <View className="flex-row items-center">
         <Text className="text-xs text-slate-500 dark:text-slate-400 me-1">
-          Silver:
+          {t("silver_label")}
         </Text>
         <Text className="text-xs font-bold text-slate-800 dark:text-white me-1">
           ${silverPricePerGramUsd.toFixed(2)}/g

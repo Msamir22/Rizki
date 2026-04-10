@@ -42,5 +42,13 @@
 
   "start_tracking_metals": "ابدأ بتتبع معادني",
   "empty_metals_description": "أضف مقتنياتك من الذهب والفضة لتتبع قيمتها لحظياً.",
-  "empty_illustration_label": "رسم توضيحي لغياب المعادن"
+  "empty_illustration_label": "رسم توضيحي لغياب المعادن",
+
+  "gold_label": "الذهب",
+  "rates_unavailable": "الأسعار غير متوفرة",
+  "pull_to_refresh_offline": "اسحب للأسفل للتحديث عند عودة الاتصال",
+  "offline_mode": "وضع عدم الاتصال",
+  "live_badge": "مباشر",
+  "silver_label": "الفضة:",
+  "total_metals_value": "إجمالي قيمة المعادن"
 }

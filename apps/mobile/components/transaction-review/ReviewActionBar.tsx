@@ -2,6 +2,7 @@ import { useToast } from "@/components/ui/Toast";
 import React from "react";
 import { ActivityIndicator, Text, TouchableOpacity } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
+import { useTranslation } from "react-i18next";
 
 export interface ReviewActionBarProps {
   readonly selectedCount: number;
@@ -17,6 +18,7 @@ export function ReviewActionBar({
   onDiscard,
 }: ReviewActionBarProps): React.JSX.Element {
   const { showToast } = useToast();
+  const { t } = useTranslation("transactions");
 
   const handleSaveWrapper = (): void => {
     onSave().catch((err: unknown) => {
@@ -42,7 +44,7 @@ export function ReviewActionBar({
         className="w-[50%] flex-1 py-4 rounded-xl items-center bg-slate-100 dark:bg-slate-800"
       >
         <Text className="text-slate-500 dark:text-slate-400 text-sm font-semibold">
-          Discard All
+          {t("discard_all")}
         </Text>
       </TouchableOpacity>
 

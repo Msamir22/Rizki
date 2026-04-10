@@ -167,7 +167,7 @@ export function DeleteAccountSheet({
                         color={palette.gold[500]}
                       />
                       <Text className="ms-2 text-sm font-bold text-amber-700 dark:text-amber-300">
-                        The following will also be deleted:
+                        {t("deletion_warning_linked_data")}
                       </Text>
                     </View>
                     <Text className="text-sm text-amber-600 dark:text-amber-400 ms-6">
@@ -179,7 +179,7 @@ export function DeleteAccountSheet({
                 {totalLinked === 0 && (
                   <View className="mb-6">
                     <Text className="text-sm text-slate-400 dark:text-slate-500 text-center">
-                      This account has no linked records.
+                      {t("no_linked_records")}
                     </Text>
                   </View>
                 )}
@@ -205,7 +205,7 @@ export function DeleteAccountSheet({
                       <ActivityIndicator size="small" color="white" />
                     ) : (
                       <Text className="text-base font-semibold text-white">
-                        Delete
+                        {t("delete_account")}
                       </Text>
                     )}
                   </TouchableOpacity>

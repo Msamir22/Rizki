@@ -5,6 +5,7 @@ import { Text, TouchableOpacity, View } from "react-native";
 import { useEffect, useMemo, useState } from "react";
 import { AccountSelectorModal } from "../modals/AccountSelectorModal";
 import { formatAmountInput } from "@astik/logic";
+import { useTranslation } from "react-i18next";
 
 interface TransferFieldsProps {
   accounts: Account[];
@@ -36,6 +37,7 @@ export function TransferFields({
 }: TransferFieldsProps): React.JSX.Element {
   const [isFromModalOpen, setIsFromModalOpen] = useState(false);
   const [isToModalOpen, setIsToModalOpen] = useState(false);
+  const { t } = useTranslation("transactions");
 
   const fromAccount = accounts.find((a) => a.id === fromAccountId);
   const toAccount = accounts.find((a) => a.id === toAccountId);
@@ -74,7 +76,7 @@ export function TransferFields({
         {/* From Account */}
         <View className="flex-1">
           <Text className="text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-2 px-1 uppercase tracking-wider">
-            FROM
+            {t("from_label").toUpperCase()}
           </Text>
           <TouchableOpacity
             onPress={() => setIsFromModalOpen(true)}
@@ -113,7 +115,7 @@ export function TransferFields({
         {/* To Account */}
         <View className="flex-1">
           <Text className="text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-2 px-1 uppercase tracking-wider">
-            TO
+            {t("to_label")}
           </Text>
           <TouchableOpacity
             onPress={() => setIsToModalOpen(true)}
