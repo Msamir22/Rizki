@@ -237,5 +237,17 @@
   "status_active": "نشط",
   "status_paused": "متوقف",
   "status_completed": "مكتمل",
-  "tap_to_edit_transaction": "اضغط لتعديل هذه المعاملة"
+  "tap_to_edit_transaction": "اضغط لتعديل هذه المعاملة",
+
+  "voice_resume": "استئناف",
+  "voice_pause": "إيقاف مؤقت",
+  "voice_done": "تم",
+  "voice_retry": "إعادة المحاولة",
+  "voice_timer_progress": "{{elapsed}}ث / {{max}}ث",
+  "duration_seconds": "{{count}}ث",
+  "duration_minutes": "{{count}}د",
+  "duration_minutes_seconds": "{{minutes}}د {{seconds}}ث",
+  "currency": "العملة",
+  "new_account_default": "حساب جديد",
+  "cash_default": "نقدي"
 }

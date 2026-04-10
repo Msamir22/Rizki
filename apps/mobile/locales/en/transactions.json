@@ -229,5 +229,17 @@
   "status_active": "Active",
   "status_paused": "Paused",
   "status_completed": "Completed",
-  "tap_to_edit_transaction": "Tap to edit this transaction"
+  "tap_to_edit_transaction": "Tap to edit this transaction",
+
+  "voice_resume": "Resume",
+  "voice_pause": "Pause",
+  "voice_done": "Done",
+  "voice_retry": "Retry",
+  "voice_timer_progress": "{{elapsed}}s / {{max}}s",
+  "duration_seconds": "{{count}}s",
+  "duration_minutes": "{{count}}m",
+  "duration_minutes_seconds": "{{minutes}}m {{seconds}}s",
+  "currency": "Currency",
+  "new_account_default": "New Account",
+  "cash_default": "Cash"
 }

@@ -40,7 +40,7 @@ const AR_PLURAL_SUFFIXES = ["_zero", "_two", "_few", "_many"];
 
 /** Legitimate Latin values in AR files (allowlist) */
 const AR_LATIN_ALLOWLIST = new Set([
-  "English", // language name in native script
+  "English", // language name shown in language picker dropdown
   "USD",
   "EGP",
   "EUR",
@@ -224,13 +224,40 @@ function flattenToEntries(
 // Check 3: Hardcoded Strings in JSX
 // ---------------------------------------------------------------------------
 
-function checkHardcodedStrings(): { passed: boolean; errors: string[] } {
+function checkHardcodedStrings(): {
+  passed: boolean;
+  errors: string[];
+  warnings: string[];
+} {
   const errors: string[] = [];
+  const warnings: string[] = [];
   const files = collectSourceFiles();
 
   for (const filePath of files) {
-    const lines = fs.readFileSync(filePath, "utf-8").split("\n");
+    const content = fs.readFileSync(filePath, "utf-8");
+    const lines = content.split("\n");
+    const relativePath = path.relative(SRC_DIR, filePath);
 
+    // ── Pass 1: Multiline <Text> detection (warnings) ──────────────────────
+    // Catches <Text ...>\n  English content\n</Text> that line-by-line misses.
+    // Reported as warnings since these are often pre-existing issues outside
+    // the current PR scope. Tracked so teams can chip away at them over time.
+    const multilineTextRe =
+      /<Text[^>]*>\s*([A-Z][A-Za-z ,.'!?&;:()\-]{2,}?)\s*<\/Text>/gs;
+    for (const m of content.matchAll(multilineTextRe)) {
+      if (m.index === undefined) continue;
+      const captured = m[1].trim();
+      // Skip if the content is already wrapped in t()
+      if (/^\{?\s*t\s*\(/.test(captured)) continue;
+      // Skip i18n-ignore
+      const beforeText = content.slice(Math.max(0, m.index - 200), m.index);
+      if (beforeText.includes("i18n-ignore")) continue;
+
+      const lineNum = content.slice(0, m.index).split("\n").length;
+      warnings.push(`${relativePath}:${lineNum} — <Text>${captured}</Text>`);
+    }
+
+    // ── Pass 2: Line-by-line attribute checks ─────────────────────────────
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       const lineNum = i + 1;
@@ -241,19 +268,19 @@ function checkHardcodedStrings(): { passed: boolean; errors: string[] } {
       // Skip import-only lines
       if (line.includes("useTranslation")) continue;
 
-      const relativePath = path.relative(SRC_DIR, filePath);
-
-      // Pattern 1: <Text> with hardcoded English content
+      // Pattern 1: <Text> with hardcoded English content (single-line)
       const textMatch = line.match(
         /<Text[^>]*>\s*([A-Z][A-Za-z ,.'!?&;:()\-]{2,})\s*<\/Text>/
       );
       if (textMatch) {
-        errors.push(
-          `${relativePath}:${lineNum} — <Text>${textMatch[1].trim()}</Text>`
-        );
+        // Only flag if the content is NOT a t() call
+        const inner = textMatch[1].trim();
+        if (!/^\{?\s*t\s*\(/.test(inner)) {
+          errors.push(`${relativePath}:${lineNum} — <Text>${inner}</Text>`);
+        }
       }
 
-      // Pattern 2: placeholder="English text"
+      // Pattern 2: placeholder="English text" (not placeholder={t(...)} or placeholder={t`...`})
       const placeholderMatch = line.match(
         /placeholder=["']([A-Z][A-Za-z ]{2,})["']/
       );
@@ -311,7 +338,7 @@ function checkHardcodedStrings(): { passed: boolean; errors: string[] } {
     }
   }
 
-  return { passed: errors.length === 0, errors };
+  return { passed: errors.length === 0, errors, warnings };
 }
 
 function collectSourceFiles(): string[] {
@@ -392,6 +419,17 @@ function main(): void {
     }
     console.log();
     totalErrors += hardcoded.errors.length;
+  }
+
+  // Warnings from multiline <Text> scan (informational, non-blocking)
+  if (hardcoded.warnings.length > 0) {
+    console.log(
+      `Warnings: ${hardcoded.warnings.length} multiline <Text> strings detected (non-blocking)`
+    );
+    for (const w of hardcoded.warnings) {
+      console.log(`    - ${w}`);
+    }
+    console.log();
   }
 
   // Summary

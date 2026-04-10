@@ -310,7 +310,7 @@ function ScanningState({
               color={palette.slate[500]}
             />
             <Text className="text-xs text-slate-500 ms-1">
-              {t("elapsed", { duration: formatDuration(elapsedMs) })}
+              {t("elapsed", { duration: formatDuration(elapsedMs, t) })}
             </Text>
           </View>
 
@@ -328,7 +328,7 @@ function ScanningState({
                 style={{ color: palette.nileGreen[400] }}
               >
                 {t("estimated_remaining", {
-                  duration: formatDuration(estimatedRemainingMs),
+                  duration: formatDuration(estimatedRemainingMs, t),
                 })}
               </Text>
             </View>
@@ -471,7 +471,7 @@ function SuccessState({
   readonly onBackPress: () => void;
   readonly t: (key: string, opts?: Record<string, unknown>) => string;
 }): React.JSX.Element {
-  const durationLabel = formatDuration(durationMs);
+  const durationLabel = formatDuration(durationMs, t);
 
   // Build systemName → displayName map from DB categories
   const { categories: allCategories } = useCategories({ topLevelOnly: false });
@@ -925,13 +925,18 @@ function ReasonBullet({ text }: { readonly text: string }): React.JSX.Element {
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Formats duration from milliseconds to a human-readable string */
-function formatDuration(ms: number): string {
+/** Formats duration from milliseconds to a human-readable localized string */
+function formatDuration(
+  ms: number,
+  t: (key: string, opts?: Record<string, unknown>) => string
+): string {
   const seconds = Math.round(ms / 1000);
-  if (seconds < 60) return `${seconds}s`;
+  if (seconds < 60) return t("duration_seconds", { count: seconds });
   const minutes = Math.floor(seconds / 60);
   const remainderSec = seconds % 60;
-  return remainderSec > 0 ? `${minutes}m ${remainderSec}s` : `${minutes}m`;
+  return remainderSec > 0
+    ? t("duration_minutes_seconds", { minutes, seconds: remainderSec })
+    : t("duration_minutes", { count: minutes });
 }
 
 /** Converts a systemName like "food_drinks" to "Food & Drinks" */
