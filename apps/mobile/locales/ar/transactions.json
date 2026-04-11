@@ -242,7 +242,7 @@
   "voice_resume": "استئناف",
   "voice_pause": "إيقاف مؤقت",
   "voice_done": "تم",
-  "voice_retry": "إعادة المحاولة",
+  "voice_retry_short": "إعادة المحاولة",
   "voice_timer_progress": "{{elapsed}}ث / {{max}}ث",
   "duration_seconds": "{{count}}ث",
   "duration_minutes": "{{count}}د",

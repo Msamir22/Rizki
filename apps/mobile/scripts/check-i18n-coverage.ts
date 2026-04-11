@@ -392,7 +392,13 @@ function collectSourceFiles(): string[] {
       if (entry.isDirectory()) {
         // Compute relative path and check if directory should be excluded
         const relative = path.relative(SRC_DIR, fullPath).replace(/\\/g, "/");
-        const isExcluded = EXCLUDE_PATTERNS.some((p) => relative.includes(p));
+        // Normalize: ensure relative ends with / for pattern matching
+        const normalizedRelative = relative.endsWith("/")
+          ? relative
+          : relative + "/";
+        const isExcluded = EXCLUDE_PATTERNS.some((p) =>
+          normalizedRelative.includes(p)
+        );
         if (isExcluded) {
           // Skip recursing into excluded directories (e.g., node_modules, locales, scripts)
           continue;

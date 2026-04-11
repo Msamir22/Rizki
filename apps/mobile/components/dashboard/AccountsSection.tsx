@@ -200,7 +200,7 @@ export function AccountsSection({
           onPress={() => router.push("/add-account")}
           icon="wallet-outline"
           title={t("no_accounts_title")}
-          description="Tap the + button to add one"
+          description={tc("tap_to_add")}
           height={CARD_HEIGHT}
           borderRadius={CARD_BORDER_RADIUS}
         />

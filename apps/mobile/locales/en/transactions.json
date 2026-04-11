@@ -234,7 +234,7 @@
   "voice_resume": "Resume",
   "voice_pause": "Pause",
   "voice_done": "Done",
-  "voice_retry": "Retry",
+  "voice_retry_short": "Retry",
   "voice_timer_progress": "{{elapsed}}s / {{max}}s",
   "duration_seconds": "{{count}}s",
   "duration_minutes": "{{count}}m",

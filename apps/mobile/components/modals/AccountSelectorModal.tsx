@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
-import { Account } from "@astik/db";
+import type { Account, AccountType } from "@astik/db";
 import { useTranslation } from "react-i18next";
 
 interface AccountSelectorModalProps {
@@ -35,13 +35,13 @@ export function AccountSelectorModal({
 
   /** Map account type enum values to their translated display labels */
   const accountTypeLabel = useCallback(
-    (type: string): string => {
-      const keyMap: Record<string, string> = {
+    (type: AccountType): string => {
+      const keyMap: Record<AccountType, string> = {
         CASH: "type_cash",
         BANK: "type_bank",
         DIGITAL_WALLET: "type_digital_wallet",
       };
-      return tAccounts(keyMap[type] ?? type);
+      return tAccounts(keyMap[type]);
     },
     [tAccounts]
   );

@@ -125,7 +125,7 @@ export function CategoryPicker({
           </View>
 
           <Text className="flex-1 text-base font-semibold text-slate-900 dark:text-white">
-            {selectedCategory?.displayName || "Select Category"}
+            {selectedCategory?.displayName || t("select_category_label")}
           </Text>
 
           <Ionicons
