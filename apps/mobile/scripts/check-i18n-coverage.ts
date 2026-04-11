@@ -374,7 +374,7 @@ function checkHardcodedStrings(): {
     }
   }
 
-  return { passed: true, errors };
+  return { passed: errors.length === 0, errors };
 }
 
 function collectSourceFiles(): string[] {
@@ -390,6 +390,13 @@ function collectSourceFiles(): string[] {
       const fullPath = path.join(dir, entry.name);
 
       if (entry.isDirectory()) {
+        // Compute relative path and check if directory should be excluded
+        const relative = path.relative(SRC_DIR, fullPath).replace(/\\/g, "/");
+        const isExcluded = EXCLUDE_PATTERNS.some((p) => relative.includes(p));
+        if (isExcluded) {
+          // Skip recursing into excluded directories (e.g., node_modules, locales, scripts)
+          continue;
+        }
         walk(fullPath);
       } else if (entry.isFile() && /\.(tsx|ts)$/.test(entry.name)) {
         const relative = path.relative(SRC_DIR, fullPath).replace(/\\/g, "/");
@@ -434,9 +441,14 @@ function loadBaseline(): Set<string> {
     if (Array.isArray(data)) {
       return new Set(data as string[]);
     }
-    return new Set();
-  } catch {
-    return new Set();
+    throw new Error(
+      `Baseline file must contain an array of finding fingerprints`
+    );
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    throw new Error(
+      `Failed to load baseline from ${BASELINE_PATH}: ${message}`
+    );
   }
 }
 
