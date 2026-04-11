@@ -12,6 +12,14 @@ import { Text, TouchableOpacity, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import { palette } from "@/constants/colors";
 
+// =============================================================================
+// Constants
+// =============================================================================
+
+const TOUCH_HIT_SLOP = { top: 10, bottom: 10, left: 10, right: 10 } as const;
+const ICON_SIZE = 14;
+const ICON_COLOR = palette.nileGreen[500];
+
 interface SectionHeaderProps {
   /** Section title text */
   title: string;
@@ -45,7 +53,7 @@ function SectionHeaderComponent({
       {onSeeAll && (
         <TouchableOpacity
           onPress={onSeeAll}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          hitSlop={TOUCH_HIT_SLOP}
           className="flex-row items-center"
         >
           <Text className="text-sm font-semibold text-nileGreen-500">
@@ -54,8 +62,8 @@ function SectionHeaderComponent({
           {showArrow && (
             <Ionicons
               name="arrow-forward"
-              size={14}
-              color={palette.nileGreen[500]}
+              size={ICON_SIZE}
+              color={ICON_COLOR}
               className="ms-1"
             />
           )}

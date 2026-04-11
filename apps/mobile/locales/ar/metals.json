@@ -61,5 +61,6 @@
   "hero_accessibility": "معلومات حساب الربح/الخسارة",
   "trend_label": "{{direction}} {{percent}}% اليوم",
   "gold_24k_subtitle": "عيار 24 · ذهب خالص",
-  "karat_label": "عيار {{karat}}"
+  "karat_label": "عيار {{karat}}",
+  "price_per_gram": "{{currencySymbol}} {{price}}/غرام"
 }

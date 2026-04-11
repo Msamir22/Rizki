@@ -21,6 +21,14 @@ import { Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
 
 // =============================================================================
+// Constants
+// =============================================================================
+
+/** Karat purity values for gold */
+const KARAT_21 = 21;
+const KARAT_18 = 18;
+
+// =============================================================================
 // Types
 // =============================================================================
 
@@ -87,7 +95,7 @@ function PurityChip({
         {t("karat_label", { karat })}
       </Text>
       <Text className="text-sm font-semibold text-white">
-        {currencySymbol} {price}/g
+        {t("price_per_gram", { currencySymbol, price })}
       </Text>
     </View>
   );
@@ -120,7 +128,7 @@ export function GoldHeroCard({
 
       {/* 24K Price — large display */}
       <Text className="text-[28px] font-bold text-white tracking-tight">
-        {currencySymbol} {price24k}/g
+        {t("price_per_gram", { currencySymbol, price: price24k })}
       </Text>
 
       {/* Subtitle + trend */}
@@ -132,12 +140,12 @@ export function GoldHeroCard({
       {/* 21K and 18K chips */}
       <View className="flex-row mt-3">
         <PurityChip
-          karat={21}
+          karat={KARAT_21}
           price={price21k}
           currencySymbol={currencySymbol}
         />
         <PurityChip
-          karat={18}
+          karat={KARAT_18}
           price={price18k}
           currencySymbol={currencySymbol}
         />

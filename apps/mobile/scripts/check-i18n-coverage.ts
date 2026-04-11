@@ -266,6 +266,150 @@ function flattenToEntries(
 // Check 3: Hardcoded Strings in JSX
 // ---------------------------------------------------------------------------
 
+/**
+ * Helper function to add a finding to the errors array with standardized format.
+ */
+function addFinding(
+  relativePath: string,
+  lineNum: number,
+  message: string,
+  errors: string[]
+): void {
+  errors.push(`${relativePath}:${lineNum} — ${message}`);
+}
+
+/**
+ * Scans content for multiline <Text> elements with hardcoded English.
+ * Catches <Text ...>\n  English content\n</Text> that line-by-line misses.
+ */
+function scanMultilineText(
+  content: string,
+  relativePath: string,
+  errors: string[]
+): void {
+  const multilineTextRe =
+    /<Text[^>]*>\s*([A-Z][A-Za-z ,.'!?&;:()\-]{2,}?)\s*<\/Text>/gs;
+  for (const m of content.matchAll(multilineTextRe)) {
+    if (m.index === undefined) continue;
+    // Skip single-line matches — Pass 2 handles those
+    if (!m[0].includes("\n")) continue;
+    const captured = m[1].trim();
+    // Skip if the content is already wrapped in t()
+    if (/^\{?\s*t\s*\(/.test(captured)) continue;
+    // Skip i18n-ignore
+    const beforeText = content.slice(Math.max(0, m.index - 200), m.index);
+    if (beforeText.includes("i18n-ignore")) continue;
+
+    const lineNum = content.slice(0, m.index).split("\n").length;
+    addFinding(relativePath, lineNum, `<Text>${captured}</Text>`, errors);
+  }
+}
+
+/**
+ * Scans individual lines for hardcoded English strings in attributes.
+ * Handles all line-based pattern matches.
+ */
+function scanLinePatterns(
+  lines: string[],
+  relativePath: string,
+  errors: string[]
+): void {
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const lineNum = i + 1;
+
+    // Skip i18n-ignore lines (current or previous line)
+    if (line.includes("i18n-ignore")) continue;
+    if (i > 0 && lines[i - 1].includes("i18n-ignore")) continue;
+
+    // Skip import lines that bring in useTranslation
+    if (/^\s*import\s+.*\buseTranslation\b/.test(line)) continue;
+
+    // Pattern 1: <Text> with hardcoded English content (single-line)
+    const textMatch = line.match(
+      /<Text[^>]*>\s*([A-Z][A-Za-z ,.'!?&;:()\-]{2,})\s*<\/Text>/
+    );
+    if (textMatch) {
+      // Only flag if the content is NOT a t() call
+      const inner = textMatch[1].trim();
+      if (!/^\{?\s*t\s*\(/.test(inner)) {
+        addFinding(relativePath, lineNum, `<Text>${inner}</Text>`, errors);
+      }
+    }
+
+    // Pattern 2: placeholder="English text"
+    const placeholderMatch = line.match(
+      /placeholder=["']([A-Z][A-Za-z ]{2,})["']/
+    );
+    if (placeholderMatch) {
+      addFinding(
+        relativePath,
+        lineNum,
+        `placeholder="${placeholderMatch[1]}"`,
+        errors
+      );
+    }
+
+    // Pattern 3: title="English text"
+    const titleMatch = line.match(/title=["']([A-Z][A-Za-z ]{2,})["']/);
+    if (titleMatch) {
+      addFinding(relativePath, lineNum, `title="${titleMatch[1]}"`, errors);
+    }
+
+    // Pattern 4: accessibilityLabel="English text"
+    const a11yLabelMatch = line.match(
+      /accessibilityLabel=["']([A-Z][A-Za-z ]{2,})["']/
+    );
+    if (a11yLabelMatch) {
+      addFinding(
+        relativePath,
+        lineNum,
+        `accessibilityLabel="${a11yLabelMatch[1]}"`,
+        errors
+      );
+    }
+
+    // Pattern 5: accessibilityHint="English text"
+    const a11yHintMatch = line.match(
+      /accessibilityHint=["']([A-Z][A-Za-z ]{2,})["']/
+    );
+    if (a11yHintMatch) {
+      addFinding(
+        relativePath,
+        lineNum,
+        `accessibilityHint="${a11yHintMatch[1]}"`,
+        errors
+      );
+    }
+
+    // Pattern 6: Alert.alert("English text"
+    const alertMatch = line.match(/Alert\.alert\(\s*["']([A-Z][A-Za-z ]{2,})/);
+    if (alertMatch) {
+      addFinding(
+        relativePath,
+        lineNum,
+        `Alert.alert("${alertMatch[1]}")`,
+        errors
+      );
+    }
+
+    // Pattern 7: throw new Error("English text"
+    const throwMatch = line.match(/throw new Error\(["']([A-Z][A-Za-z ]{2,})/);
+    if (throwMatch) {
+      addFinding(
+        relativePath,
+        lineNum,
+        `throw new Error("${throwMatch[1]}")`,
+        errors
+      );
+    }
+  }
+}
+
+/**
+ * Main coordinator for hardcoded string detection.
+ * Collects source files and delegates to specialized scanning functions.
+ */
 function checkHardcodedStrings(): {
   passed: boolean;
   errors: string[];
@@ -279,105 +423,10 @@ function checkHardcodedStrings(): {
     const relativePath = path.relative(SRC_DIR, filePath);
 
     // ── Pass 1: Multiline <Text> detection ──────────────────────────────
-    // Catches <Text ...>\n  English content\n</Text> that line-by-line misses.
-    // Only reports truly multiline matches — single-line is handled by Pass 2.
-    const multilineTextRe =
-      /<Text[^>]*>\s*([A-Z][A-Za-z ,.'!?&;:()\-]{2,}?)\s*<\/Text>/gs;
-    for (const m of content.matchAll(multilineTextRe)) {
-      if (m.index === undefined) continue;
-      // Skip single-line matches — Pass 2 handles those
-      if (!m[0].includes("\n")) continue;
-      const captured = m[1].trim();
-      // Skip if the content is already wrapped in t()
-      if (/^\{?\s*t\s*\(/.test(captured)) continue;
-      // Skip i18n-ignore
-      const beforeText = content.slice(Math.max(0, m.index - 200), m.index);
-      if (beforeText.includes("i18n-ignore")) continue;
-
-      const lineNum = content.slice(0, m.index).split("\n").length;
-      errors.push(`${relativePath}:${lineNum} — <Text>${captured}</Text>`);
-    }
+    scanMultilineText(content, relativePath, errors);
 
     // ── Pass 2: Line-by-line attribute checks ─────────────────────────────
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      const lineNum = i + 1;
-
-      // Skip i18n-ignore lines (current or previous line)
-      if (line.includes("i18n-ignore")) continue;
-      if (i > 0 && lines[i - 1].includes("i18n-ignore")) continue;
-
-      // Skip import-only lines
-      if (line.includes("useTranslation")) continue;
-
-      // Pattern 1: <Text> with hardcoded English content (single-line)
-      const textMatch = line.match(
-        /<Text[^>]*>\s*([A-Z][A-Za-z ,.'!?&;:()\-]{2,})\s*<\/Text>/
-      );
-      if (textMatch) {
-        // Only flag if the content is NOT a t() call
-        const inner = textMatch[1].trim();
-        if (!/^\{?\s*t\s*\(/.test(inner)) {
-          errors.push(`${relativePath}:${lineNum} — <Text>${inner}</Text>`);
-        }
-      }
-
-      // Pattern 2: placeholder="English text" (not placeholder={t(...)} or placeholder={t`...`})
-      const placeholderMatch = line.match(
-        /placeholder=["']([A-Z][A-Za-z ]{2,})["']/
-      );
-      if (placeholderMatch) {
-        errors.push(
-          `${relativePath}:${lineNum} — placeholder="${placeholderMatch[1]}"`
-        );
-      }
-
-      // Pattern 3: title="English text"
-      const titleMatch = line.match(/title=["']([A-Z][A-Za-z ]{2,})["']/);
-      if (titleMatch) {
-        errors.push(`${relativePath}:${lineNum} — title="${titleMatch[1]}"`);
-      }
-
-      // Pattern 4: accessibilityLabel="English text"
-      const a11yLabelMatch = line.match(
-        /accessibilityLabel=["']([A-Z][A-Za-z ]{2,})["']/
-      );
-      if (a11yLabelMatch) {
-        errors.push(
-          `${relativePath}:${lineNum} — accessibilityLabel="${a11yLabelMatch[1]}"`
-        );
-      }
-
-      // Pattern 5: accessibilityHint="English text"
-      const a11yHintMatch = line.match(
-        /accessibilityHint=["']([A-Z][A-Za-z ]{2,})["']/
-      );
-      if (a11yHintMatch) {
-        errors.push(
-          `${relativePath}:${lineNum} — accessibilityHint="${a11yHintMatch[1]}"`
-        );
-      }
-
-      // Pattern 6: Alert.alert("English text"
-      const alertMatch = line.match(
-        /Alert\.alert\(\s*["']([A-Z][A-Za-z ]{2,})/
-      );
-      if (alertMatch) {
-        errors.push(
-          `${relativePath}:${lineNum} — Alert.alert("${alertMatch[1]}")`
-        );
-      }
-
-      // Pattern 7: throw new Error("English text"
-      const throwMatch = line.match(
-        /throw new Error\(["']([A-Z][A-Za-z ]{2,})/
-      );
-      if (throwMatch) {
-        errors.push(
-          `${relativePath}:${lineNum} — throw new Error("${throwMatch[1]}")`
-        );
-      }
-    }
+    scanLinePatterns(lines, relativePath, errors);
   }
 
   return { passed: errors.length === 0, errors };
@@ -437,11 +486,11 @@ function collectSourceFiles(): string[] {
 // ---------------------------------------------------------------------------
 
 /**
- * Strips line numbers from a finding to produce a stable fingerprint.
- * "components/Foo.tsx:42 — <Text>Hello</Text>" → "components/Foo.tsx — <Text>Hello</Text>"
+ * Returns the finding as-is for fingerprinting.
+ * Line numbers are preserved so same-file findings at different lines remain unique.
  */
 function toFingerprint(finding: string): string {
-  return finding.replace(/:\d+ — /, " — ");
+  return finding;
 }
 
 function loadBaseline(): Set<string> {

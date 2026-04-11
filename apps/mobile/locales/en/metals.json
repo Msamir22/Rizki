@@ -57,5 +57,6 @@
   "hero_accessibility": "Profit/loss calculation info",
   "trend_label": "{{direction}} {{percent}}% today",
   "gold_24k_subtitle": "24 Karat · Pure Gold",
-  "karat_label": "{{karat}} Karat"
+  "karat_label": "{{karat}} Karat",
+  "price_per_gram": "{{currencySymbol}} {{price}}/g"
 }
