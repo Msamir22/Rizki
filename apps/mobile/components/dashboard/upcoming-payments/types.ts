@@ -10,7 +10,11 @@ export interface PayNowModalProps {
   readonly payment: RecurringPayment | null;
   readonly visible: boolean;
   readonly onClose: () => void;
-  readonly onSuccess: (amount: number) => void;
+  readonly onSuccess: (
+    amount: number,
+    paymentName: string,
+    paymentCurrency: string
+  ) => void;
 }
 
 export interface FeaturedPaymentCardProps {

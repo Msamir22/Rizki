@@ -72,6 +72,9 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
   const [hasBudget, setHasBudget] = useState(false);
   const [hasSmsEnabled, setHasSmsEnabled] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
+  // NOTE: isLoading tracks only the async SMS check. WatermelonDB observers
+  // emit synchronously on subscribe, so bank/transaction/budget states are
+  // immediately available. On iOS, isLoading is set false synchronously.
   const [isLoading, setIsLoading] = useState(true);
 
   // ── Check dismissed state from AsyncStorage ──

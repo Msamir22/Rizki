@@ -14,6 +14,7 @@ import {
   BILLS_PERIOD_LABELS,
   type BillsPeriodFilter,
 } from "@/hooks/useRecurringPayments";
+import type { CurrencyType, RecurringPayment } from "@astik/db";
 import { formatCurrency } from "@astik/logic";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -27,7 +28,6 @@ import {
 } from "react-native";
 
 import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
-import type { RecurringPayment } from "@astik/db";
 import { useTranslation } from "react-i18next";
 import {
   FeaturedPaymentCard,
@@ -90,18 +90,18 @@ function UpcomingPaymentsComponent(): React.JSX.Element {
   }, []);
 
   const handleSuccess = useCallback(
-    (amount: number): void => {
+    (amount: number, paymentName: string, paymentCurrency: string): void => {
       showToast({
         type: "success",
         title: t("payment_recorded"),
-        message: `${selectedPayment?.name} - ${formatCurrency({
+        message: `${paymentName} - ${formatCurrency({
           amount,
-          currency: selectedPayment?.currency ?? preferredCurrency,
+          currency: paymentCurrency as CurrencyType,
         })}`,
         duration: TOAST_DURATION_MS,
       });
     },
-    [showToast, t, selectedPayment, preferredCurrency]
+    [showToast, t]
   );
 
   const handleSeeAll = useCallback((): void => {

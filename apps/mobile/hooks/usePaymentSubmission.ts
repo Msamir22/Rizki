@@ -25,8 +25,12 @@ interface UsePaymentSubmissionParams {
   payment: RecurringPayment | null;
   /** The account to deduct from */
   accountId: string;
-  /** Callback after successful payment */
-  onSuccess: (amount: number) => void;
+  /** Callback after successful payment — receives amount, payment name, and currency */
+  onSuccess: (
+    amount: number,
+    paymentName: string,
+    paymentCurrency: string
+  ) => void;
   /** Callback to close the modal */
   onClose: () => void;
 }
@@ -94,7 +98,7 @@ export function usePaymentSubmission({
 
           setIsSubmitting(false);
           onClose();
-          onSuccess(numericAmount);
+          onSuccess(numericAmount, payment.name, payment.currency);
         } catch (error) {
           setIsSubmitting(false);
           logger.error("Error creating transaction", error, {
