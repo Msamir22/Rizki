@@ -62,5 +62,5 @@
   "trend_label": "{{direction}} {{percent}}% اليوم",
   "gold_24k_subtitle": "عيار 24 · ذهب خالص",
   "karat_label": "عيار {{karat}}",
-  "price_per_gram": "{{currencySymbol}} {{price}}/غرام"
+  "price_gram_with_symbol": "{{currencySymbol}} {{price}}/غرام"
 }

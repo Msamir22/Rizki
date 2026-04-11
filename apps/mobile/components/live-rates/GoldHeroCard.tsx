@@ -95,7 +95,7 @@ function PurityChip({
         {t("karat_label", { karat })}
       </Text>
       <Text className="text-sm font-semibold text-white">
-        {t("price_per_gram", { currencySymbol, price })}
+        {t("price_gram_with_symbol", { currencySymbol, price })}
       </Text>
     </View>
   );
@@ -128,7 +128,7 @@ export function GoldHeroCard({
 
       {/* 24K Price — large display */}
       <Text className="text-[28px] font-bold text-white tracking-tight">
-        {t("price_per_gram", { currencySymbol, price: price24k })}
+        {t("price_gram_with_symbol", { currencySymbol, price: price24k })}
       </Text>
 
       {/* Subtitle + trend */}
