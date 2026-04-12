@@ -221,7 +221,7 @@ describe("calculateAccountsTotalBalance", () => {
   // ---------------------------------------------------------------------------
 
   describe("currency conversion edge cases", () => {
-    it("should return original amounts when rates return NaN (convertCurrency guards against NaN)", () => {
+    it("should return 0 when rates produce NaN (convertCurrency guards against NaN)", () => {
       const accounts = [
         createMockAccount(1000, "EGP"),
         createMockAccount(500, "EUR"),
@@ -243,9 +243,8 @@ describe("calculateAccountsTotalBalance", () => {
       expect(result).toBe(0);
     });
 
-    it("should handle mixed known and unknown currencies gracefully", () => {
-      // When a rate is unavailable, MarketRate.getRate returns 1 (identity)
-      const identityFallbackRates = createMockRates(
+    it("should return 0 for unknown currency pairs (conversion failure)", () => {
+      const failingRates = createMockRates(
         (from: CurrencyType, to: CurrencyType): number => {
           if (from === to) return 1;
           if (from === "USD" || to === "USD") {
@@ -253,24 +252,21 @@ describe("calculateAccountsTotalBalance", () => {
               return from === "EGP" ? 1 / 49.7 : 49.7;
             }
           }
-          // Unknown pair returns 1 (identity fallback)
-          return 1;
+          // Unknown pair returns 0 (conversion failure)
+          return 0;
         }
       );
 
       const accounts = [
         createMockAccount(1000, "EGP"), // known rate
-        createMockAccount(500, "KWD"), // unknown rate -> identity fallback
+        createMockAccount(500, "KWD"), // unknown rate -> 0
       ];
 
-      const result = calculateAccountsTotalBalance(
-        accounts,
-        identityFallbackRates
-      );
+      const result = calculateAccountsTotalBalance(accounts, failingRates);
 
       // EGP: 1000 * (1/49.7) ~= 20.12 USD
-      // KWD: 500 * 1 = 500 (identity fallback)
-      expect(result).toBeCloseTo(1000 / 49.7 + 500, 1);
+      // KWD: 500 * 0 = 0 (conversion failure)
+      expect(result).toBeCloseTo(1000 / 49.7, 1);
     });
   });
 

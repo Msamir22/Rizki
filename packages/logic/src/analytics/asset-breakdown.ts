@@ -133,16 +133,17 @@ export function calculateAssetBreakdownPercentages(
   let remaining = 100 - floored.reduce((sum, item) => sum + item.percentage, 0);
 
   // Sort by remainder descending, distribute 1% to each until remaining is 0
+  // Uses immutable map to avoid mutating floored items
   const sorted = [...floored].sort((a, b) => b.remainder - a.remainder);
-  for (const item of sorted) {
-    if (remaining <= 0) break;
-    item.percentage += 1;
+  const adjusted = sorted.map((item) => {
+    if (remaining <= 0) return item;
     remaining -= 1;
-  }
+    return { ...item, percentage: item.percentage + 1 };
+  });
 
   // Return in original order (Bank, Cash, Metals)
   return items.map((original) => {
-    const matched = floored.find((f) => f.label === original.label);
+    const matched = adjusted.find((f) => f.label === original.label);
     if (!matched) {
       throw new Error(
         `Invariant violation: missing floored percentage for label "${original.label}"`

@@ -53,14 +53,14 @@ import {
 } from "../services/sms-live-listener-service";
 
 Sentry.init({
-  dsn: "https://8572438a798ff28bca10e8b9708cfe22@o4511198588174336.ingest.de.sentry.io/4511198591254608",
+  dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
   sendDefaultPii: true,
   tracesSampleRate: 1.0,
   profilesSampleRate: 1.0,
   replaysOnErrorSampleRate: 1.0,
   replaysSessionSampleRate: 0.1,
   integrations: [Sentry.mobileReplayIntegration()],
-  enabled: !__DEV__,
+  enabled: Boolean(process.env.EXPO_PUBLIC_SENTRY_DSN) && !__DEV__,
 });
 
 // Prevent splash screen from auto-hiding until fonts are loaded
@@ -90,8 +90,8 @@ function RootLayout(): React.ReactNode {
         logger.error("Failed to initialize i18n", error);
         try {
           await i18n.changeLanguage("en");
-        } catch {
-          // Last resort — i18n stays in whatever state it's in
+        } catch (fallbackError: unknown) {
+          logger.error("Failed to set i18n fallback to en", fallbackError);
         }
         setI18nInitialized(true);
       });

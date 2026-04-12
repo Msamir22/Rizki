@@ -145,7 +145,11 @@ export default function TransactionsPlaceholder(): React.JSX.Element {
 
   const handleRefresh = async (): Promise<void> => {
     setIsRefreshing(true);
-    await sync();
+    try {
+      await sync();
+    } catch {
+      // Error is already captured in SyncProvider state
+    }
     // Also trigger local refetch just in case
     refetch();
     setIsRefreshing(false);

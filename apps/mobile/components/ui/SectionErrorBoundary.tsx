@@ -107,9 +107,14 @@ export function SectionErrorBoundary({
     setRetryCount((prev) => prev + 1);
   }, []);
 
+  const resetRetryCount = useCallback((): void => {
+    setRetryCount(0);
+  }, []);
+
   return (
     <ErrorBoundary
       onError={handleError}
+      onReset={resetRetryCount}
       fallbackRender={(props) => (
         <SectionFallback
           {...props}
