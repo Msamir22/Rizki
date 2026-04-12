@@ -152,6 +152,5 @@
   "sms_last_scan": "Last scan: {{time}}",
   "sms_never_scanned": "Not yet scanned",
   "new_badge": "NEW",
-  "section_failed_to_load": "{{name}} failed to load",
-  "retry": "Retry"
+  "section_failed_to_load": "{{name}} failed to load"
 }

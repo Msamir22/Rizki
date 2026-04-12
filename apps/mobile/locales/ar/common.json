@@ -167,6 +167,5 @@
   "sms_last_scan": "آخر فحص: {{time}}",
   "sms_never_scanned": "لم يتم الفحص بعد",
   "new_badge": "جديد",
-  "section_failed_to_load": "فشل تحميل {{name}}",
-  "retry": "إعادة المحاولة"
+  "section_failed_to_load": "فشل تحميل {{name}}"
 }

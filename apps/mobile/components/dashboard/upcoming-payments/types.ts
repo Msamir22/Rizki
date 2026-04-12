@@ -4,7 +4,7 @@
  * Uses RecurringPayment from @astik/db as the canonical payment type.
  */
 
-import type { RecurringPayment } from "@astik/db";
+import type { CurrencyType, RecurringPayment } from "@astik/db";
 
 export interface PayNowModalProps {
   readonly payment: RecurringPayment | null;
@@ -13,7 +13,7 @@ export interface PayNowModalProps {
   readonly onSuccess: (
     amount: number,
     paymentName: string,
-    paymentCurrency: string
+    paymentCurrency: CurrencyType
   ) => void;
 }
 

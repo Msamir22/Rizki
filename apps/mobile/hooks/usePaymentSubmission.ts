@@ -8,7 +8,7 @@
  * @module usePaymentSubmission
  */
 
-import type { RecurringPayment } from "@astik/db";
+import type { CurrencyType, RecurringPayment } from "@astik/db";
 import { useCallback, useState } from "react";
 import { InteractionManager } from "react-native";
 import { useTranslation } from "react-i18next";
@@ -29,7 +29,7 @@ interface UsePaymentSubmissionParams {
   onSuccess: (
     amount: number,
     paymentName: string,
-    paymentCurrency: string
+    paymentCurrency: CurrencyType
   ) => void;
   /** Callback to close the modal */
   onClose: () => void;
@@ -99,9 +99,11 @@ export function usePaymentSubmission({
           setIsSubmitting(false);
           onClose();
           onSuccess(numericAmount, payment.name, payment.currency);
-        } catch (error) {
+        } catch (error: unknown) {
           setIsSubmitting(false);
-          logger.error("Error creating transaction", error, {
+          const normalizedError =
+            error instanceof Error ? error : new Error(String(error));
+          logger.error("Error creating transaction", normalizedError, {
             paymentId: payment.id,
             accountId,
           });

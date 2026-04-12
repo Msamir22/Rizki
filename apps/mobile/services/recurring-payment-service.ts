@@ -81,6 +81,11 @@ export async function updateRecurringPaymentNextDueDate(
 /**
  * Submit a recurring payment: create a linked transaction and advance the due date.
  * Orchestrates the two DB writes (transaction creation + due date update).
+ *
+ * TODO: Wrap both operations in a single database.write() for atomicity.
+ * Currently, if updateRecurringPaymentNextDueDate fails after createTransaction
+ * succeeds, the payment is recorded but the schedule is not advanced.
+ * See: https://github.com/Msamir22/Astik/issues/217
  */
 export async function submitRecurringPayment(params: {
   payment: RecurringPayment;

@@ -90,14 +90,14 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
       }
     }
 
-    checkDismissed().catch(() => {});
+    void checkDismissed();
   }, []);
 
   // ── Observe bank accounts (type = "BANK") ──
   useEffect(() => {
     const subscription = database
       .get<Account>("accounts")
-      .query(Q.where("deleted", false), Q.where("type", "BANK"), Q.take(1))
+      .query(Q.where("deleted", false), Q.where("type", "BANK"))
       .observeCount()
       .subscribe((count) => {
         setHasBankAccount(count > 0);
@@ -110,7 +110,7 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
   useEffect(() => {
     const subscription = database
       .get<Transaction>("transactions")
-      .query(Q.where("deleted", false), Q.take(1))
+      .query(Q.where("deleted", false))
       .observeCount()
       .subscribe((count) => {
         setHasTransaction(count > 0);
@@ -154,9 +154,7 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
       }
     }
 
-    checkSms().catch(() => {
-      setIsLoading(false);
-    });
+    void checkSms();
   }, []);
 
   // ── Build steps array ──

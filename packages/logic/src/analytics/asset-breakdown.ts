@@ -133,7 +133,9 @@ export function calculateAssetBreakdownPercentages(
   return items.map((original) => {
     const matched = floored.find((f) => f.label === original.label);
     if (!matched) {
-      return { label: original.label, value: original.value, percentage: 0 };
+      throw new Error(
+        `Invariant violation: missing floored percentage for label "${original.label}"`
+      );
     }
     return {
       label: matched.label,

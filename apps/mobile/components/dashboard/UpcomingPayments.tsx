@@ -90,13 +90,17 @@ function UpcomingPaymentsComponent(): React.JSX.Element {
   }, []);
 
   const handleSuccess = useCallback(
-    (amount: number, paymentName: string, paymentCurrency: string): void => {
+    (
+      amount: number,
+      paymentName: string,
+      paymentCurrency: CurrencyType
+    ): void => {
       showToast({
         type: "success",
         title: t("payment_recorded"),
         message: `${paymentName} - ${formatCurrency({
           amount,
-          currency: paymentCurrency as CurrencyType,
+          currency: paymentCurrency,
         })}`,
         duration: TOAST_DURATION_MS,
       });
