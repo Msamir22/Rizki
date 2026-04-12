@@ -20,6 +20,7 @@ import { Q } from "@nozbe/watermelondb";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Platform } from "react-native";
+import { logger } from "@/utils/logger";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -71,6 +72,9 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
   const [hasBudget, setHasBudget] = useState(false);
   const [hasSmsEnabled, setHasSmsEnabled] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
+  // NOTE: isLoading tracks only the async SMS check. WatermelonDB observers
+  // emit synchronously on subscribe, so bank/transaction/budget states are
+  // immediately available. On iOS, isLoading is set false synchronously.
   const [isLoading, setIsLoading] = useState(true);
 
   // ── Check dismissed state from AsyncStorage ──
@@ -79,19 +83,21 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
       try {
         const dismissed = await AsyncStorage.getItem(GUIDE_DISMISSED_KEY);
         setIsDismissed(dismissed === "true");
-      } catch {
-        // Fail silently — show guide by default
+      } catch (error: unknown) {
+        logger.warn("Failed to read onboarding dismissed state", {
+          error: error instanceof Error ? error.message : String(error),
+        });
       }
     }
 
-    checkDismissed().catch(() => {});
+    void checkDismissed();
   }, []);
 
   // ── Observe bank accounts (type = "BANK") ──
   useEffect(() => {
     const subscription = database
       .get<Account>("accounts")
-      .query(Q.where("deleted", false), Q.where("type", "BANK"), Q.take(1))
+      .query(Q.where("deleted", false), Q.where("type", "BANK"))
       .observeCount()
       .subscribe((count) => {
         setHasBankAccount(count > 0);
@@ -104,7 +110,7 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
   useEffect(() => {
     const subscription = database
       .get<Transaction>("transactions")
-      .query(Q.where("deleted", false), Q.take(1))
+      .query(Q.where("deleted", false))
       .observeCount()
       .subscribe((count) => {
         setHasTransaction(count > 0);
@@ -138,16 +144,17 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
       try {
         const hasSynced = await AsyncStorage.getItem("@astik/sms-has-synced");
         setHasSmsEnabled(hasSynced === "true");
-      } catch {
+      } catch (error: unknown) {
+        logger.warn("Failed to read SMS sync state", {
+          error: error instanceof Error ? error.message : String(error),
+        });
         setHasSmsEnabled(false);
       } finally {
         setIsLoading(false);
       }
     }
 
-    checkSms().catch(() => {
-      setIsLoading(false);
-    });
+    void checkSms();
   }, []);
 
   // ── Build steps array ──
@@ -174,7 +181,7 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
         key: "spending_budget",
         labelKey: "onboarding_step_spending_budget",
         isComplete: hasBudget,
-        route: "/(tabs)/budgets",
+        route: "/create-budget",
       },
       {
         key: "sms_import",
@@ -198,8 +205,10 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
     setIsDismissed(true);
     try {
       await AsyncStorage.setItem(GUIDE_DISMISSED_KEY, "true");
-    } catch {
-      // Silently fail — guide will re-appear next time
+    } catch (error: unknown) {
+      logger.warn("Failed to persist onboarding guide dismissal", {
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   }, []);
 
