@@ -6,7 +6,7 @@
 
 import type { Account, AssetMetal, MarketRate } from "@astik/db";
 import { convertCurrency } from "../utils/currency";
-import { getMetalPriceUsd } from "../utils/metal";
+import { MetalPriceUnavailableError, getMetalPriceUsd } from "../utils/metal";
 
 export interface AssetBreakdown {
   bank: number;
@@ -80,11 +80,7 @@ export function calculateAssetBreakdown(
       const pricePerGram = getMetalPriceUsd(metal.metalType, marketRates);
       breakdown.metals += metal.calculateValue(pricePerGram);
     } catch (error: unknown) {
-      // Only swallow "Metal price unavailable" errors — rethrow anything unexpected.
-      if (
-        error instanceof Error &&
-        error.message.startsWith("Metal price unavailable")
-      ) {
+      if (error instanceof MetalPriceUnavailableError) {
         return;
       }
       throw error;
@@ -106,9 +102,12 @@ export function calculateAssetBreakdown(
 export function calculateAssetBreakdownPercentages(
   breakdown: AssetBreakdown
 ): AssetBreakdownPercentage[] {
-  const { bank, cash, metals, total } = breakdown;
+  const { bank, cash, metals } = breakdown;
 
-  if (total === 0) {
+  // Use the sum of displayed categories (excludes wallet) so percentages sum to 100%
+  const displayedTotal = bank + cash + metals;
+
+  if (displayedTotal === 0) {
     return [
       { label: "Bank", value: 0, percentage: 0 },
       { label: "Cash", value: 0, percentage: 0 },
@@ -119,9 +118,9 @@ export function calculateAssetBreakdownPercentages(
   // Largest remainder method: floor all percentages, then distribute remaining
   // points to items with the largest fractional remainders
   const items = [
-    { label: "Bank", value: bank, rawPct: (bank / total) * 100 },
-    { label: "Cash", value: cash, rawPct: (cash / total) * 100 },
-    { label: "Metals", value: metals, rawPct: (metals / total) * 100 },
+    { label: "Bank", value: bank, rawPct: (bank / displayedTotal) * 100 },
+    { label: "Cash", value: cash, rawPct: (cash / displayedTotal) * 100 },
+    { label: "Metals", value: metals, rawPct: (metals / displayedTotal) * 100 },
   ];
 
   const floored = items.map((item) => ({

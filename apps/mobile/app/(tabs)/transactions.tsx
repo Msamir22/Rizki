@@ -27,6 +27,7 @@ import {
   toDateKey,
 } from "@/hooks/useHistoricalRates";
 import { useSync } from "@/providers/SyncProvider";
+import { logger } from "@/utils/logger";
 import { updateTransaction, updateTransfer } from "@/services";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
@@ -147,8 +148,12 @@ export default function TransactionsPlaceholder(): React.JSX.Element {
     setIsRefreshing(true);
     try {
       await sync();
-    } catch {
-      // Error is already captured in SyncProvider state
+    } catch (error: unknown) {
+      logger.error("Pull-to-refresh sync failed", error);
+      showToast({
+        type: "error",
+        title: tCommon("error_generic"),
+      });
     }
     // Also trigger local refetch just in case
     refetch();
