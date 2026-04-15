@@ -1,8 +1,8 @@
 ---
-description: Run styling checks and common refactorings for Astik UI
+description: Run styling checks and common refactorings for Rizqi UI
 ---
 
-# 🎨 Astik Styling Workflow
+# 🎨 Rizqi Styling Workflow
 
 This workflow helps ensure that building components follow the established
 styling rules:

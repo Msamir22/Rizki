@@ -7,8 +7,8 @@
  * before aggregation to handle mixed-currency transactions correctly.
  */
 
-import { database, Transaction } from "@astik/db";
-import { convertCurrency, getYearMonthBoundaries } from "@astik/logic";
+import { database, Transaction } from "@rizqi/db";
+import { convertCurrency, getYearMonthBoundaries } from "@rizqi/logic";
 import { Q } from "@nozbe/watermelondb";
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useMarketRates } from "./useMarketRates";

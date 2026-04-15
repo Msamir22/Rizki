@@ -6,7 +6,7 @@
  * the `usePaymentSubmission` hook (SRP).
  */
 
-import { formatCurrency } from "@astik/logic";
+import { formatCurrency } from "@rizqi/logic";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useState } from "react";
 import {

@@ -13,7 +13,7 @@
  * @module useEditAccountForm
  */
 
-import type { Account, AccountType, CurrencyType } from "@astik/db";
+import type { Account, AccountType, CurrencyType } from "@rizqi/db";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   type EditAccountFormData,

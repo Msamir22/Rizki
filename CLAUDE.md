@@ -1,8 +1,8 @@
-# Astik - Project Instructions
+# Rizqi - Project Instructions
 
 ## Project Context
 
-Astik is a personal financial app — a frictionless financial companion that
+Rizqi is a personal financial app — a frictionless financial companion that
 tracks cash, digital payments, and savings (Gold/USD) for the modern Egyptian
 user. It solves the "boring manual entry" problem using voice and automation.
 
@@ -41,13 +41,13 @@ with Angular equivalents in chat (never in code comments).
 
 Dependency direction: `apps/ → packages/logic → packages/db`. **Never reverse.**
 
-- **`packages/db` (`@astik/db`)**: WatermelonDB models, schema, types, sync
+- **`packages/db` (`@rizqi/db`)**: WatermelonDB models, schema, types, sync
   config. MUST NOT import from `apps/` or other packages.
-- **`packages/logic` (`@astik/logic`)**: Shared calculations and parsers (net
-  worth, voice parser, currency utils). May import from `@astik/db` for types
+- **`packages/logic` (`@rizqi/logic`)**: Shared calculations and parsers (net
+  worth, voice parser, currency utils). May import from `@rizqi/db` for types
   only. MUST NOT import from `apps/`.
 - **`apps/mobile`**: React Native Expo app. May import from any package.
-- **`apps/api`**: Express.js backend. May import from `@astik/logic` for shared
+- **`apps/api`**: Express.js backend. May import from `@rizqi/logic` for shared
   logic.
 
 ## Service-Layer Separation

@@ -80,7 +80,7 @@ const SHOW_APPLE_SIGN_IN = Platform.OS === "ios";
 ## R4: AsyncStorage Keys for Prompt Dismissal
 
 **Decision**: Use `@react-native-async-storage/async-storage` (already
-installed) with `@astik/` prefix.
+installed) with `@rizqi/` prefix.
 
 **Rationale**: Follows existing project conventions (e.g., `HAS_ONBOARDED_KEY`
 in onboarding). AsyncStorage is already a dependency.
@@ -88,10 +88,10 @@ in onboarding). AsyncStorage is already a dependency.
 **Keys**:
 
 ```typescript
-const SIGNUP_PROMPT_DISMISSED_AT = "@astik/signup-prompt-dismissed-at";
+const SIGNUP_PROMPT_DISMISSED_AT = "@rizqi/signup-prompt-dismissed-at";
 const SIGNUP_PROMPT_DISMISSED_TX_COUNT =
-  "@astik/signup-prompt-dismissed-tx-count";
-const SIGNUP_PROMPT_NEVER_SHOW = "@astik/signup-prompt-never-show";
+  "@rizqi/signup-prompt-dismissed-tx-count";
+const SIGNUP_PROMPT_NEVER_SHOW = "@rizqi/signup-prompt-never-show";
 ```
 
 ---

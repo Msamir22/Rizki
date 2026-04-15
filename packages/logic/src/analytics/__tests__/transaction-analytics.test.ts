@@ -11,7 +11,7 @@ import type {
   CurrencyType,
   Transaction,
   Category,
-} from "@astik/db";
+} from "@rizqi/db";
 import {
   calculateMonthlyTotals,
   aggregateByCategory,

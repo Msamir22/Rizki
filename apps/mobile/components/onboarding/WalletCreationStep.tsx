@@ -21,7 +21,7 @@ import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
 import { ensureCashAccount } from "@/services/account-service";
 import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
-import type { CurrencyType } from "@astik/db";
+import type { CurrencyType } from "@rizqi/db";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import React, { useCallback, useEffect, useState } from "react";

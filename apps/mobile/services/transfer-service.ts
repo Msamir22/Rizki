@@ -7,7 +7,7 @@ import {
   Transfer,
   type TransactionSource,
   type TransactionType,
-} from "@astik/db";
+} from "@rizqi/db";
 import { ensureCashAccount } from "./account-service";
 
 export interface TransferData {

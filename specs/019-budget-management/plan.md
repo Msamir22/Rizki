@@ -1,12 +1,12 @@
 # Implementation Plan: Budget Management UI & Spending Progress Tracking
 
 **Branch**: `019-budget-management` | **Date**: 2026-03-19 | **Spec**:
-[spec.md](file:///e:/Work/My%20Projects/Astik/specs/019-budget-management/spec.md)
+[spec.md](file:///e:/Work/My%20Projects/Rizqi/specs/019-budget-management/spec.md)
 **Input**: Feature specification from `/specs/019-budget-management/spec.md`
 
 ## Summary
 
-Implement a complete budget management feature for Astik: a card-based dashboard
+Implement a complete budget management feature for Rizqi: a card-based dashboard
 with circular progress rings, budget CRUD (create/edit/pause/delete), a detail
 screen with spending trend charts and subcategory breakdowns, in-app alert
 modals triggered by transaction creation, and period filtering. The
@@ -35,7 +35,7 @@ _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 | ----------------------------- | ------- | --------------------------------------------------------------------------------- |
 | I. Offline-First Data         | ✅ PASS | All reads/writes via WatermelonDB. Spending aggregation is local queries.         |
 | II. Documented Business Logic | ✅ PASS | All rules in spec.md. `business-decisions.md` to be updated on completion.        |
-| III. Type Safety              | ✅ PASS | Budget types already exist in `@astik/db`. All new code strictly typed.           |
+| III. Type Safety              | ✅ PASS | Budget types already exist in `@rizqi/db`. All new code strictly typed.           |
 | IV. Service-Layer Separation  | ✅ PASS | `budget-service.ts` for DB ops, hooks for subscriptions, components for UI.       |
 | V. Premium UI                 | ✅ PASS | Circular progress rings, dark mode, NativeWind, reanimated animations.            |
 | VI. Monorepo Boundaries       | ✅ PASS | Model in `packages/db`, service in `apps/mobile/services/`, UI in `apps/mobile/`. |
@@ -64,12 +64,12 @@ specs/019-budget-management/
 supabase/migrations/
 └── 035_budget_schema_updates.sql          # currency optional + alert_fired_level column
 
-# Package: @astik/db (packages/db/)
+# Package: @rizqi/db (packages/db/)
 packages/db/src/models/base/base-budget.ts  # AUTO-GENERATED — will update via db:migrate
 packages/db/src/schema.ts                   # AUTO-GENERATED — will update via db:migrate
 packages/db/src/types.ts                    # Verify BudgetType, BudgetPeriod, BudgetStatus types
 
-# Package: @astik/logic (packages/logic/)
+# Package: @rizqi/logic (packages/logic/)
 packages/logic/src/budget/
 ├── budget-period-utils.ts                  # Period boundary calculations (start/end dates)
 ├── budget-spending.ts                      # Spending percentage, remaining, daily average
@@ -120,7 +120,7 @@ packages/logic/src/budget/__tests__/
 **Structure Decision**: Mobile + monorepo pattern (Option 3). Budget logic split
 between `packages/logic` (pure calculations) and `apps/mobile/services`
 (WatermelonDB operations), following the existing `transaction-service.ts` and
-`@astik/logic` patterns.
+`@rizqi/logic` patterns.
 
 ## Implementation Phases
 

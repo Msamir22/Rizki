@@ -6,7 +6,7 @@ import {
   RecurringFrequency,
   RecurringPayment,
   TransactionType,
-} from "@astik/db";
+} from "@rizqi/db";
 import { getCurrentUserId } from "./supabase";
 import { createTransaction } from "./transaction-service";
 
@@ -85,7 +85,7 @@ export async function updateRecurringPaymentNextDueDate(
  * TODO: Wrap both operations in a single database.write() for atomicity.
  * Currently, if updateRecurringPaymentNextDueDate fails after createTransaction
  * succeeds, the payment is recorded but the schedule is not advanced.
- * See: https://github.com/Msamir22/Astik/issues/217
+ * See: https://github.com/Msamir22/Rizqi/issues/217
  */
 export async function submitRecurringPayment(params: {
   payment: RecurringPayment;

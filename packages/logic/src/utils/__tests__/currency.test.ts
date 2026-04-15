@@ -16,7 +16,7 @@ import {
   formatExchangeRate,
   formatConversionPreview,
 } from "../currency";
-import type { CurrencyType, MarketRate } from "@astik/db";
+import type { CurrencyType, MarketRate } from "@rizqi/db";
 
 // =============================================================================
 // Helpers

@@ -10,9 +10,9 @@ module.exports = function (api) {
           root: ["./"],
           alias: {
             "@": "./",
-            "@astik/mobile": "./",
-            "@astik/logic": "../../packages/logic/src",
-            "@astik/db": "../../packages/db/src",
+            "@rizqi/mobile": "./",
+            "@rizqi/logic": "../../packages/logic/src",
+            "@rizqi/db": "../../packages/db/src",
           },
         },
       ],

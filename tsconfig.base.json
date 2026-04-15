@@ -16,8 +16,8 @@
     "noImplicitAny": true,
     "forceConsistentCasingInFileNames": true,
     "paths": {
-      "@astik/logic": ["./packages/logic/src/index.ts"],
-      "@astik/db": ["./packages/db/src/index.ts"]
+      "@rizqi/logic": ["./packages/logic/src/index.ts"],
+      "@rizqi/db": ["./packages/db/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp", "dist"]

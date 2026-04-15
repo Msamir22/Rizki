@@ -12,7 +12,7 @@
  * @module useDeleteAccount
  */
 
-import { database, type Transaction, type Transfer } from "@astik/db";
+import { database, type Transaction, type Transfer } from "@rizqi/db";
 import { Q } from "@nozbe/watermelondb";
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";

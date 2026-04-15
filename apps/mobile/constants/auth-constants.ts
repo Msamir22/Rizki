@@ -9,4 +9,4 @@
  */
 
 /** Deep link scheme used as the OAuth redirect target. */
-export const AUTH_REDIRECT_URL = "astik://auth-callback";
+export const AUTH_REDIRECT_URL = "rizqi://auth-callback";

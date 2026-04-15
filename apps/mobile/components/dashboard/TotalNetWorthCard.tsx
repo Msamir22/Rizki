@@ -1,6 +1,6 @@
 import { palette } from "@/constants/colors";
-import { CurrencyType } from "@astik/db";
-import { formatCurrency } from "@astik/logic";
+import { CurrencyType } from "@rizqi/db";
+import { formatCurrency } from "@rizqi/logic";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useTranslation } from "react-i18next";

@@ -1,6 +1,6 @@
-# Astik Styling & UI Guidelines
+# Rizqi Styling & UI Guidelines
 
-This document outlines the project-specific styling and UI rules for Astik's
+This document outlines the project-specific styling and UI rules for Rizqi's
 mobile application.
 
 ## 🎨 Styling Rules

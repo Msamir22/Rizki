@@ -8,12 +8,12 @@ placeholders:
 1. **Icon** - `apps/mobile/assets/icon.png`
    - Size: 1024x1024 px
    - Background: #065F46 (Nile Green)
-   - Add "A" letter or Astik logo
+   - Add "A" letter or Rizqi logo
 
 2. **Splash Screen** - `apps/mobile/assets/splash.png`
    - Size: 1284x2778 px
    - Background: #065F46
-   - Center: "Astik" text
+   - Center: "Rizqi" text
 
 3. **Adaptive Icon** - `apps/mobile/assets/adaptive-icon.png`
    - Size: 1024x1024 px

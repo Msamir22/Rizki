@@ -9,8 +9,8 @@
  */
 
 import { palette } from "@/constants/colors";
-import type { CurrencyType } from "@astik/db";
-import { SUPPORTED_CURRENCIES, type CurrencyInfo } from "@astik/logic";
+import type { CurrencyType } from "@rizqi/db";
+import { SUPPORTED_CURRENCIES, type CurrencyInfo } from "@rizqi/logic";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useMemo, useState } from "react";
 import {

@@ -1,4 +1,4 @@
-// Shared types and interfaces for Astik
+// Shared types and interfaces for Rizqi
 
 export * from "./accounts/accounts-calculations";
 export * from "./analytics";

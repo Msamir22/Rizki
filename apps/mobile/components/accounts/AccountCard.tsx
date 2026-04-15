@@ -1,6 +1,6 @@
 import { palette } from "@/constants/colors";
-import { Account, MarketRate } from "@astik/db";
-import { convertCurrency, formatCurrency } from "@astik/logic";
+import { Account, MarketRate } from "@rizqi/db";
+import { convertCurrency, formatCurrency } from "@rizqi/logic";
 import { Ionicons } from "@expo/vector-icons";
 import { useMemo } from "react";
 import { Text, TouchableOpacity, View } from "react-native";

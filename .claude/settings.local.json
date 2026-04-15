@@ -6,9 +6,9 @@
       "Bash(npm list:*)",
       "mcp__github__get_issue",
       "Bash(grep -E \"^d|\\\\.json$|\\\\.yaml$|\\\\.yml$\")",
-      "Bash(ls -la /e/Work/\"My Projects\"/Astik/apps/mobile/app/\\\\\\(tabs\\\\\\)/)",
-      "Bash(mkdir -p \"E:/Work/My Projects/Astik/.claude/commands\")",
-      "Bash(mkdir -p \"E:/Work/My Projects/Astik/.claude/rules\")",
+      "Bash(ls -la /e/Work/\"My Projects\"/Rizqi/apps/mobile/app/\\\\\\(tabs\\\\\\)/)",
+      "Bash(mkdir -p \"E:/Work/My Projects/Rizqi/.claude/commands\")",
+      "Bash(mkdir -p \"E:/Work/My Projects/Rizqi/.claude/rules\")",
       "WebSearch",
       "Bash(npm search:*)",
       "WebFetch(domain:github.com)",
@@ -25,7 +25,7 @@
       "mcp__stitch__generate_screen_from_text",
       "mcp__stitch__list_screens",
       "mcp__stitch__get_screen",
-      "Bash(curl -L -o \"E:/Work/My Projects/Astik/apps/mobile/assets/generated-logos/rizqi-logo-final.png\" \"https://lh3.googleusercontent.com/aida-public/AB6AXuB6vyNPtLGPThP2gomgjWsxXhO9MZZzgEX2JqqwdjhlaL6R7L-KBxk83BLLFDX5nprGTlD7agCFnhf3mA_-k--dPfhuMTvesFta-aVUm7n85oMLs1q3fz6hbNGKYVBqZ3RSqCMLCZluh4Qd9FJkqDA0rO1E9nsZ4JJxE5fCgCZUr8YxafPRkF38P01Y_yQWEUb2P1seOQzceiZI_x9ypzAqM5_6QWElRSxISkStq9FepDlmpvsyw4RUzUDlrdXe6I22Ak0jLJrLzOc\")",
+      "Bash(curl -L -o \"E:/Work/My Projects/Rizqi/apps/mobile/assets/generated-logos/rizqi-logo-final.png\" \"https://lh3.googleusercontent.com/aida-public/AB6AXuB6vyNPtLGPThP2gomgjWsxXhO9MZZzgEX2JqqwdjhlaL6R7L-KBxk83BLLFDX5nprGTlD7agCFnhf3mA_-k--dPfhuMTvesFta-aVUm7n85oMLs1q3fz6hbNGKYVBqZ3RSqCMLCZluh4Qd9FJkqDA0rO1E9nsZ4JJxE5fCgCZUr8YxafPRkF38P01Y_yQWEUb2P1seOQzceiZI_x9ypzAqM5_6QWElRSxISkStq9FepDlmpvsyw4RUzUDlrdXe6I22Ak0jLJrLzOc\")",
       "mcp__stitch__generate_variants"
     ]
   }

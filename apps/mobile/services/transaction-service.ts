@@ -7,7 +7,7 @@ import {
   Transfer,
   TransactionSource,
   TransactionType,
-} from "@astik/db";
+} from "@rizqi/db";
 import { Q, type Model } from "@nozbe/watermelondb";
 import type { DisplayTransaction } from "@/hooks/useTransactionsGrouping";
 

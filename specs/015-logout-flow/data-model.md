@@ -11,16 +11,16 @@ operates on existing entities and AsyncStorage keys.
 
 | Key                         | Type              | Lifecycle                                          | Purpose                   |
 | --------------------------- | ----------------- | -------------------------------------------------- | ------------------------- |
-| `@astik/logout-in-progress` | `"true"` / absent | Set before logout starts, removed after completion | Force-close recovery flag |
+| `@rizqi/logout-in-progress` | `"true"` / absent | Set before logout starts, removed after completion | Force-close recovery flag |
 
 ### AsyncStorage Keys (Existing — Cleared on Logout)
 
 | Key                                       | Constant                               | Purpose                |
 | ----------------------------------------- | -------------------------------------- | ---------------------- |
-| `@astik/first-use-date`                   | `FIRST_USE_DATE_KEY`                   | Sign-up prompt trigger |
-| `@astik/signup-prompt-dismissed-at`       | `SIGNUP_PROMPT_DISMISSED_AT_KEY`       | Prompt cooldown        |
-| `@astik/signup-prompt-dismissed-tx-count` | `SIGNUP_PROMPT_DISMISSED_TX_COUNT_KEY` | Prompt cooldown        |
-| `@astik/signup-prompt-never-show`         | `SIGNUP_PROMPT_NEVER_SHOW_KEY`         | "Never show" flag      |
+| `@rizqi/first-use-date`                   | `FIRST_USE_DATE_KEY`                   | Sign-up prompt trigger |
+| `@rizqi/signup-prompt-dismissed-at`       | `SIGNUP_PROMPT_DISMISSED_AT_KEY`       | Prompt cooldown        |
+| `@rizqi/signup-prompt-dismissed-tx-count` | `SIGNUP_PROMPT_DISMISSED_TX_COUNT_KEY` | Prompt cooldown        |
+| `@rizqi/signup-prompt-never-show`         | `SIGNUP_PROMPT_NEVER_SHOW_KEY`         | "Never show" flag      |
 
 ### AsyncStorage Keys (Existing — Preserved on Logout)
 

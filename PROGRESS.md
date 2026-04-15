@@ -1,4 +1,4 @@
-# Astik Project - Current Status & Next Steps
+# Rizqi Project - Current Status & Next Steps
 
 ## 🎉 What We've Built So Far
 
@@ -19,10 +19,10 @@
 
 ### Shared Packages
 
-- `@astik/logic` - Voice parser, notification parser, category detection,
+- `@rizqi/logic` - Voice parser, notification parser, category detection,
   currency utilities
-- `@astik/db` - WatermelonDB models (Account, Transaction)
-- `@astik/ui` - Egyptian color palette (#065F46 Nile Green, #10B981 Astik Mint,
+- `@rizqi/db` - WatermelonDB models (Account, Transaction)
+- `@rizqi/ui` - Egyptian color palette (#065F46 Nile Green, #10B981 Rizqi Mint,
   etc.)
 
 ### Developer Tools
@@ -65,7 +65,7 @@ the mock API while Supabase is being set up.
 **Benefits:**
 
 - Start building value immediately
-- Test shared packages (@astik/logic, @astik/ui)
+- Test shared packages (@rizqi/logic, @rizqi/ui)
 - Mock API lets us develop offline
 - More exciting/visible progress
 

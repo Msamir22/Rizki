@@ -1,5 +1,5 @@
 /**
- * Supabase Client for Astik Mobile
+ * Supabase Client for Rizqi Mobile
  * Initialized with environment variables
  *
  * Uses SecureStore for session persistence:
@@ -7,7 +7,7 @@
  * - Android: EncryptedSharedPreferences - survives app restarts but NOT manual data clear
  */
 
-import { SupabaseDatabase } from "@astik/db";
+import { SupabaseDatabase } from "@rizqi/db";
 import { createClient, AuthError } from "@supabase/supabase-js";
 import * as SecureStore from "expo-secure-store";
 import { AUTH_REDIRECT_URL } from "@/constants/auth-constants";

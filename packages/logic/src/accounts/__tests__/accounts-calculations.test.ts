@@ -10,7 +10,7 @@
  */
 
 import { calculateAccountsTotalBalance } from "../accounts-calculations";
-import type { Account, MarketRate, CurrencyType } from "@astik/db";
+import type { Account, MarketRate, CurrencyType } from "@rizqi/db";
 
 // =============================================================================
 // Helpers

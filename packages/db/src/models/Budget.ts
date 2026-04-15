@@ -1,6 +1,6 @@
 import { BaseBudget } from "./base/base-budget";
 import type { AlertFiredLevel } from "../types";
-import { parsePauseIntervals, type PauseInterval } from "@astik/logic";
+import { parsePauseIntervals, type PauseInterval } from "@rizqi/logic";
 
 export class Budget extends BaseBudget {
   /**

@@ -33,7 +33,7 @@ import { palette } from "@/constants/colors";
 import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
 import { useBudgets, type BudgetWithMetrics } from "@/hooks/useBudgets";
 
-import { formatCurrency } from "@astik/logic";
+import { formatCurrency } from "@rizqi/logic";
 import { PeriodFilterChips } from "./PeriodFilterChips";
 import { BudgetHeroCard } from "./BudgetHeroCard";
 import { BudgetCategoryCard } from "./BudgetCategoryCard";

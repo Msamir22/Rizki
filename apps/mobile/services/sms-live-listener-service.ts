@@ -22,7 +22,7 @@ import {
   computeSmsHash,
   isLikelyFinancialSms,
   SUPPORTED_CURRENCIES,
-} from "@astik/logic";
+} from "@rizqi/logic";
 import {
   DeviceEventEmitter,
   type EmitterSubscription,
@@ -33,7 +33,7 @@ import {
   type SmsCandidate,
   type ParseSmsContext,
 } from "./ai-sms-parser-service";
-import { database, type Category } from "@astik/db";
+import { database, type Category } from "@rizqi/db";
 import { Q } from "@nozbe/watermelondb";
 
 // ---------------------------------------------------------------------------

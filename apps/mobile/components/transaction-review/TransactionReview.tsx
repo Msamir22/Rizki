@@ -24,7 +24,7 @@ import { PeriodFilterModal } from "@/components/modals/PeriodFilterModal";
 import { TypeFilterModal } from "@/components/modals/TypeFilterModal";
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
-import type { ReviewableTransaction } from "@astik/logic";
+import type { ReviewableTransaction } from "@rizqi/logic";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useState } from "react";
 import { FlatList, Text, TouchableOpacity, View } from "react-native";

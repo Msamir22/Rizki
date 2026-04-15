@@ -4,7 +4,7 @@ import {
   type MatchInput,
 } from "../../services/sms-account-matcher";
 
-jest.mock("@astik/db", () => ({
+jest.mock("@rizqi/db", () => ({
   database: {
     get: jest.fn(() => ({
       query: jest.fn(() => ({

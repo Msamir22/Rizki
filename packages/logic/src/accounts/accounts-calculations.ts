@@ -1,4 +1,4 @@
-import type { Account, MarketRate } from "@astik/db";
+import type { Account, MarketRate } from "@rizqi/db";
 import { convertCurrency } from "../utils/currency";
 
 /**

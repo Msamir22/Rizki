@@ -1,7 +1,7 @@
 import { formatToLocalDateString } from "@/utils/dateHelpers";
 import { palette } from "@/constants/colors";
-import type { CurrencyType } from "@astik/db";
-import { CURRENCY_INFO_MAP } from "@astik/logic";
+import type { CurrencyType } from "@rizqi/db";
+import { CURRENCY_INFO_MAP } from "@rizqi/logic";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useTranslation } from "react-i18next";
@@ -445,7 +445,9 @@ export default function SettingsScreen(): React.JSX.Element {
             </View>
 
             {/* Auto Confirm Toggle */}
-            <View className={`flex-row items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-800 mt-0.5 ${!liveDetection ? "opacity-50" : ""}`}>
+            <View
+              className={`flex-row items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-800 mt-0.5 ${!liveDetection ? "opacity-50" : ""}`}
+            >
               <View className="flex-row items-center gap-3 flex-1">
                 <View className="w-8 bg-indigo-600 dark:bg-indigo-500 h-8 rounded-lg justify-center items-center">
                   <Ionicons name="checkmark-circle" size={20} color="#FFF" />

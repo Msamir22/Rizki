@@ -21,7 +21,7 @@ import {
   database,
   type CurrencyType,
   type MetalType,
-} from "@astik/db";
+} from "@rizqi/db";
 
 // ---------------------------------------------------------------------------
 // Types

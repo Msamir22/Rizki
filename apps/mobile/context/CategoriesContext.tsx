@@ -6,7 +6,7 @@
  * Any category update (add, rename, reorder) propagates automatically.
  */
 
-import { Category, database } from "@astik/db";
+import { Category, database } from "@rizqi/db";
 import { Q } from "@nozbe/watermelondb";
 import React, {
   createContext,

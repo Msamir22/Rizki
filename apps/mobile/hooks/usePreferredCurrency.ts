@@ -3,8 +3,8 @@ import {
   DEFAULT_CURRENCY,
   detectCurrencyFromTimezone,
 } from "@/utils/currency-detection";
-import { database, Profile, type CurrencyType } from "@astik/db";
-import { SUPPORTED_CURRENCIES } from "@astik/logic";
+import { database, Profile, type CurrencyType } from "@rizqi/db";
+import { SUPPORTED_CURRENCIES } from "@rizqi/logic";
 import { Q } from "@nozbe/watermelondb";
 import { useEffect, useMemo, useState } from "react";
 

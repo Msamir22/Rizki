@@ -8,8 +8,8 @@
  */
 
 import { palette } from "@/constants/colors";
-import type { CurrencyType } from "@astik/db";
-import { type SpendingMetrics, formatCurrency } from "@astik/logic";
+import type { CurrencyType } from "@rizqi/db";
+import { type SpendingMetrics, formatCurrency } from "@rizqi/logic";
 import React from "react";
 import { Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
@@ -43,9 +43,7 @@ export function BudgetDetailOverview({
       {/* Paused indicator */}
       {isPaused && (
         <View className="bg-slate-500 rounded-full px-3 py-1 mb-3 self-center">
-          <Text className="text-xs font-medium text-white">
-            {t("paused")}
-          </Text>
+          <Text className="text-xs font-medium text-white">{t("paused")}</Text>
         </View>
       )}
 

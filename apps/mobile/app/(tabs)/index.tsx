@@ -27,8 +27,8 @@ import { useRecentTransactions } from "@/hooks/useTransactions";
 import { useDatabaseReady } from "@/providers/DatabaseProvider";
 import { useSync } from "@/providers/SyncProvider";
 import { logger } from "@/utils/logger";
-import type { CurrencyType } from "@astik/db";
-import { CURRENCY_INFO_MAP } from "@astik/logic";
+import type { CurrencyType } from "@rizqi/db";
+import { CURRENCY_INFO_MAP } from "@rizqi/logic";
 import { useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
 import {

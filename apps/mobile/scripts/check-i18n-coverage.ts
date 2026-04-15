@@ -64,7 +64,7 @@ const AR_LATIN_SHORT_ALLOWLIST = new Set([
   "GBP",
   "SAR",
   "AED",
-  "Astik",
+  "Rizqi",
 ]);
 
 /** Regex for purely numeric/placeholder values like "0.00", "0.0" */

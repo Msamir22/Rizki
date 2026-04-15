@@ -7,7 +7,7 @@
  * - Internal: Fraction (0.0-1.0)
  */
 
-import type { MetalType } from "@astik/db";
+import type { MetalType } from "@rizqi/db";
 
 // =============================================================================
 // TYPES

@@ -41,7 +41,7 @@ interface MockDbApi {
 // jest.mock (hoisted — everything inside the factory)
 // ---------------------------------------------------------------------------
 
-jest.mock("@astik/db", () => {
+jest.mock("@rizqi/db", () => {
   function createModel(
     id: string,
     fields: Record<string, unknown> = {}
@@ -142,7 +142,7 @@ const {
   __seed: mockSeed,
   __clearStores: mockClearStores,
   __rewire: mockRewire,
-} = jest.requireMock<MockDbApi>("@astik/db");
+} = jest.requireMock<MockDbApi>("@rizqi/db");
 
 // ---------------------------------------------------------------------------
 // Helpers

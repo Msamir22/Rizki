@@ -1,5 +1,5 @@
-import { AccountType } from "@astik/db";
-import { SUPPORTED_CURRENCIES } from "@astik/logic";
+import { AccountType } from "@rizqi/db";
+import { SUPPORTED_CURRENCIES } from "@rizqi/logic";
 import { Ionicons } from "@expo/vector-icons";
 
 export const ACCOUNT_TYPES = [

@@ -1,10 +1,10 @@
 /**
- * Bank Notification Parser for Astik
+ * Bank Notification Parser for Rizqi
  * Parses Egyptian bank notifications (InstaPay, Debit Cards)
  * Based on specification in notification_parser_spec.md
  */
 
-import { CurrencyType } from "@astik/db";
+import { CurrencyType } from "@rizqi/db";
 import { ParsedNotification } from "../types";
 
 /**

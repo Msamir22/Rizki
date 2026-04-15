@@ -1,4 +1,4 @@
-import type { ReviewableTransaction } from "@astik/logic";
+import type { ReviewableTransaction } from "@rizqi/logic";
 
 export interface SourceTypeBadge {
   readonly label: string;

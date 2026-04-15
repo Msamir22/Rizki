@@ -2,7 +2,7 @@
  * Parsers Barrel Exports
  *
  * Re-exports all SMS parser modules for clean imports from
- * `@astik/logic` or `packages/logic/src/parsers`.
+ * `@rizqi/logic` or `packages/logic/src/parsers`.
  *
  * @module parsers/index
  */

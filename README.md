@@ -1,4 +1,4 @@
-# Astik Project
+# Rizqi Project
 
 A friction-less mobile money tracker for the Egyptian market.
 
@@ -19,7 +19,7 @@ A friction-less mobile money tracker for the Egyptian market.
 ## Project Structure
 
 ```
-/astik
+/rizqi
   /apps/api - Express.js API server
   /packages
     /logic - Parsers and utilities (ready)
@@ -70,23 +70,23 @@ npm start
 
 ## Shared Packages (Ready for Mobile)
 
-### @astik/logic
+### @rizqi/logic
 
 - Voice parser (Egyptian Arabic + English)
 - Notification parser (InstaPay, debit cards)
 - Category detection
 - Currency conversion
 
-### @astik/db
+### @rizqi/db
 
 - WatermelonDB schema
 - Account & Transaction models
 
-### @astik/ui
+### @rizqi/ui
 
 - Egyptian color palette:
   - Nile Green #065F46
-  - Astik Mint #10B981
+  - Rizqi Mint #10B981
   - Expense Red #EF4444
   - Pharaonic Gold #D97706
 

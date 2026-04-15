@@ -1,5 +1,5 @@
-import { Account, database, Transaction } from "@astik/db";
-import { ParsedVoiceTransaction } from "@astik/logic";
+import { Account, database, Transaction } from "@rizqi/db";
+import { ParsedVoiceTransaction } from "@rizqi/logic";
 import { getCurrentUserId } from "../services/supabase";
 
 /**
@@ -37,7 +37,7 @@ export function formatTransactionDate(date: Date): string {
  * Create a new transaction from voice input.
  *
  * NOTE: This function lives here (rather than in transaction-service.ts)
- * because it depends on ParsedVoiceTransaction from @astik/logic, which is
+ * because it depends on ParsedVoiceTransaction from @rizqi/logic, which is
  * a voice-input-specific concern, not a core CRUD operation.
  */
 export async function createTransactionFromVoice(

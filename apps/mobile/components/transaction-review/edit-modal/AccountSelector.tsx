@@ -4,7 +4,7 @@ import React from "react";
 import { Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useTranslation } from "react-i18next";
 
-import type { CurrencyType } from "@astik/db";
+import type { CurrencyType } from "@rizqi/db";
 
 export interface AccountOption {
   readonly id: string;

@@ -16,8 +16,8 @@ import {
   TransactionValidationErrors,
   validateTransactionForm,
 } from "@/validation/transaction-validation";
-import type { Category, CurrencyType, TransactionType } from "@astik/db";
-import { parseAmountInput, type ReviewableTransaction } from "@astik/logic";
+import type { Category, CurrencyType, TransactionType } from "@rizqi/db";
+import { parseAmountInput, type ReviewableTransaction } from "@rizqi/logic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 export interface UseTransactionEditStateReturn {

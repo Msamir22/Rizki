@@ -16,9 +16,9 @@ import { Platform } from "react-native";
 // Constants
 // ---------------------------------------------------------------------------
 
-const SMS_PROMPT_SHOWN_KEY = "@astik/sms-prompt-shown";
-const SMS_LAST_SYNC_KEY = "@astik/sms-last-sync";
-const SMS_HAS_SYNCED_KEY = "@astik/sms-has-synced";
+const SMS_PROMPT_SHOWN_KEY = "@rizqi/sms-prompt-shown";
+const SMS_LAST_SYNC_KEY = "@rizqi/sms-last-sync";
+const SMS_HAS_SYNCED_KEY = "@rizqi/sms-has-synced";
 
 // ---------------------------------------------------------------------------
 // Types

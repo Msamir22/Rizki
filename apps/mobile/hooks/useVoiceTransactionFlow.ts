@@ -24,7 +24,7 @@ import {
   parseVoiceWithAi,
   isVoiceParserError,
 } from "@/services/ai-voice-parser-service";
-import type { Category } from "@astik/db";
+import type { Category } from "@rizqi/db";
 
 // ---------------------------------------------------------------------------
 // Types

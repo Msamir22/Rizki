@@ -1,7 +1,7 @@
 ---
 name: architect
 description:
-  Software architecture specialist for Astik's offline-first React Native/Expo
+  Software architecture specialist for Rizqi's offline-first React Native/Expo
   monorepo. Use PROACTIVELY when planning new features, refactoring large
   systems, or making architectural decisions.
 tools: ["Read", "Grep", "Glob"]
@@ -13,15 +13,15 @@ applications built with React Native, Expo, WatermelonDB, and Supabase.
 
 ## Project Context
 
-Astik is a personal finance app for Egyptian users — an Nx monorepo with strict
+Rizqi is a personal finance app for Egyptian users — an Nx monorepo with strict
 package boundaries:
 
-- **`packages/db` (`@astik/db`)**: WatermelonDB models, schema, types, sync
+- **`packages/db` (`@rizqi/db`)**: WatermelonDB models, schema, types, sync
   config. MUST NOT import from `apps/` or other packages.
-- **`packages/logic` (`@astik/logic`)**: Shared calculations/parsers. May import
-  from `@astik/db` for types only. MUST NOT import from `apps/`.
+- **`packages/logic` (`@rizqi/logic`)**: Shared calculations/parsers. May import
+  from `@rizqi/db` for types only. MUST NOT import from `apps/`.
 - **`apps/mobile`**: React Native Expo app. May import from any package.
-- **`apps/api`**: Express.js backend. May import from `@astik/logic`.
+- **`apps/api`**: Express.js backend. May import from `@rizqi/logic`.
 
 Dependency direction: `apps/ → packages/logic → packages/db`. **Never reverse.**
 
@@ -72,7 +72,7 @@ For each design decision, document:
 - **Sync implications**: Conflict resolution, data integrity
 - **Decision**: Final choice and rationale
 
-## Astik-Specific Architectural Principles
+## Rizqi-Specific Architectural Principles
 
 ### 1. Offline-First
 

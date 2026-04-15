@@ -1,22 +1,22 @@
 {
   "expo": {
-    "name": "Astik",
-    "slug": "astik",
+    "name": "Rizqi",
+    "slug": "rizqi",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
-    "scheme": "astik",
+    "scheme": "rizqi",
     "assetBundlePatterns": ["**/*"],
     "extra": {
       "supportsRTL": true
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.astik.app",
+      "bundleIdentifier": "com.rizqi.app",
       "infoPlist": {
-        "NSSpeechRecognitionUsageDescription": "Astik needs speech recognition to convert your voice to transactions",
-        "NSMicrophoneUsageDescription": "Astik needs microphone access for voice input"
+        "NSSpeechRecognitionUsageDescription": "Rizqi needs speech recognition to convert your voice to transactions",
+        "NSMicrophoneUsageDescription": "Rizqi needs microphone access for voice input"
       }
     },
     "android": {
@@ -24,7 +24,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0F172A"
       },
-      "package": "com.msamir22.astikmobile",
+      "package": "com.rizqi.app",
       "permissions": [
         "android.permission.RECORD_AUDIO",
         "android.permission.READ_SMS",

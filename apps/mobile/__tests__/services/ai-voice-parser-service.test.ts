@@ -7,7 +7,7 @@
  *
  * Mock Strategy:
  *   - `supabase.functions.invoke` is mocked to simulate Edge Function responses
- *   - `@astik/logic` utilities are partially mocked for category resolution
+ *   - `@rizqi/logic` utilities are partially mocked for category resolution
  */
 
 // ---------------------------------------------------------------------------
@@ -28,9 +28,9 @@ jest.mock("@/services/supabase", () => ({
 const mockFetch = jest.fn();
 global.fetch = mockFetch as unknown as typeof fetch;
 
-// Mock @astik/logic — keep real implementations except parseCategory/buildCategoryMap
-jest.mock("@astik/logic", () => {
-  const actual = jest.requireActual<Record<string, unknown>>("@astik/logic");
+// Mock @rizqi/logic — keep real implementations except parseCategory/buildCategoryMap
+jest.mock("@rizqi/logic", () => {
+  const actual = jest.requireActual<Record<string, unknown>>("@rizqi/logic");
   return {
     ...actual,
     // parseCategory needs a valid category map to resolve — stub it
@@ -54,7 +54,7 @@ import {
   parseVoiceWithAi,
   isVoiceParserError,
 } from "@/services/ai-voice-parser-service";
-import type { Category } from "@astik/db";
+import type { Category } from "@rizqi/db";
 
 // ---------------------------------------------------------------------------
 // Helpers

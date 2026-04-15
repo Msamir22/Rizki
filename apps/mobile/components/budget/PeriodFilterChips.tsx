@@ -15,7 +15,7 @@
 
 import React, { useCallback } from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
-import type { BudgetPeriod } from "@astik/db";
+import type { BudgetPeriod } from "@rizqi/db";
 import { palette } from "@/constants/colors";
 import { useTranslation } from "react-i18next";
 

@@ -1,7 +1,7 @@
 ---
 name: strict-null-semantics
 description:
-  Astik architectural rule for handling unselected or pending entity IDs. Never
+  Rizqi architectural rule for handling unselected or pending entity IDs. Never
   coerce nullable IDs to empty strings just to satisfy validation or type
   checkers.
 ---
@@ -9,7 +9,7 @@ description:
 # Strict Null Semantics for Entity IDs
 
 When managing entity IDs (such as `accountId`, `categoryId`, etc.) across the
-UI, state hooks, and validation layers in Astik, you must adhere strictly to the
+UI, state hooks, and validation layers in Rizqi, you must adhere strictly to the
 true domain model.
 
 ## Core Directives

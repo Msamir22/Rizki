@@ -1,5 +1,5 @@
 /**
- * API Utilities for Astik
+ * API Utilities for Rizqi
  */
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL as string;

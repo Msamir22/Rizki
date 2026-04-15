@@ -1,4 +1,4 @@
-import { formatAmountInput } from "@astik/logic";
+import { formatAmountInput } from "@rizqi/logic";
 import { Text, TouchableOpacity, View } from "react-native";
 
 interface AmountDisplayProps {

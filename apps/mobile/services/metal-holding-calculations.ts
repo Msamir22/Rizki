@@ -15,8 +15,8 @@
  * @module metal-holding-calculations
  */
 
-import type { Asset, AssetMetal, CurrencyType } from "@astik/db";
-import { convertCurrency, getMetalPriceUsd } from "@astik/logic";
+import type { Asset, AssetMetal, CurrencyType } from "@rizqi/db";
+import { convertCurrency, getMetalPriceUsd } from "@rizqi/logic";
 
 // ---------------------------------------------------------------------------
 // Constants

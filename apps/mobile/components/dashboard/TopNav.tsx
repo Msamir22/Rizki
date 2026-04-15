@@ -5,7 +5,7 @@ import React from "react";
 import { Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "@/context/ThemeContext";
-import { AstikLogo } from "../ui/AstikLogo";
+import { RizqiLogo } from "../ui/RizqiLogo";
 
 interface TopNavProps {
   onMenuPress?: () => void;
@@ -23,7 +23,7 @@ interface TopNavProps {
  * The greeting has been moved to a separate row below TopNav in the dashboard
  * to prevent crowding on narrow screens (<375px).
  *
- * Layout: [☰ Menu] [Astik Logo] ─── flex spacer ─── [🇪🇬 EGP ▾] [⚙] [🔔]
+ * Layout: [☰ Menu] [Rizqi Logo] ─── flex spacer ─── [🇪🇬 EGP ▾] [⚙] [🔔]
  */
 function TopNavComponent({
   onMenuPress,
@@ -55,7 +55,7 @@ function TopNavComponent({
         )}
 
         {/* Logo */}
-        <AstikLogo width={80} height={25} color={theme.text.primary} />
+        <RizqiLogo width={80} height={25} color={theme.text.primary} />
 
         {/* Spacer */}
         <View className="flex-1" />

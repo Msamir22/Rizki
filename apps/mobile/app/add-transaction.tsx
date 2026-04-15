@@ -34,8 +34,8 @@ import type {
   RecurringFrequency,
   TransactionType,
   Transaction,
-} from "@astik/db";
-import { formatAmountInput } from "@astik/logic";
+} from "@rizqi/db";
+import { formatAmountInput } from "@rizqi/logic";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";

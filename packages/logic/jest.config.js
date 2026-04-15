@@ -6,7 +6,7 @@ module.exports = {
   testMatch: ["**/__tests__/**/*.test.ts"],
   moduleFileExtensions: ["ts", "js", "json"],
   moduleNameMapper: {
-    "^@astik/db$": "<rootDir>/../db/src",
+    "^@rizqi/db$": "<rootDir>/../db/src",
   },
   clearMocks: true,
   passWithNoTests: true,

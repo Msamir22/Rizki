@@ -1,6 +1,6 @@
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
-import { Account } from "@astik/db";
+import { Account } from "@rizqi/db";
 import { Ionicons } from "@expo/vector-icons";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 

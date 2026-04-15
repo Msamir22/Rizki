@@ -21,7 +21,7 @@ import { useTheme } from "@/context/ThemeContext";
 import { getCurrentUserId } from "@/services/supabase";
 import { changeLanguage } from "@/i18n/changeLanguage";
 import { useTranslation } from "react-i18next";
-import type { CurrencyType } from "@astik/db";
+import type { CurrencyType } from "@rizqi/db";
 import {
   FontAwesome5,
   Ionicons,

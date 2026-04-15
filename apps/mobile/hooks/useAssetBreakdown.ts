@@ -3,12 +3,12 @@
  * Reactive hook for asset breakdown data from WatermelonDB
  */
 
-import { AssetMetal, database } from "@astik/db";
+import { AssetMetal, database } from "@rizqi/db";
 import {
   AssetBreakdownPercentage,
   calculateAssetBreakdown,
   calculateAssetBreakdownPercentages,
-} from "@astik/logic";
+} from "@rizqi/logic";
 import { Q } from "@nozbe/watermelondb";
 import { useEffect, useMemo, useState } from "react";
 import { useAccounts } from "./useAccounts";
