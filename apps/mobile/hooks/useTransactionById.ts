@@ -3,7 +3,7 @@
  * Observes a single transaction by ID from WatermelonDB.
  */
 
-import { database, Transaction } from "@astik/db";
+import { database, Transaction } from "@rizqi/db";
 import { useEffect, useState } from "react";
 
 interface UseTransactionByIdResult {

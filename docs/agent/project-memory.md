@@ -2,7 +2,7 @@
 alwaysApply: true
 ---
 
-# 🧠 Astik Project Memory
+# 🧠 Rizqi Project Memory
 
 > **Last Updated:** 2026-02-12 **Purpose:** Persistent context for AI agents
 > across conversations
@@ -11,7 +11,7 @@ alwaysApply: true
 
 ## 1. Project Overview
 
-**Astik** is a personal finance mobile app designed for the Egyptian market. It
+**Rizqi** is a personal finance mobile app designed for the Egyptian market. It
 helps users track expenses, income, assets (especially gold), debts, and net
 worth with an offline-first approach.
 
@@ -52,7 +52,7 @@ worth with an offline-first approach.
 ## 3. Project Architecture
 
 ```
-Astik/
+Rizqi/
 ├── apps/
 │   ├── mobile/          # React Native Expo app
 │   │   ├── app/         # Expo Router pages (file-based routing)
@@ -86,7 +86,7 @@ Astik/
 ## 4. Business Logic Summary
 
 > 📋 **Full details:**
-> [business-decisions.md](file:///e:/Work/My%20Projects/Astik/docs/business/business-decisions.md)
+> [business-decisions.md](file:///e:/Work/My%20Projects/Rizqi/docs/business/business-decisions.md)
 
 ### 4.1 Authentication
 
@@ -150,13 +150,13 @@ for asset transactions)
 - [x] Dashboard UI (light/dark mode)
 - [x] Custom bottom tab bar with animations
 - [x] RecentTransactions component
-- [x] Egyptian color palette (@astik/ui)
-- [x] Voice parser, notification parser (@astik/logic)
+- [x] Egyptian color palette (@rizqi/ui)
+- [x] Voice parser, notification parser (@rizqi/logic)
 - [x] AI Agent Memory System (project-memory.md + workflows)
 - [x] Dashboard real data integration (all components)
 - [x] Quick Action FAB component
 - [x] Schema sync automation (Supabase → WatermelonDB)
-- [x] Net worth local-first calculations (removed API, use @astik/logic)
+- [x] Net worth local-first calculations (removed API, use @rizqi/logic)
 - [x] Fixed snapshot functions (latest rates, no hardcoded fallbacks)
 - [x] Database schema overhaul (37 currencies, 4 precious metals)
 - [x] Metal schema refactoring (purity_fraction, removed industrial/LBMA)
@@ -219,7 +219,7 @@ for asset transactions)
 
 ### Design Preferences
 
-- Egyptian-inspired color palette (Nile Green #065F46, Astik Mint #10B981)
+- Egyptian-inspired color palette (Nile Green #065F46, Rizqi Mint #10B981)
 - Premium, modern aesthetic (not basic MVPs)
 - Dark mode support is essential
 - Smooth animations and micro-interactions
@@ -238,6 +238,16 @@ for asset transactions)
 ## 7. Recent Sessions
 
 > Last 10 sessions for context continuity
+
+### Session: 2026-04-16 (16:00)
+
+- **Topic:** Onboarding Card Redesign + SMS Permission Gate + Dashboard Fixes
+- **Accomplished:** Redesigned OnboardingGuideCard as compact expandable card
+  (Mockup 4 from Stitch). Fixed dismiss reactivity (WatermelonDB mutable record
+  reference). Added SMS permission gate to /sms-scan with auto-request for
+  first-time users. Fixed text-text-primary dark mode contrast, currency
+  wrapping, card ordering. Created 3 GitHub issues (#219-#221).
+- **Outcome:** PR #218 on branch fix/onboarding-sms-permission with 5 commits.
 
 ### Session: 2026-02-12 (09:44)
 
@@ -295,7 +305,7 @@ for asset transactions)
 
 - **Topic:** Remove v_user_net_worth View
 - **Accomplished:** Removed PostgreSQL view, implemented local-first net worth
-  calculations in `@astik/logic`, deleted API endpoint, rewrote mobile hook,
+  calculations in `@rizqi/logic`, deleted API endpoint, rewrote mobile hook,
   fixed snapshot functions.
 - **Outcome:** Net worth now calculated on-device using WatermelonDB.
 
@@ -396,12 +406,12 @@ for asset transactions)
 
 | Document           | Purpose                            | Path                                                                                                               |
 | ------------------ | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| Business Decisions | All finalized business logic       | [business-decisions.md](file:///e:/Work/My%20Projects/Astik/docs/business/business-decisions.md)                   |
-| Dashboard Spec     | Dashboard enhancement requirements | [dashboard-enhancements-v1.md](file:///e:/Work/My%20Projects/Astik/docs/requirements/dashboard-enhancements-v1.md) |
-| Progress           | High-level project status          | [PROGRESS.md](file:///e:/Work/My%20Projects/Astik/PROGRESS.md)                                                     |
-| Colors             | App color palette                  | [colors.ts](file:///e:/Work/My%20Projects/Astik/apps/mobile/constants/colors.ts)                                   |
-| DB Models          | WatermelonDB models                | [packages/db/models/](file:///e:/Work/My%20Projects/Astik/packages/db/models/)                                     |
-| Session History    | Detailed session log               | [session-history.md](file:///e:/Work/My%20Projects/Astik/docs/agent/session-history.md)                            |
+| Business Decisions | All finalized business logic       | [business-decisions.md](file:///e:/Work/My%20Projects/Rizqi/docs/business/business-decisions.md)                   |
+| Dashboard Spec     | Dashboard enhancement requirements | [dashboard-enhancements-v1.md](file:///e:/Work/My%20Projects/Rizqi/docs/requirements/dashboard-enhancements-v1.md) |
+| Progress           | High-level project status          | [PROGRESS.md](file:///e:/Work/My%20Projects/Rizqi/PROGRESS.md)                                                     |
+| Colors             | App color palette                  | [colors.ts](file:///e:/Work/My%20Projects/Rizqi/apps/mobile/constants/colors.ts)                                   |
+| DB Models          | WatermelonDB models                | [packages/db/models/](file:///e:/Work/My%20Projects/Rizqi/packages/db/models/)                                     |
+| Session History    | Detailed session log               | [session-history.md](file:///e:/Work/My%20Projects/Rizqi/docs/agent/session-history.md)                            |
 
 ---
 

@@ -1,4 +1,4 @@
-# Astik Mobile App - Quick Start Guide
+# Rizqi Mobile App - Quick Start Guide
 
 ## Prerequisites
 

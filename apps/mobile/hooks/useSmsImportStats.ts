@@ -7,8 +7,8 @@
  * @module useSmsImportStats
  */
 
-import { Transaction, database } from "@astik/db";
-import { getMonthBoundaries } from "@astik/logic";
+import { Transaction, database } from "@rizqi/db";
+import { getMonthBoundaries } from "@rizqi/logic";
 import { Q } from "@nozbe/watermelondb";
 import { useEffect, useState } from "react";
 

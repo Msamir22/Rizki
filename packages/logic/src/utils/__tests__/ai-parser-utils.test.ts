@@ -19,7 +19,7 @@ import {
   DATE_ONLY_REGEX,
   type CategoryMap,
 } from "../ai-parser-utils";
-import type { Category } from "@astik/db";
+import type { Category } from "@rizqi/db";
 
 // ---------------------------------------------------------------------------
 // Helpers

@@ -2,7 +2,7 @@ import { CurrencyPicker } from "@/components/currency/CurrencyPicker";
 import { AccountsSection } from "@/components/dashboard/AccountsSection";
 import { LiveRates } from "@/components/dashboard/LiveRates";
 import { OnboardingGuideCard } from "@/components/dashboard/OnboardingGuideCard";
-import { SmsImportStatusCard } from "@/components/dashboard/SmsImportStatusCard";
+
 import { RecentTransactions } from "@/components/dashboard/RecentTransactions";
 import { ThisMonth } from "@/components/dashboard/ThisMonth";
 import { TopNav } from "@/components/dashboard/TopNav";
@@ -27,8 +27,8 @@ import { useRecentTransactions } from "@/hooks/useTransactions";
 import { useDatabaseReady } from "@/providers/DatabaseProvider";
 import { useSync } from "@/providers/SyncProvider";
 import { logger } from "@/utils/logger";
-import type { CurrencyType } from "@astik/db";
-import { CURRENCY_INFO_MAP } from "@astik/logic";
+import type { CurrencyType } from "@rizqi/db";
+import { CURRENCY_INFO_MAP } from "@rizqi/logic";
 import { useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
 import {
@@ -210,9 +210,6 @@ export default function DashboardScreen(): React.JSX.Element {
               monthlyPercentageChange={monthlyPercentageChange}
               isLoading={isLoading}
             />
-          </SectionErrorBoundary>
-          <SectionErrorBoundary name={t("section_sms_import")}>
-            <SmsImportStatusCard />
           </SectionErrorBoundary>
           <SectionErrorBoundary name={t("section_live_rates")}>
             <LiveRates

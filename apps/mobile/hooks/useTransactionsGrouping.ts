@@ -8,8 +8,8 @@ import {
   getStartOfWeek,
   isSameDay,
 } from "@/utils/dateHelpers";
-import { database, Transaction, Transfer, type CurrencyType } from "@astik/db";
-import { convertCurrency } from "@astik/logic";
+import { database, Transaction, Transfer, type CurrencyType } from "@rizqi/db";
+import { convertCurrency } from "@rizqi/logic";
 import { Q } from "@nozbe/watermelondb";
 import { useEffect, useMemo, useState } from "react";
 import { useMarketRates } from "./useMarketRates";

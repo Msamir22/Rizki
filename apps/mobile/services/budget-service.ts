@@ -18,14 +18,14 @@ import {
   type BudgetType,
   type CurrencyType,
   type AlertFiredLevel,
-} from "@astik/db";
+} from "@rizqi/db";
 import { Q, type Collection } from "@nozbe/watermelondb";
 import {
   getCurrentPeriodBounds,
   filterExcludedTransactions,
   buildPauseInterval,
   parsePauseIntervals,
-} from "@astik/logic";
+} from "@rizqi/logic";
 
 // =============================================================================
 // TYPES

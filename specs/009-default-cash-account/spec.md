@@ -25,7 +25,7 @@ batch-sms-transactions."
 
 ### User Story 1 — Cash Account Auto-Created on First Launch (Priority: P1)
 
-A new user installs Astik, swipes through the onboarding carousel, and taps "Get
+A new user installs Rizqi, swipes through the onboarding carousel, and taps "Get
 Started." Behind the scenes the system creates a Cash account in their preferred
 currency. A playful toast notification appears, welcoming them with a message
 like **"💰 We set up a Cash wallet for you — because who leaves the house

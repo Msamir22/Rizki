@@ -19,7 +19,7 @@
  * @module financial-sender-registry
  */
 
-import type { AccountType, TransactionType } from "@astik/db";
+import type { AccountType, TransactionType } from "@rizqi/db";
 
 // ---------------------------------------------------------------------------
 // Types

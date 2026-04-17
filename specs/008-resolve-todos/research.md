@@ -1,7 +1,7 @@
 # Research: 008 – Resolve Codebase TODOs
 
 **Date**: 2026-02-25  
-**Spec**: [spec.md](file:///e:/Work/My%20Projects/Astik/specs/008-resolve-todos/spec.md)
+**Spec**: [spec.md](file:///e:/Work/My%20Projects/Rizqi/specs/008-resolve-todos/spec.md)
 
 ---
 
@@ -78,7 +78,7 @@
 ### Rationale
 
 Dynamic for SMS (client sends the list). Static expansion for voice (voice flow
-doesn't accept additional context parameters yet). `CurrencyType` in `@astik/db`
+doesn't accept additional context parameters yet). `CurrencyType` in `@rizqi/db`
 is the single source of truth.
 
 ---
@@ -195,7 +195,7 @@ function.
 
 Extract to a pure function
 `getTopCategories(transactions: ParsedSmsTransaction[], limit?: number): string[]`
-in a shared location, e.g., `@astik/logic` or a local `utils/sms-helpers.ts`
+in a shared location, e.g., `@rizqi/logic` or a local `utils/sms-helpers.ts`
 file.
 
 ### Rationale
@@ -211,7 +211,7 @@ it's pure data transformation.
 
 - **Edge Functions**: Deno + `@google/genai` + `@supabase/supabase-js`
 - **Client**: React Native + Expo + WatermelonDB + NativeWind
-- **Shared Logic**: `@astik/logic` (pure TypeScript)
+- **Shared Logic**: `@rizqi/logic` (pure TypeScript)
 - **Testing**: Jest (only `regex-sms-parser.test.ts` exists today)
 
 ### Testing Approach

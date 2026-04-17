@@ -11,7 +11,7 @@
 
 import { getMetalPriceUsd, getMetalPrice, getGoldPurityPrice } from "../metal";
 import { convertCurrency } from "../currency";
-import type { MarketRate, MetalType } from "@astik/db";
+import type { MarketRate, MetalType } from "@rizqi/db";
 
 // =============================================================================
 // MOCKS

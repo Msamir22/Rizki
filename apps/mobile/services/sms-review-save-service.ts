@@ -24,8 +24,8 @@ import {
 import type { AccountMatch } from "@/services/sms-account-matcher";
 import type { TransactionEdits } from "@/services/sms-edit-modal-service";
 import { ensureCashAccount } from "@/services/account-service";
-import type { ReviewableTransaction } from "@astik/logic";
-import type { CurrencyType } from "@astik/db";
+import type { ReviewableTransaction } from "@rizqi/logic";
+import type { CurrencyType } from "@rizqi/db";
 
 // ---------------------------------------------------------------------------
 // Types

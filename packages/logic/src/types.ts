@@ -1,5 +1,5 @@
 /**
- * Core types for Astik application
+ * Core types for Rizqi application
  */
 
 import type {
@@ -7,7 +7,7 @@ import type {
   CurrencyType,
   Transaction,
   TransactionType,
-} from "@astik/db";
+} from "@rizqi/db";
 
 // ---------------------------------------------------------------------------
 // Voice Parser Error

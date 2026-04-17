@@ -1,9 +1,9 @@
 /**
- * Database Provider for Astik Mobile
+ * Database Provider for Rizqi Mobile
  * Provides WatermelonDB context to the app and handles initialization
  */
 
-import { Account, Category, database, Transaction } from "@astik/db";
+import { Account, Category, database, Transaction } from "@rizqi/db";
 import { Collection, Database } from "@nozbe/watermelondb";
 import {
   createContext,

@@ -20,7 +20,7 @@
  */
 
 import { logger } from "@/utils/logger";
-import { Account, Budget, Profile, Transaction, database } from "@astik/db";
+import { Account, Budget, Profile, Transaction, database } from "@rizqi/db";
 import { Q } from "@nozbe/watermelondb";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -187,7 +187,7 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
 
     async function checkSms(): Promise<void> {
       try {
-        const hasSynced = await AsyncStorage.getItem("@astik/sms-has-synced");
+        const hasSynced = await AsyncStorage.getItem("@rizqi/sms-has-synced");
         setHasSmsEnabled(hasSynced === "true");
       } catch (error: unknown) {
         logger.warn("Failed to read SMS sync state", {

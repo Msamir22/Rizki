@@ -13,13 +13,13 @@
  * @module budget-alert-service
  */
 
-import { Budget, database, Transaction } from "@astik/db";
+import { Budget, database, Transaction } from "@rizqi/db";
 import { Q } from "@nozbe/watermelondb";
 import {
   getCurrentPeriodBounds,
   getDaysElapsed,
   computeSpendingMetrics,
-} from "@astik/logic";
+} from "@rizqi/logic";
 import {
   getSpendingForBudget,
   setAlertFiredLevel,

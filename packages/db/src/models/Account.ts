@@ -1,4 +1,4 @@
-import { formatCurrency } from "@astik/logic";
+import { formatCurrency } from "@rizqi/logic";
 import { BaseAccount } from "./base/base-account";
 
 export class Account extends BaseAccount {

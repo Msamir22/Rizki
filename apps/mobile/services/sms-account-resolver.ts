@@ -16,7 +16,7 @@
  * @module sms-account-resolver
  */
 
-import type { CurrencyType } from "@astik/db";
+import type { CurrencyType } from "@rizqi/db";
 import { getCurrentUserId } from "./supabase";
 import {
   matchAccountCore,

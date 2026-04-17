@@ -15,7 +15,7 @@
  */
 
 import { Platform } from "react-native";
-import type { SmsMessage } from "@astik/logic";
+import type { SmsMessage } from "@rizqi/logic";
 
 // ---------------------------------------------------------------------------
 // Types

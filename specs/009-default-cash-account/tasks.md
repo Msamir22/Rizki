@@ -23,13 +23,13 @@
       `packages/logic/src/utils/currency-detection.ts` and export from barrel
       `packages/logic/src/index.ts`
 - [ ] T002 [P] Update `apps/mobile/hooks/usePreferredCurrency.ts` to import
-      `detectCurrencyFromDevice` from `@astik/logic` and delete the local copy
+      `detectCurrencyFromDevice` from `@rizqi/logic` and delete the local copy
 - [ ] T003 Create `apps/mobile/services/account-service.ts` with
       `ensureCashAccount(userId)` and `findCashAccount(userId)` functions
 - [ ] T004 Re-export `ensureCashAccount` and `findCashAccount` from
       `apps/mobile/services/index.ts`
 
-**Checkpoint**: Currency detection utility available in `@astik/logic`, account
+**Checkpoint**: Currency detection utility available in `@rizqi/logic`, account
 service ready for integration.
 
 ---

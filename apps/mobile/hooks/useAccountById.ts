@@ -12,7 +12,7 @@
  * @module useAccountById
  */
 
-import { Account, BankDetails, database } from "@astik/db";
+import { Account, BankDetails, database } from "@rizqi/db";
 import { useEffect, useState } from "react";
 
 // ---------------------------------------------------------------------------

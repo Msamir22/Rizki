@@ -14,7 +14,7 @@
  * Phase 4 (US1): Full edit form, save flow, and validation
  */
 
-import type { Account } from "@astik/db";
+import type { Account } from "@rizqi/db";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";

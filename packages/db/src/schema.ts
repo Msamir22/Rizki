@@ -1,5 +1,5 @@
 /**
- * WatermelonDB Schema for Astik
+ * WatermelonDB Schema for Rizqi
  * AUTO-GENERATED - DO NOT EDIT MANUALLY
  * Run 'npm run db:sync' to regenerate
  */

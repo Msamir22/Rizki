@@ -18,7 +18,7 @@
  */
 
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { Budget, database } from "@astik/db";
+import { Budget, database } from "@rizqi/db";
 import { Q } from "@nozbe/watermelondb";
 
 import {
@@ -33,7 +33,7 @@ import {
   getDaysElapsed,
   getDaysLeft,
   computeSpendingMetrics,
-} from "@astik/logic";
+} from "@rizqi/logic";
 
 // =============================================================================
 // TYPES

@@ -14,8 +14,8 @@ import {
   BILLS_PERIOD_LABELS,
   type BillsPeriodFilter,
 } from "@/hooks/useRecurringPayments";
-import type { CurrencyType, RecurringPayment } from "@astik/db";
-import { formatCurrency } from "@astik/logic";
+import type { CurrencyType, RecurringPayment } from "@rizqi/db";
+import { formatCurrency } from "@rizqi/logic";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";

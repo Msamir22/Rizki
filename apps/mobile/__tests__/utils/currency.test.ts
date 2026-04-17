@@ -4,15 +4,15 @@
  * Since MarketRate is a WatermelonDB model, we create a mock object
  * that replicates the getRate() logic: rate = fromUsd / toUsd.
  *
- * We define local interfaces instead of importing from @astik/db because
+ * We define local interfaces instead of importing from @rizqi/db because
  * Jest's Babel transform cannot parse WatermelonDB decorators. TypeScript's
  * structural typing ensures our mock is compatible with the real MarketRate.
  */
 
-import { convertCurrency, formatCurrency } from "@astik/logic";
+import { convertCurrency, formatCurrency } from "@rizqi/logic";
 
 // ---------------------------------------------------------------------------
-// Local type definitions (structurally compatible with @astik/db)
+// Local type definitions (structurally compatible with @rizqi/db)
 // ---------------------------------------------------------------------------
 
 /** Mirrors the subset of MarketRate that convertCurrency() requires */

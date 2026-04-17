@@ -22,7 +22,7 @@ import {
   type Account,
   type BankDetails,
   type CurrencyType,
-} from "@astik/db";
+} from "@rizqi/db";
 import { Q } from "@nozbe/watermelondb";
 import { getCurrentUserId } from "./supabase";
 

@@ -1,4 +1,4 @@
-import type { CurrencyType, MarketRate } from "@astik/db";
+import type { CurrencyType, MarketRate } from "@rizqi/db";
 
 const EXCHANGE_RATE_UNAVAILABLE_MESSAGE = "Exchange rate unavailable";
 const CONVERSION_UNAVAILABLE_MESSAGE = "Conversion unavailable";

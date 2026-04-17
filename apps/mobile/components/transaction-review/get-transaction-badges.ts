@@ -1,4 +1,4 @@
-import type { ReviewableTransaction } from "@astik/logic";
+import type { ReviewableTransaction } from "@rizqi/logic";
 
 export type BadgeColor = "amber" | "red" | "blue" | "emerald";
 

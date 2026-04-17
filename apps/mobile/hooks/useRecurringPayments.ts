@@ -14,8 +14,8 @@ import {
   RecurringStatus,
   TransactionType,
   type CurrencyType,
-} from "@astik/db";
-import { convertCurrency } from "@astik/logic";
+} from "@rizqi/db";
+import { convertCurrency } from "@rizqi/logic";
 import { Q } from "@nozbe/watermelondb";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useMarketRates } from "./useMarketRates";

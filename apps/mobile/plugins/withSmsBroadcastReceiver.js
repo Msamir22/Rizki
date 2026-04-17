@@ -278,8 +278,7 @@ function withKotlinSourceFiles(config) {
   return withDangerousMod(config, [
     "android",
     (modConfig) => {
-      const packageName =
-        modConfig.android?.package || "com.msamir22.astikmobile";
+      const packageName = modConfig.android?.package || "com.rizqi.app";
       const packagePath = packageName.replace(/\./g, "/");
 
       const sourceDir = path.join(
@@ -333,8 +332,7 @@ function withSmsEventPackageRegistration(config) {
   return withDangerousMod(config, [
     "android",
     (modConfig) => {
-      const packageName =
-        modConfig.android?.package || "com.msamir22.astikmobile";
+      const packageName = modConfig.android?.package || "com.rizqi.app";
       const packagePath = packageName.replace(/\./g, "/");
 
       const mainApplicationPath = path.join(
@@ -368,7 +366,8 @@ function withSmsEventPackageRegistration(config) {
       // CRLF-tolerant patterns: use \r?\n to match either LF or CRLF.
 
       // Expo SDK 52+ style: val packages = PackageList(this).packages
-      const newStylePattern = /val packages = PackageList\(this\)\.packages\r?\n/;
+      const newStylePattern =
+        /val packages = PackageList\(this\)\.packages\r?\n/;
 
       // Older Expo style: override fun getPackages() ... return PackageList(this).packages
       const oldStylePattern =
@@ -412,8 +411,7 @@ function withSmsEventPackageRegistration(config) {
 function withSmsManifestChanges(config) {
   return withAndroidManifest(config, (modConfig) => {
     const manifest = modConfig.modResults.manifest;
-    const packageName =
-      modConfig.android?.package || "com.msamir22.astikmobile";
+    const packageName = modConfig.android?.package || "com.rizqi.app";
 
     // --- Add RECEIVE_SMS permission ---
     const permissions = manifest["uses-permission"] || [];

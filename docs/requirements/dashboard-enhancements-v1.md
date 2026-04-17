@@ -8,7 +8,7 @@
 
 ## 1. Executive Summary
 
-This document outlines the business requirements for enhancing the Astik mobile
+This document outlines the business requirements for enhancing the Rizqi mobile
 app's Dashboard screen. The enhancements focus on improving user experience
 through quick action accessibility, real data integration, and local
 notification support.

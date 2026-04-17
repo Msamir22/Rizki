@@ -1,4 +1,4 @@
-import { AccountType, CurrencyType } from "@astik/db";
+import { AccountType, CurrencyType } from "@rizqi/db";
 import { z } from "zod";
 
 /**

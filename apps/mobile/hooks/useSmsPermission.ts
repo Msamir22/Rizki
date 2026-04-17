@@ -109,7 +109,7 @@ export function useSmsPermission(): UseSmsPermissionResult {
           {
             title: "SMS Access",
             message:
-              "Astik would like to read your financial SMS messages to automatically track your transactions.",
+              "Rizqi would like to read your financial SMS messages to automatically track your transactions.",
             buttonPositive: "Allow",
             buttonNegative: "Not Now",
           }

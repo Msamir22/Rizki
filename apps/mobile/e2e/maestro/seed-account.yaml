@@ -1,4 +1,4 @@
-appId: com.msamir22.astikmobile
+appId: com.rizqi.app
 
 ---
 
@@ -7,7 +7,7 @@ appId: com.msamir22.astikmobile
 
 # Step 1: Launch app
 - launchApp:
-    appId: com.msamir22.astikmobile
+    appId: com.rizqi.app
     clearState: false
 
 - waitForAnimationToEnd

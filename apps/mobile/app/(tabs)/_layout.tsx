@@ -7,7 +7,7 @@ import { useAccounts } from "@/hooks/useAccounts";
 import { useCategories } from "@/hooks/useCategories";
 import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
 import { useVoiceTransactionFlow } from "@/hooks/useVoiceTransactionFlow";
-import { buildCategoryTree } from "@astik/logic";
+import { buildCategoryTree } from "@rizqi/logic";
 import { Tabs, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useMemo } from "react";
 import { View } from "react-native";

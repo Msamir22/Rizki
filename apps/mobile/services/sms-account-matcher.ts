@@ -30,11 +30,11 @@ import {
   BankDetails,
   database,
   type CurrencyType,
-} from "@astik/db";
+} from "@rizqi/db";
 import {
   type ReviewableTransaction,
   isKnownFinancialSender,
-} from "@astik/logic";
+} from "@rizqi/logic";
 import { Q } from "@nozbe/watermelondb";
 
 // ---------------------------------------------------------------------------

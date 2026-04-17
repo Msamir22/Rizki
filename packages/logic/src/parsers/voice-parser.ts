@@ -1,5 +1,5 @@
 /**
- * Voice Transaction Parser for Astik
+ * Voice Transaction Parser for Rizqi
  * Parses Egyptian Arabic and English voice input to extract transaction details
  *
  * @deprecated This legacy regex-based parser is superseded by `ai-voice-parser-service.ts`.
@@ -7,7 +7,7 @@
  * TODO: Remove this file entirely once voice parser migration is verified.
  */
 
-import type { CurrencyType } from "@astik/db";
+import type { CurrencyType } from "@rizqi/db";
 
 /** @deprecated Legacy return type — do not use in new code. */
 interface LegacyParsedVoiceTransaction {

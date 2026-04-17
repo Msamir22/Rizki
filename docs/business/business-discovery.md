@@ -1,4 +1,4 @@
-# Astik - Business Logic & Architecture Discovery
+# Rizqi - Business Logic & Architecture Discovery
 
 > **Status:** ✅ COMPLETE  
 > **Last Updated:** 2026-01-04  

@@ -1,4 +1,4 @@
-# Astik - Finalized Business Decisions
+# Rizqi - Finalized Business Decisions
 
 > **Status:** 🟢 Confirmed  
 > **Last Updated:** 2026-03-09  

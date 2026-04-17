@@ -18,8 +18,8 @@ import type {
   CurrencyType,
   RecurringPayment,
   RecurringStatus,
-} from "@astik/db";
-import { formatCurrency } from "@astik/logic";
+} from "@rizqi/db";
+import { formatCurrency } from "@rizqi/logic";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useCallback } from "react";

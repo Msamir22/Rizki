@@ -1,4 +1,4 @@
-import { Account, BankDetails, database } from "@astik/db";
+import { Account, BankDetails, database } from "@rizqi/db";
 import { useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import { useToast } from "../components/ui/Toast";

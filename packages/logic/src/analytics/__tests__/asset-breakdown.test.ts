@@ -11,7 +11,7 @@ import type {
   CurrencyType,
   MarketRate,
   MetalType,
-} from "@astik/db";
+} from "@rizqi/db";
 import {
   calculateAssetBreakdown,
   calculateAssetBreakdownPercentages,

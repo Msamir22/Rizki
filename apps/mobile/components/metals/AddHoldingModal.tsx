@@ -38,8 +38,8 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 
-import type { MetalType } from "@astik/db";
-import { FINENESS_OPTIONS, GOLD_PURITY_OPTIONS } from "@astik/logic";
+import type { MetalType } from "@rizqi/db";
+import { FINENESS_OPTIONS, GOLD_PURITY_OPTIONS } from "@rizqi/logic";
 
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";

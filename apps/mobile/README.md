@@ -1,4 +1,4 @@
-# Astik Mobile App
+# Rizqi Mobile App
 
 React Native mobile app built with Expo.
 

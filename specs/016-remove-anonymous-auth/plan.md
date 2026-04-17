@@ -263,7 +263,7 @@ The new `auth.tsx` screen that replaces `sign-up.tsx`.
 
 The unified authentication screen. Design requirements:
 
-- Welcoming header: "Welcome to Astik"
+- Welcoming header: "Welcome to Rizqi"
 - Google OAuth button (using existing `SocialLoginButtons` component)
 - Email/password form with Sign Up / Sign In toggle
 - "Forgot Password?" link (visible in Sign In mode)

@@ -14,7 +14,7 @@ user's language preference stored in AsyncStorage.
 
 | Field | Type   | Description                        |
 | ----- | ------ | ---------------------------------- |
-| key   | string | `@astik/language`                  |
+| key   | string | `@rizqi/language`                  |
 | value | string | `"en"` or `"ar"` (ISO 639-1 codes) |
 
 **Lifecycle**:

@@ -16,7 +16,7 @@
  */
 
 import { formatTimeAgo } from "@/utils/dateHelpers";
-import type { CurrencyType } from "@astik/db";
+import type { CurrencyType } from "@rizqi/db";
 import {
   type CurrencyInfo,
   CURRENCY_INFO_MAP,
@@ -26,7 +26,7 @@ import {
   formatRate,
   getGoldPurityPrice,
   getMetalPrice,
-} from "@astik/logic";
+} from "@rizqi/logic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMarketRates } from "./useMarketRates";
 import { usePreferredCurrency } from "./usePreferredCurrency";

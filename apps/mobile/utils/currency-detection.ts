@@ -12,8 +12,8 @@
  * @module currency-detection
  */
 
-import type { CurrencyType } from "@astik/db";
-import { TIMEZONE_TO_CURRENCY } from "@astik/logic";
+import type { CurrencyType } from "@rizqi/db";
+import { TIMEZONE_TO_CURRENCY } from "@rizqi/logic";
 import { getCalendars } from "expo-localization";
 
 export const DEFAULT_CURRENCY: CurrencyType = "USD";

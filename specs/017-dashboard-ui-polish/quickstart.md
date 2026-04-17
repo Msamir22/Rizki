@@ -12,7 +12,7 @@
 ## Running the App
 
 ```bash
-cd e:/Work/My\ Projects/Astik
+cd e:/Work/My\ Projects/Rizqi
 npm run start:android
 ```
 
@@ -46,7 +46,7 @@ npm run start:android
 
 ```bash
 # Run existing tests
-cd e:/Work/My\ Projects/Astik
+cd e:/Work/My\ Projects/Rizqi
 npx jest --passWithNoTests
 
 # Manual testing

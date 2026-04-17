@@ -1,4 +1,4 @@
-import type { AssetMetal, MarketRate } from "@astik/db";
+import type { AssetMetal, MarketRate } from "@rizqi/db";
 import { MetalPriceUnavailableError, getMetalPriceUsd } from "../utils/metal";
 
 /**

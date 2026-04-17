@@ -8,7 +8,7 @@
  * - createBalanceAdjustmentTransaction
  *
  * Mock Strategy:
- *   The `@astik/db` mock is defined entirely inside the jest.mock factory
+ *   The `@rizqi/db` mock is defined entirely inside the jest.mock factory
  *   to avoid Jest hoisting issues. Follows the same pattern as
  *   transaction-service.test.ts.
  */
@@ -48,7 +48,7 @@ interface MockDbApi {
 // jest.mock declarations
 // ---------------------------------------------------------------------------
 
-jest.mock("@astik/db", () => {
+jest.mock("@rizqi/db", () => {
   /** Mutable model: .update(builder) mutates fields in place */
   function createModel(
     id: string,
@@ -159,7 +159,7 @@ const {
   __seed: mockSeed,
   __clearStores: mockClearStores,
   __rewireMocks: mockRewire,
-} = jest.requireMock<MockDbApi>("@astik/db");
+} = jest.requireMock<MockDbApi>("@rizqi/db");
 
 // ---------------------------------------------------------------------------
 // Test Helpers

@@ -1,5 +1,5 @@
-import type { CurrencyType } from "@astik/db";
-import { formatCurrency } from "@astik/logic";
+import type { CurrencyType } from "@rizqi/db";
+import { formatCurrency } from "@rizqi/logic";
 import { BlurView } from "expo-blur";
 import React from "react";
 import { Platform, Text, useColorScheme, View } from "react-native";

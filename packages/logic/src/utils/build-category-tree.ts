@@ -19,7 +19,7 @@
  * @module build-category-tree
  */
 
-import { Category } from "@astik/db";
+import { Category } from "@rizqi/db";
 
 // ---------------------------------------------------------------------------
 // Types (minimal shape required — decoupled from WatermelonDB model)

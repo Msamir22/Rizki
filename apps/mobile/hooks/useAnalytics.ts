@@ -1,10 +1,10 @@
 /**
  * useAnalytics Hooks
  * Local-first analytics hooks using WatermelonDB
- * All calculations use shared logic from @astik/logic
+ * All calculations use shared logic from @rizqi/logic
  */
 
-import { Category, database, Transaction, TransactionType } from "@astik/db";
+import { Category, database, Transaction, TransactionType } from "@rizqi/db";
 import {
   aggregateByCategory,
   calculateComparison,
@@ -16,7 +16,7 @@ import {
   getComparisonPeriods,
   getYearMonthBoundaries,
   MonthlySummary,
-} from "@astik/logic";
+} from "@rizqi/logic";
 import { Q } from "@nozbe/watermelondb";
 import { useEffect, useMemo, useState } from "react";
 

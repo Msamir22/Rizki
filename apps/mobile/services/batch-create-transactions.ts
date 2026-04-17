@@ -29,8 +29,8 @@ import {
   Transaction,
   Transfer,
   type CurrencyType,
-} from "@astik/db";
-import type { ReviewableTransaction } from "@astik/logic";
+} from "@rizqi/db";
+import type { ReviewableTransaction } from "@rizqi/logic";
 import { Q, type Model } from "@nozbe/watermelondb";
 import { ensureCashAccount } from "./account-service";
 import { getCurrentUserId } from "./supabase";

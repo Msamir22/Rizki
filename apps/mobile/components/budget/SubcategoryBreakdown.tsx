@@ -10,8 +10,8 @@
 import React from "react";
 import { Text, View } from "react-native";
 import type { SubcategorySpending } from "@/hooks/useBudgetDetail";
-import type { CurrencyType } from "@astik/db";
-import { formatCurrency } from "@astik/logic";
+import type { CurrencyType } from "@rizqi/db";
+import { formatCurrency } from "@rizqi/logic";
 import { palette } from "@/constants/colors";
 import { useTranslation } from "react-i18next";
 

@@ -48,7 +48,7 @@ jest.mock("@/services/supabase", () => ({
 }));
 
 jest.mock("@/constants/auth-constants", () => ({
-  AUTH_REDIRECT_URL: "astik://auth-callback",
+  AUTH_REDIRECT_URL: "rizqi://auth-callback",
 }));
 
 const mockOpenAuthSession = jest.fn<
@@ -120,7 +120,7 @@ describe("auth-service - signInWithOAuth", () => {
       });
       mockOpenAuthSession.mockResolvedValue({
         type: "success",
-        url: "astik://auth-callback#access_token=test-token&refresh_token=test-refresh&token_type=bearer",
+        url: "rizqi://auth-callback#access_token=test-token&refresh_token=test-refresh&token_type=bearer",
       });
       mockSetSession.mockResolvedValue({ data: { session: {} }, error: null });
 
@@ -129,7 +129,7 @@ describe("auth-service - signInWithOAuth", () => {
       expect(mockSignInWithOAuthProvider).toHaveBeenCalledWith("google");
       expect(mockOpenAuthSession).toHaveBeenCalledWith(
         "https://accounts.google.com/o/oauth2/auth?...",
-        "astik://auth-callback"
+        "rizqi://auth-callback"
       );
       expect(result).toEqual({ success: true });
     });
@@ -140,7 +140,7 @@ describe("auth-service - signInWithOAuth", () => {
       });
       mockOpenAuthSession.mockResolvedValue({
         type: "success",
-        url: "astik://auth-callback?code=pkce-auth-code",
+        url: "rizqi://auth-callback?code=pkce-auth-code",
       });
       mockExchangeCodeForSession.mockResolvedValue({
         data: { session: {} },
@@ -160,7 +160,7 @@ describe("auth-service - signInWithOAuth", () => {
       });
       mockOpenAuthSession.mockResolvedValue({
         type: "success",
-        url: "astik://auth-callback",
+        url: "rizqi://auth-callback",
       });
 
       const result = await signInWithOAuth("google");
@@ -178,7 +178,7 @@ describe("auth-service - signInWithOAuth", () => {
       });
       mockOpenAuthSession.mockResolvedValue({
         type: "success",
-        url: "astik://auth-callback#access_token=test-token&refresh_token=test-refresh",
+        url: "rizqi://auth-callback#access_token=test-token&refresh_token=test-refresh",
       });
       mockSetSession.mockResolvedValue({
         data: { session: null },

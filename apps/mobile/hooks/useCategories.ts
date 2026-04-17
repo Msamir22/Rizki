@@ -5,7 +5,7 @@
  * applies in-memory filters. No own DB subscription is created.
  */
 
-import { Category, TransactionType } from "@astik/db";
+import { Category, TransactionType } from "@rizqi/db";
 import { useMemo } from "react";
 import { useAllCategories } from "../context/CategoriesContext";
 

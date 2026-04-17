@@ -1,7 +1,7 @@
 import { CategoryIcon, IconLibrary } from "@/components/common/CategoryIcon";
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
-import type { Category } from "@astik/db";
+import type { Category } from "@rizqi/db";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useMemo } from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";

@@ -3,7 +3,7 @@
  * Shared calculation functions for transaction data analysis
  */
 
-import { Category, Transaction, TransactionType } from "@astik/db";
+import { Category, Transaction, TransactionType } from "@rizqi/db";
 import {
   CategoryBreakdown,
   ChartDataPoint,

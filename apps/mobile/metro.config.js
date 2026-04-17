@@ -7,7 +7,7 @@ const workspaceRoot = path.resolve(projectRoot, "../..");
 
 const config = getSentryExpoConfig(projectRoot);
 
-// 1. Watch the whole monorepo so @astik/logic and @astik/db hot-reload.
+// 1. Watch the whole monorepo so @rizqi/logic and @rizqi/db hot-reload.
 config.watchFolders = [workspaceRoot];
 
 // 2. Resolve modules from the app first, then the workspace root.

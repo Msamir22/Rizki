@@ -1,7 +1,7 @@
 import { palette } from "@/constants/colors";
 import { useCategoryLookup } from "@/context/CategoriesContext";
 import { formatTransactionDate } from "@/utils/transactions";
-import { Category, Transaction } from "@astik/db";
+import { Category, Transaction } from "@rizqi/db";
 import { router } from "expo-router";
 import React, { useCallback } from "react";
 import { ActivityIndicator, Text, TouchableOpacity, View } from "react-native";

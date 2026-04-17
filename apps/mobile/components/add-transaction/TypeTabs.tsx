@@ -1,4 +1,4 @@
-import type { TransactionType } from "@astik/db";
+import type { TransactionType } from "@rizqi/db";
 import * as Haptics from "expo-haptics";
 import { Text, TouchableOpacity, View } from "react-native";
 import { palette } from "@/constants/colors";

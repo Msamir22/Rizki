@@ -1,4 +1,4 @@
-import type { MarketRate } from "@astik/db";
+import type { MarketRate } from "@rizqi/db";
 import { Q } from "@nozbe/watermelondb";
 import { useEffect, useState } from "react";
 import { useDatabase } from "../providers/DatabaseProvider";

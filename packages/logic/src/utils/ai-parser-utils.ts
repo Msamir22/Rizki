@@ -15,7 +15,7 @@
  * @module ai-parser-utils
  */
 
-import type { Category, CurrencyType, TransactionType } from "@astik/db";
+import type { Category, CurrencyType, TransactionType } from "@rizqi/db";
 import { SUPPORTED_CURRENCIES } from "./currency-data";
 
 // Constants

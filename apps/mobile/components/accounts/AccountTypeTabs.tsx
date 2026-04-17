@@ -1,5 +1,5 @@
 import { ACCOUNT_TYPES } from "@/constants/accounts";
-import { AccountType } from "@astik/db";
+import { AccountType } from "@rizqi/db";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 
 export type FilterType = AccountType | "ALL";

@@ -2,7 +2,7 @@
  * Budget Logic Module — Barrel Export
  *
  * Re-exports all budget-related pure logic utilities
- * from the @astik/logic package.
+ * from the @rizqi/logic package.
  */
 
 export * from "./budget-period-utils";

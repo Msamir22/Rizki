@@ -11,17 +11,17 @@
 export const HAS_ONBOARDED_KEY = "hasOnboarded";
 
 /** ISO timestamp when the user first launched the app. */
-export const FIRST_USE_DATE_KEY = "@astik/first-use-date";
+export const FIRST_USE_DATE_KEY = "@rizqi/first-use-date";
 
 /** User's preferred language: "en" or "ar". */
-export const LANGUAGE_KEY = "@astik/language";
+export const LANGUAGE_KEY = "@rizqi/language";
 
 // =============================================================================
 // Logout Keys
 // =============================================================================
 
 /** Set to `"true"` before logout begins; removed after completion. Used for force-close recovery. */
-export const LOGOUT_IN_PROGRESS_KEY = "@astik/logout-in-progress";
+export const LOGOUT_IN_PROGRESS_KEY = "@rizqi/logout-in-progress";
 
 /**
  * AsyncStorage keys that MUST be cleared on logout.
