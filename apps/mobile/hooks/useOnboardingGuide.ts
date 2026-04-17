@@ -10,11 +10,13 @@
  * is set to `true` in WatermelonDB (syncs to Supabase).
  *
  * Steps:
- * 1. Cash account created (always true — auto-created during onboarding)
+ * 1. Cash account created (any account with type "CASH" exists for the user)
  * 2. Bank account added (any account with type "BANK" exists)
  * 3. First transaction recorded (any non-deleted transaction exists)
  * 4. Spending budget set (any active budget exists)
- * 5. SMS auto-import enabled (SMS permission granted + has synced)
+ * 5. SMS auto-import enabled (at least one transaction imported from SMS —
+ *    detected via `sms_body_hash` on any transaction; scoped per-user since
+ *    WatermelonDB is wiped on logout)
  *
  * @module useOnboardingGuide
  */
@@ -22,7 +24,6 @@
 import { logger } from "@/utils/logger";
 import { Account, Budget, Profile, Transaction, database } from "@rizqi/db";
 import { Q } from "@nozbe/watermelondb";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Platform } from "react-native";
 
@@ -74,24 +75,40 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
   const [setupGuideCompleted, setSetupGuideCompleted] = useState<
     boolean | null
   >(null);
+  const [hasCashAccount, setHasCashAccount] = useState(false);
   const [hasBankAccount, setHasBankAccount] = useState(false);
   const [hasTransaction, setHasTransaction] = useState(false);
   const [hasBudget, setHasBudget] = useState(false);
-  const [hasSmsEnabled, setHasSmsEnabled] = useState(false);
-  // NOTE: isLoading tracks the async SMS check + profile observation.
-  // WatermelonDB observers for bank/transaction/budget emit synchronously
-  // on subscribe, so those states are immediately available.
+  const [hasSmsImported, setHasSmsImported] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Track loading for profile and SMS separately, mark done when both complete
   const [profileLoaded, setProfileLoaded] = useState(false);
-  const [smsLoaded, setSmsLoaded] = useState(false);
+  const [cashLoaded, setCashLoaded] = useState(false);
+  const [bankLoaded, setBankLoaded] = useState(false);
+  const [txLoaded, setTxLoaded] = useState(false);
+  const [budgetLoaded, setBudgetLoaded] = useState(false);
+  // SMS observer is skipped on iOS, so mark it pre-loaded on non-Android.
+  const [smsLoaded, setSmsLoaded] = useState(Platform.OS !== "android");
 
   useEffect(() => {
-    if (profileLoaded && smsLoaded) {
+    if (
+      profileLoaded &&
+      cashLoaded &&
+      bankLoaded &&
+      txLoaded &&
+      budgetLoaded &&
+      smsLoaded
+    ) {
       setIsLoading(false);
     }
-  }, [profileLoaded, smsLoaded]);
+  }, [
+    profileLoaded,
+    cashLoaded,
+    bankLoaded,
+    txLoaded,
+    budgetLoaded,
+    smsLoaded,
+  ]);
 
   // ── Observe profile for setupGuideCompleted ──
   // Use observeWithColumns to react to field-level changes (not just add/remove)
@@ -123,6 +140,26 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
   // a flash of the card before we know the real state.
   const isDismissed = setupGuideCompleted ?? true;
 
+  // ── Observe cash accounts (type = "CASH") ──
+  useEffect(() => {
+    const subscription = database
+      .get<Account>("accounts")
+      .query(Q.where("deleted", false), Q.where("type", "CASH"))
+      .observeCount()
+      .subscribe({
+        next: (count) => {
+          setHasCashAccount(count > 0);
+          setCashLoaded(true);
+        },
+        error: (error: unknown) => {
+          logger.error("Failed to observe cash accounts", error);
+          setCashLoaded(true);
+        },
+      });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
   // ── Observe bank accounts (type = "BANK") ──
   useEffect(() => {
     const subscription = database
@@ -132,9 +169,11 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
       .subscribe({
         next: (count) => {
           setHasBankAccount(count > 0);
+          setBankLoaded(true);
         },
         error: (error: unknown) => {
           logger.error("Failed to observe bank accounts", error);
+          setBankLoaded(true);
         },
       });
 
@@ -150,9 +189,11 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
       .subscribe({
         next: (count) => {
           setHasTransaction(count > 0);
+          setTxLoaded(true);
         },
         error: (error: unknown) => {
           logger.error("Failed to observe transactions", error);
+          setTxLoaded(true);
         },
       });
 
@@ -168,38 +209,46 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
       .subscribe({
         next: (count) => {
           setHasBudget(count > 0);
+          setBudgetLoaded(true);
         },
         error: (error: unknown) => {
           logger.error("Failed to observe budgets", error);
+          setBudgetLoaded(true);
         },
       });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  // ── Check SMS sync state ──
+  // ── Observe SMS-imported transactions (per-user via WatermelonDB) ──
+  // We look for any transaction with a non-null `sms_body_hash`, which is
+  // set only by the SMS parser. WatermelonDB is wiped on logout so this is
+  // inherently user-scoped (previously this state was read from AsyncStorage
+  // which persisted across account switches — a bug that marked the step as
+  // complete for users who had never imported SMS themselves). iOS has no
+  // SMS import, so this is Android-only.
   useEffect(() => {
     if (Platform.OS !== "android") {
-      setHasSmsEnabled(false);
-      setSmsLoaded(true);
+      setHasSmsImported(false);
       return;
     }
 
-    async function checkSms(): Promise<void> {
-      try {
-        const hasSynced = await AsyncStorage.getItem("@rizqi/sms-has-synced");
-        setHasSmsEnabled(hasSynced === "true");
-      } catch (error: unknown) {
-        logger.warn("Failed to read SMS sync state", {
-          error: error instanceof Error ? error.message : String(error),
-        });
-        setHasSmsEnabled(false);
-      } finally {
-        setSmsLoaded(true);
-      }
-    }
+    const subscription = database
+      .get<Transaction>("transactions")
+      .query(Q.where("deleted", false), Q.where("sms_body_hash", Q.notEq(null)))
+      .observeCount()
+      .subscribe({
+        next: (count) => {
+          setHasSmsImported(count > 0);
+          setSmsLoaded(true);
+        },
+        error: (error: unknown) => {
+          logger.error("Failed to observe SMS-imported transactions", error);
+          setSmsLoaded(true);
+        },
+      });
 
-    void checkSms();
+    return () => subscription.unsubscribe();
   }, []);
 
   // ── Build steps array ──
@@ -208,7 +257,8 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
       {
         key: "cash_account",
         labelKey: "onboarding_step_cash_account",
-        isComplete: true, // Always true — auto-created during onboarding
+        isComplete: hasCashAccount,
+        route: "/(tabs)/accounts",
       },
       {
         key: "bank_account",
@@ -231,12 +281,12 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
       {
         key: "sms_import",
         labelKey: "onboarding_step_sms_import",
-        isComplete: hasSmsEnabled,
+        isComplete: hasSmsImported,
         route: "/sms-scan",
         isNew: Platform.OS === "android",
       },
     ],
-    [hasBankAccount, hasTransaction, hasBudget, hasSmsEnabled]
+    [hasCashAccount, hasBankAccount, hasTransaction, hasBudget, hasSmsImported]
   );
 
   const completedCount = useMemo(
