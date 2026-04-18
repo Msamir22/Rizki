@@ -228,10 +228,21 @@ export async function parseVoiceWithAi(
     const rawData = response.data;
     const parsed = ParseVoiceResponseSchema.safeParse(rawData);
     if (!parsed.success) {
+      // PII/privacy: do NOT log `rawData` — it contains the user's transcript
+      // and parsed transaction details (amounts, counterparties, dates).
+      // Log only schema issue paths/codes for diagnostics.
       logger.error(
         "[ai-voice-parser] Malformed backend response shape",
         new Error("Response schema validation failed"),
-        { issues: parsed.error.issues, rawData }
+        {
+          issueCount: parsed.error.issues.length,
+          issuePaths: parsed.error.issues
+            .map((i) => i.path.join("."))
+            .slice(0, 5),
+          issueCodes: Array.from(
+            new Set(parsed.error.issues.map((i) => i.code))
+          ),
+        }
       );
       return {
         kind: "schema",
@@ -263,9 +274,17 @@ export async function parseVoiceWithAi(
       if (parsed.success) {
         validTransactions.push(parsed.data);
       } else {
+        // PII/privacy: do NOT log `raw` (it contains the AI-parsed transaction
+        // with counterparty, amount, description, etc.). Log only aggregate
+        // diagnostics.
         logger.warn("[ai-voice-parser] Skipping malformed transaction entry", {
-          raw,
-          issues: parsed.error.issues,
+          issueCount: parsed.error.issues.length,
+          issuePaths: parsed.error.issues
+            .map((i) => i.path.join("."))
+            .slice(0, 5),
+          issueCodes: Array.from(
+            new Set(parsed.error.issues.map((i) => i.code))
+          ),
         });
       }
     }
@@ -341,10 +360,15 @@ export async function parseVoiceWithAi(
           aiDetectedCurrency,
         });
       } catch (error) {
+        // PII/privacy: do NOT log the full `aiTx` object — it contains the
+        // user's transcript-derived transaction (counterparty, amount, note,
+        // description). Log only the category system name (enum-ish) and
+        // currency for diagnostics.
         logger.warn(
           "[ai-voice-parser] Skipping semantically invalid transaction",
           {
-            aiTx,
+            categorySystemName: aiTx.categorySystemName,
+            currency: aiTx.currency,
             error: error instanceof Error ? error.message : String(error),
           }
         );

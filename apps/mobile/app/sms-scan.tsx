@@ -12,7 +12,7 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useRef } from "react";
-import { Text, TouchableOpacity, View } from "react-native";
+import { Platform, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
@@ -27,6 +27,7 @@ import { useSmsPermission } from "@/hooks/useSmsPermission";
 import { useSmsSync } from "@/hooks/useSmsSync";
 import { loadExistingSmsHashes } from "@/services/sms-sync-service";
 import { palette } from "@/constants/colors";
+import { logger } from "@/utils/logger";
 import type { ParseSmsContext } from "@/services/ai-sms-parser-service";
 
 // ---------------------------------------------------------------------------
@@ -151,12 +152,6 @@ function SmsPermissionGate({
             {tCommon("back")}
           </Text>
         </TouchableOpacity>
-
-        {isBlocked && (
-          <Text className="mt-6 text-center text-sm text-slate-500 dark:text-slate-500">
-            {t("sms_scan_instructions")}
-          </Text>
-        )}
       </View>
     </SafeAreaView>
   );
@@ -234,13 +229,20 @@ export default function SmsScanScreen(): React.JSX.Element {
   // This preserves the pre-gate UX where tapping "Enable SMS auto-import"
   // surfaced the native permission dialog directly, with no extra screen.
   // The visible gate UI only appears if the user has already denied/blocked.
+  // Skipped on iOS — SMS import is Android-only (see non-Android short-circuit
+  // in the render body below).
   const autoRequestedRef = useRef(false);
   useEffect(() => {
+    if (Platform.OS !== "android") return;
     if (isPermissionLoading) return;
     if (permissionStatus !== "undetermined") return;
     if (autoRequestedRef.current) return;
     autoRequestedRef.current = true;
-    requestPermission().catch(() => {});
+    requestPermission().catch((err: unknown) => {
+      logger.warn("Auto-request SMS permission failed on mount", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    });
   }, [permissionStatus, isPermissionLoading, requestPermission]);
 
   // Auto-start scan on mount — waits until permission is granted and categories loaded
@@ -274,6 +276,38 @@ export default function SmsScanScreen(): React.JSX.Element {
     [transactions]
   );
 
+  // ── iOS short-circuit ──
+  // SMS import is Android-only (iOS has no equivalent of READ_SMS). Avoid
+  // trapping iOS users in the permission gate where useSmsPermission returns
+  // a permanent "denied" status and "Allow" would resolve back to "denied"
+  // indefinitely. Navigate the user back instead.
+  useEffect(() => {
+    if (Platform.OS !== "android") {
+      router.back();
+    }
+  }, [router]);
+
+  if (Platform.OS !== "android") {
+    return <SafeAreaView className="flex-1 bg-slate-50 dark:bg-slate-900" />;
+  }
+
+  // Shared error handlers for permission gate callbacks — log failures
+  // instead of silently swallowing them, per project coding guidelines.
+  const handleGateRequest = (): void => {
+    requestPermission().catch((err: unknown) => {
+      logger.warn("Failed to request SMS permission from gate", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    });
+  };
+  const handleGateOpenSettings = (): void => {
+    openSettings().catch((err: unknown) => {
+      logger.warn("Failed to open settings from gate", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    });
+  };
+
   // ── Permission gate ──
   // While the initial permission check (or auto-request for first-time users)
   // is in flight, show a skeleton loading state instead of the gate UI.
@@ -285,12 +319,8 @@ export default function SmsScanScreen(): React.JSX.Element {
       <SmsPermissionGate
         status="undetermined"
         isLoading
-        onRequest={() => {
-          requestPermission().catch(() => {});
-        }}
-        onOpenSettings={() => {
-          openSettings().catch(() => {});
-        }}
+        onRequest={handleGateRequest}
+        onOpenSettings={handleGateOpenSettings}
         onBack={handleBackPress}
       />
     );
@@ -301,12 +331,8 @@ export default function SmsScanScreen(): React.JSX.Element {
       <SmsPermissionGate
         status={permissionStatus}
         isLoading={false}
-        onRequest={() => {
-          requestPermission().catch(() => {});
-        }}
-        onOpenSettings={() => {
-          openSettings().catch(() => {});
-        }}
+        onRequest={handleGateRequest}
+        onOpenSettings={handleGateOpenSettings}
         onBack={handleBackPress}
       />
     );
