@@ -60,7 +60,6 @@ export default function DashboardScreen(): React.JSX.Element {
   const [isCurrencyPickerOpen, setIsCurrencyPickerOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const isDbReady = useDatabaseReady();
-
   const { t } = useTranslation("common");
   const { profile } = useProfile();
   const { sync } = useSync();

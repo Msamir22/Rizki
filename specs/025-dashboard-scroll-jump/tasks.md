@@ -5,7 +5,7 @@ description: "Task list for feature 025-dashboard-scroll-jump"
 # Tasks: Stable Dashboard Layout During Initial Load
 
 **Input**: Design documents from `/specs/025-dashboard-scroll-jump/`
-**Prerequisites**: plan.md ✅, spec.md ✅, research.md (scaffold) ✅, quickstart.md ✅
+**Prerequisites**: plan.md ✅, spec.md ✅, research.md (complete, all FD answered) ✅, quickstart.md ✅
 
 **Tests**: Automated visual-regression tests are OUT OF SCOPE per spec Assumptions (manual device verification with screen recordings is the evidence method per SC-002). Unit tests are included **only** where new logic is introduced (e.g., a `useDashboardLoadingState` hook if FD-3 adds one).
 

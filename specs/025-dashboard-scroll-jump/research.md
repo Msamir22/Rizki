@@ -119,7 +119,7 @@ This is a well-known cold-start race in `react-native-safe-area-context`. The li
 | FD-1 | Is the primary fix to move `TopNav` outside `ScrollView`? | **No — not needed.** | H2 ruled out; no scroll drift. Fix is at the SafeArea provider boundary, not the scroll-view layout. |
 | FD-2 | Does any hypothesis beyond #1 independently cause visible symptoms? | **No.** | H2, H3, H4 all ruled out. H1 fully explains the observed symptom. |
 | FD-3 | Is a defensive `scrollTo({y:0})` guard needed on "all sections loaded"? | **No.** | Scroll offset never drifts from 0 per H2 evidence. Adding a guard would be defensive against a non-existent condition. |
-| FD-4 | Does the fix require changes to `app/(tabs)/_layout.tsx`? | **No.** | H4 ruled out. The only required change is passing `initialMetrics={initialWindowMetrics}` to `SafeAreaProvider` in `app/_layout.tsx`. |
+| FD-4 | Does the fix require changes to `app/(tabs)/_layout.tsx`? | **No.** | H4 ruled out. `app/(tabs)/_layout.tsx` is NOT modified. The validated fix touches three other files: `app/_layout.tsx` (`initialMetrics` seed), `components/ui/StarryBackground.tsx` (direct-inset padding — the effective cure), and `components/dashboard/TopNav.tsx` (nested `SafeAreaView` removal). See "Fix summary" below. |
 
 ## Fix summary
 
@@ -130,6 +130,11 @@ The validated fix is three-part (all three required on the primary device — se
 3. **Remove redundant nested SafeAreaView** — in `apps/mobile/components/dashboard/TopNav.tsx`, delete the inner `<SafeAreaView edges={["top"]}>` so the top inset has a single source (the library does not deduplicate `paddingTop` between nested SafeAreaViews).
 
 All downstream `useSafeAreaInsets()` / `SafeAreaView` consumers benefit automatically from step 1. Zero behavioral risk beyond the Dashboard: `StarryBackground` is the only screen-wrapper that was touched, and all other consumers continue to read insets through the (now-seeded) context.
+
+## Known limitations / trade-offs
+
+- **Module-level inset snapshot in `StarryBackground`** — `INITIAL_TOP_INSET` is captured once at module import from `initialWindowMetrics.insets.top`. This is the portrait-at-cold-start value. The `StarryBackground` wrapper therefore does not re-inset if the device rotates or reports a different top inset per orientation (e.g., iPad split-screen, foldables). Mitigations in code: (a) a `Math.max(INITIAL_TOP_INSET, hookInsetTop)` hybrid is applied so post-first-render inset values from `useSafeAreaInsets()` still win when they become larger; (b) a `__DEV__` warning is emitted if `initialWindowMetrics` is unexpectedly null (Fabric/turbomodule init-order edge case) so the silent `?? 0` fallback cannot regress the cold-start symptom undetected.
+- **Cross-screen scope** — the direct-inset bypass is applied only in `StarryBackground` because it is the single screen-wrapper affected by the cold-start race on the Dashboard. Other screens continue to read insets via the (seeded) `SafeAreaInsetsContext`. If any other screen is later observed to have the same clip-and-snap behavior, the same pattern should be extended there rather than broadened globally.
 
 ## Exit gate for Phase 0
 

@@ -11,7 +11,11 @@ import Animated, {
   withSequence,
   withTiming,
 } from "react-native-reanimated";
-import { initialWindowMetrics } from "react-native-safe-area-context";
+import {
+  initialWindowMetrics,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
+import { logger } from "@/utils/logger";
 import Svg, { Circle, Defs, RadialGradient, Stop } from "react-native-svg";
 
 interface Props {
@@ -224,12 +228,28 @@ const Star = ({ data }: { data: StarConfig }): JSX.Element => {
 // That is the root cause of the cold-start scroll-jump reported in #234.
 const INITIAL_TOP_INSET = initialWindowMetrics?.insets.top ?? 0;
 
+if (__DEV__ && !initialWindowMetrics) {
+  // Fabric / turbomodule init-order edge case: the silent `?? 0` fallback
+  // would reintroduce the exact cold-start symptom being fixed, so surface
+  // it loudly during development.
+  logger.warn(
+    "[StarryBackground] initialWindowMetrics is null — cold-start scroll-jump fix degraded; top inset will be 0 until runtime insets resolve"
+  );
+}
+
 export function StarryBackground({ children }: Props): JSX.Element {
   const { isDark } = useTheme();
+  // Hybrid inset: start from the module-level snapshot so the very first
+  // render has the correct top padding (bypassing the context-shadowing
+  // race), but let the runtime inset win once it exceeds the snapshot. This
+  // guards against orientation changes and devices that report a larger top
+  // inset post-mount (foldables, iPad split-screen, Dynamic Island).
+  const runtimeInsets = useSafeAreaInsets();
+  const topInset = Math.max(INITIAL_TOP_INSET, runtimeInsets.top);
 
   if (isDark) {
     return (
-      <View className="flex-1" style={{ paddingTop: INITIAL_TOP_INSET }}>
+      <View className="flex-1" style={{ paddingTop: topInset }}>
         {STATIC_STARS.map((star) => (
           <Star key={star.id} data={star} />
         ))}
@@ -240,7 +260,7 @@ export function StarryBackground({ children }: Props): JSX.Element {
 
   // Light mode fallback (Standard light background)
   return (
-    <View className="flex-1" style={{ paddingTop: INITIAL_TOP_INSET }}>
+    <View className="flex-1" style={{ paddingTop: topInset }}>
       {children}
     </View>
   );
