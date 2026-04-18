@@ -196,3 +196,10 @@ mapping logic from component to model, suggest a rule update with location.
 - NativeWind `shadow-*`, `opacity-*`, `bg-color/opacity` on
   `TouchableOpacity`/`Pressable`
 - `i18next.t()` — use `{ t } from "i18next"` or `useTranslation` hook instead
+
+## Active Technologies
+- TypeScript 5.x (strict mode, NON-NEGOTIABLE per constitution III) + React Native + Expo (managed workflow), Expo Router (file-based routing, `Tabs`), `react-native-safe-area-context`, `expo-status-bar`, NativeWind v4 (025-dashboard-scroll-jump)
+- N/A — UI-stability fix, no data-model changes (025-dashboard-scroll-jump)
+
+## Recent Changes
+- 025-dashboard-scroll-jump: Added TypeScript 5.x (strict mode, NON-NEGOTIABLE per constitution III) + React Native + Expo (managed workflow), Expo Router (file-based routing, `Tabs`), `react-native-safe-area-context`, `expo-status-bar`, NativeWind v4
