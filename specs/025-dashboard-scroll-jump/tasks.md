@@ -66,7 +66,7 @@ description: "Task list for feature 025-dashboard-scroll-jump"
 - [X] T019 [US1] Manual verification pass on the primary device — user confirmed cold-start scenarios SC-001 (TopNav fully visible first frame), SC-002 (zero auto-scroll during load), SC-003 (no snap animation) all pass after the final fix (StarryBackground uses `initialWindowMetrics` directly). Post-fix recording `after-android-navbar.mp4` to be captured and attached to PR
 - [ ] T020 [US1] Manual verification pass on the primary device for FR-005: cold-start, manually scroll halfway down before the last section resolves, confirm the scroll position is preserved (no auto-scroll to top when loading finishes). Document pass/fail in `research.md` under "Verification results"
 
-**Checkpoint**: User Story 1 is fully functional and verified. MVP ready.
+**Checkpoint**: User Story 1 implementation is complete and the primary cold-start scenarios (SC-001..SC-003 via T019) are verified. Final sign-off is pending T020 (FR-005 user-scroll preservation during load).
 
 ---
 
@@ -131,7 +131,7 @@ description: "Task list for feature 025-dashboard-scroll-jump"
 ### Within Each User Story
 
 - Investigation is shared foundation — NO per-story investigation
-- US1's `T014 (TopNav extraction)` is the foundational fix for ALL three stories
+- US1's `T014` (SafeAreaProvider `initialMetrics` + `StarryBackground` direct-inset padding + nested `SafeAreaView` removal from `TopNav`) is the foundational fix for ALL three stories
 - US2 and US3 are primarily verification phases; they add new code only if regressions are observed (T023, T026)
 
 ### Parallel Opportunities
@@ -180,7 +180,7 @@ The feature is owned by a single developer (Mohamed). All phases execute sequent
 
 1. Finish Phase 1 (~15 min)
 2. Phase 2 investigation — the most time-intensive phase (~2–4 hours depending on reproduction stability)
-3. Phase 3 fix — likely a single `TopNav` extraction commit (~30 min) + verification (~20 min)
+3. Phase 3 fix — a focused SafeArea-metric seeding + `StarryBackground` top-inset stabilization commit (~30 min) + verification (~20 min)
 4. Phase 4 + Phase 5 verification — short (~20 min combined)
 5. Phase 6 polish + PR (~30 min)
 

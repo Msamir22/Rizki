@@ -123,7 +123,13 @@ This is a well-known cold-start race in `react-native-safe-area-context`. The li
 
 ## Fix summary
 
-Add `initialMetrics={initialWindowMetrics}` to the root `SafeAreaProvider` in `apps/mobile/app/_layout.tsx`. Import `initialWindowMetrics` from `react-native-safe-area-context` alongside `SafeAreaProvider`. Zero behavioral risk — affects only the synchronous inset values returned during the very first render, replacing `{top: 0, ...}` placeholders with measured window metrics. All downstream `useSafeAreaInsets()` / `SafeAreaView` consumers benefit automatically (not just the Dashboard).
+The validated fix is three-part (all three required on the primary device — see commit history `120c605`, `16997a5`, `77ad88f`):
+
+1. **Seed root metrics** — in `apps/mobile/app/_layout.tsx`, pass `initialMetrics={initialWindowMetrics}` to `<SafeAreaProvider>` (import `initialWindowMetrics` alongside `SafeAreaProvider` from `react-native-safe-area-context`). Defence-in-depth; benefits every screen.
+2. **Bypass context shadowing** (the effective fix) — in `apps/mobile/components/ui/StarryBackground.tsx`, replace `<SafeAreaView edges={["top"]}>` with a plain `<View>` whose `paddingTop` is sourced directly from the module-level constant `initialWindowMetrics?.insets.top ?? 0`. Rationale: instrumentation on the primary device proved that even after step 1, `useSafeAreaInsets()` still returned `top: 0` on render 1, meaning some component between the root provider and the Dashboard (almost certainly expo-router / react-native-screens internals) re-provides `SafeAreaInsetsContext` with zero defaults and shadows the root `initialMetrics`. A plain JS import cannot be shadowed.
+3. **Remove redundant nested SafeAreaView** — in `apps/mobile/components/dashboard/TopNav.tsx`, delete the inner `<SafeAreaView edges={["top"]}>` so the top inset has a single source (the library does not deduplicate `paddingTop` between nested SafeAreaViews).
+
+All downstream `useSafeAreaInsets()` / `SafeAreaView` consumers benefit automatically from step 1. Zero behavioral risk beyond the Dashboard: `StarryBackground` is the only screen-wrapper that was touched, and all other consumers continue to read insets through the (now-seeded) context.
 
 ## Exit gate for Phase 0
 

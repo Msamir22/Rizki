@@ -77,11 +77,13 @@ apps/mobile/
     └── (possibly) useDashboardLoadingState.ts  # NEW if needed — aggregates per-section loading flags
 ```
 
-**Structure Decision**: The fix lives entirely in `apps/mobile`. No packages touched. The primary edit targets are:
+**Structure Decision** (finalized post-investigation): The fix lives entirely in `apps/mobile`. No packages touched. The actual edit targets, per the confirmed H1 root cause and FD-1..FD-4 outcomes, are:
 
-1. `apps/mobile/app/(tabs)/index.tsx` — extract `TopNav` from inside the `ScrollView` so its Y-position is anchored to the viewport, not to the scrollable content (hypothesis #2 primary candidate)
-2. `apps/mobile/app/_layout.tsx` — only if investigation proves the `StatusBar` config contributes to the jump (hypothesis #3, gated by Q2 clarification)
-3. Minor touches only if hypotheses #1 (SafeArea timing) or #4 (Tabs scene race) are confirmed
+1. `apps/mobile/app/_layout.tsx` — pass `initialMetrics={initialWindowMetrics}` to `SafeAreaProvider` for first-frame inset stability (defence-in-depth; benefits every screen).
+2. `apps/mobile/components/ui/StarryBackground.tsx` — apply `paddingTop` from `initialWindowMetrics?.insets.top ?? 0` on a plain `View`, bypassing `SafeAreaInsetsContext` re-providers that shadow root metrics on cold start (the effective fix).
+3. `apps/mobile/components/dashboard/TopNav.tsx` — remove the redundant nested `SafeAreaView edges={["top"]}` so the top inset has a single source.
+
+`apps/mobile/app/(tabs)/index.tsx` is NOT modified — FD-1 ruled out the "extract `TopNav` from `ScrollView`" hypothesis (H2 had zero scroll drift).
 
 No new package dependencies. No schema changes. No migrations.
 

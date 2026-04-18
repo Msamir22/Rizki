@@ -34,9 +34,11 @@ function TopNavComponent({
   const { theme } = useTheme();
   const { t } = useTranslation("common");
 
-  // Top inset is handled by the parent screen's SafeAreaView (StarryBackground).
-  // Nesting another SafeAreaView here would double-apply `paddingTop: insets.top`,
-  // which caused the cold-start scroll-jump reported in issue #234.
+  // Top inset is handled by the parent StarryBackground, which applies
+  // `paddingTop` sourced directly from `initialWindowMetrics.insets.top` on a
+  // plain View (it does NOT use SafeAreaView). Nesting a SafeAreaView here
+  // would reintroduce the double-inset behavior that caused the cold-start
+  // scroll-jump reported in issue #234.
   return (
     <View className="pb-2">
       <View className="flex-row items-center mt-2">
