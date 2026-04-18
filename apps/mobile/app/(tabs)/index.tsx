@@ -40,6 +40,15 @@ import {
 } from "react-native";
 import { useTranslation } from "react-i18next";
 
+// Static style objects — extracted to module scope to keep referential
+// stability across re-renders and avoid recreating them on every render.
+const SCROLL_CONTENT_STYLE = {
+  paddingBottom: TAB_BAR_HEIGHT + 20,
+} as const;
+
+const REFRESH_TINT_COLOR = palette.nileGreen[500];
+const REFRESH_COLORS: string[] = [REFRESH_TINT_COLOR];
+
 /**
  * Returns a time-based greeting key for i18n.
  */
@@ -168,7 +177,7 @@ export default function DashboardScreen(): React.JSX.Element {
   return (
     <StarryBackground>
       <ScrollView
-        contentContainerStyle={{ paddingBottom: TAB_BAR_HEIGHT + 20 }}
+        contentContainerStyle={SCROLL_CONTENT_STYLE}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -176,8 +185,8 @@ export default function DashboardScreen(): React.JSX.Element {
             onRefresh={() => {
               void handleRefresh();
             }}
-            tintColor={palette.nileGreen[500]}
-            colors={[palette.nileGreen[500]]}
+            tintColor={REFRESH_TINT_COLOR}
+            colors={REFRESH_COLORS}
           />
         }
       >
