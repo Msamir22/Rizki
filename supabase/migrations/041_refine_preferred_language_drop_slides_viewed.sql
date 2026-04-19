@@ -30,7 +30,18 @@ ALTER TABLE profiles DROP COLUMN IF EXISTS slides_viewed;
 
 ALTER TABLE profiles DROP COLUMN IF EXISTS preferred_language;
 
-CREATE TYPE preferred_language_code AS ENUM ('en', 'ar');
+-- Create the enum defensively. Postgres does not support `CREATE TYPE IF NOT
+-- EXISTS`, and a plain `CREATE TYPE` fails with SQLSTATE 42710 if the type
+-- already exists (e.g., re-running this migration against an environment that
+-- ran it once already, or restoring from a snapshot). The DO block swallows
+-- the duplicate-object error so the migration is idempotent.
+DO $$
+BEGIN
+  CREATE TYPE preferred_language_code AS ENUM ('en', 'ar');
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END
+$$;
 
 ALTER TABLE profiles
-  ADD COLUMN preferred_language preferred_language_code NOT NULL DEFAULT 'en';
+  ADD COLUMN IF NOT EXISTS preferred_language preferred_language_code NOT NULL DEFAULT 'en';

@@ -26,7 +26,6 @@ import { WalletCreationStep } from "@/components/onboarding/WalletCreationStep";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useProfile } from "@/hooks/useProfile";
-import { changeLanguage } from "@/i18n/changeLanguage";
 import {
   readOnboardingStep,
   writeOnboardingStep,
@@ -187,12 +186,14 @@ export default function OnboardingScreen(): React.JSX.Element | null {
         setPhase(nextPhase);
 
         // Resume at the wallet-creation confirmation only makes sense if we
-        // already know which currency was picked. The cash account's
-        // currency is the source of truth — but for simplicity we use the
-        // profile's preferredCurrency, which was written atomically alongside
-        // account creation in setPreferredCurrencyAndCreateCashAccount.
+        // already know which currency was picked. The profile's
+        // preferredCurrency was written atomically alongside account creation
+        // in setPreferredCurrencyAndCreateCashAccount. Thanks to migration
+        // 042 the column is the `currency_type` Postgres enum, so the field
+        // is already narrowed to `CurrencyType` on the client — no runtime
+        // guard required.
         if (nextPhase === "wallet-creation" && profile?.preferredCurrency) {
-          setSelectedCurrency(profile.preferredCurrency as CurrencyType);
+          setSelectedCurrency(profile.preferredCurrency);
         }
       } catch (error) {
         logger.warn(
@@ -239,7 +240,9 @@ export default function OnboardingScreen(): React.JSX.Element | null {
       if (isChangingLanguage) return;
       setIsChangingLanguage(true);
       try {
-        await changeLanguage(language);
+        // profile-service.setPreferredLanguage writes the DB column AND
+        // applies the language to the in-memory i18n state (Principle IV).
+        // The screen no longer calls changeLanguage directly.
         await setPreferredLanguage(language);
         await writeOnboardingStep(userId, "slides");
         setPhase("carousel");
