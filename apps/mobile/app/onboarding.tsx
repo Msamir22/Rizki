@@ -186,19 +186,7 @@ export default function OnboardingScreen(): React.JSX.Element | null {
       try {
         const cursor = await readOnboardingStep(userId);
         if (cancelled) return;
-        const nextPhase = cursorToPhase(cursor);
-        setPhase(nextPhase);
-
-        // Resume at the wallet-creation confirmation only makes sense if we
-        // already know which currency was picked. The profile's
-        // preferredCurrency was written atomically alongside account creation
-        // in setPreferredCurrencyAndCreateCashAccount. Thanks to migration
-        // 042 the column is the `currency_type` Postgres enum, so the field
-        // is already narrowed to `CurrencyType` on the client — no runtime
-        // guard required.
-        if (nextPhase === "wallet-creation" && profile?.preferredCurrency) {
-          setSelectedCurrency(profile.preferredCurrency);
-        }
+        setPhase(cursorToPhase(cursor));
       } catch (error) {
         logger.warn(
           "onboarding.resumePhase.failed",
@@ -212,7 +200,21 @@ export default function OnboardingScreen(): React.JSX.Element | null {
     return (): void => {
       cancelled = true;
     };
-  }, [userId, profile?.preferredCurrency]);
+  }, [userId]);
+
+  // Seed selectedCurrency for the wallet-creation resume path.
+  useEffect(() => {
+    // Resume at the wallet-creation confirmation only makes sense if we
+    // already know which currency was picked. The profile's
+    // preferredCurrency was written atomically alongside account creation
+    // in setPreferredCurrencyAndCreateCashAccount. Thanks to migration
+    // 042 the column is the `currency_type` Postgres enum, so the field
+    // is already narrowed to `CurrencyType` on the client — no runtime
+    // guard required.
+    if (phase === "wallet-creation" && profile?.preferredCurrency) {
+      setSelectedCurrency(profile.preferredCurrency);
+    }
+  }, [phase, profile?.preferredCurrency]);
 
   // ---------------------------------------------------------------------
   // Navigation helpers
@@ -441,15 +443,15 @@ export default function OnboardingScreen(): React.JSX.Element | null {
           void handleOnboardingComplete();
         }}
         onError={(): void => {
-          // On error the user hasn't truly completed onboarding — do NOT
-          // flip the DB flag or clear the cursor. Just navigate away so the
-          // app isn't stuck; next launch resumes at the cash-account step
-          // and they can retry.
-          if (isAuthLoading) {
-            pendingNavigationRef.current = true;
-            return;
-          }
-          navigateAfterOnboarding();
+          // Cash-account creation failed — keep the user on the wallet step
+          // so they can retry instead of bouncing them to the dashboard
+          // while onboarding_completed is still false (which would bypass
+          // the routing gate in app/index.tsx).
+          showToast({
+            type: "error",
+            title: tCommon("error"),
+            message: tCommon("error_generic"),
+          });
         }}
       />
     );
