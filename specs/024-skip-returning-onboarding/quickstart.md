@@ -19,7 +19,8 @@ splits into:
 4. **Onboarding rewrite** — persist each step's output to the profile via
    `profile-service.ts`, read the initial phase from the profile.
 5. **Currency-step change** — remove the Skip button (FR-009).
-6. **Retry screen** — new component; **blocked on mockups**.
+6. **Retry screen** — new component. Mockup approved (V2 "Status Card") on
+   2026-04-18, assets under `mockups/`.
 7. **Observability** — one info-level log per routing decision.
 8. **Tests** — unit + integration, TDD-first.
 
@@ -28,9 +29,13 @@ splits into:
 - [x] **Retry-screen mockups** — approved 2026-04-18. V2 "Status Card" saved at
       `specs/024-skip-returning-onboarding/mockups/retry-sync-screen.png` and
       `.html`. See T032 for the implementation spec.
-- [x] **Currency-step signal** — approved 2026-04-18. Using **Option B**:
-      cash-account presence (via `hasCashAccount`) is the "user completed
-      currency step" signal. No `handle_new_user()` trigger audit required.
+- [x] **Currency-step signal** — superseded 2026-04-18 (second-pass
+      simplification). The routing gate is now purely binary (`syncState` +
+      `profile.onboarding_completed`); per-step progress — including "user
+      reached the currency step" — lives in AsyncStorage via
+      `onboarding-cursor-service.ts`, not on the profile. The earlier
+      `hasCashAccount` / `hasPreferredCurrency` signals are no longer part of
+      `getRoutingDecision`. No `handle_new_user()` trigger audit required.
 
 ## Running the migration locally
 
@@ -120,8 +125,9 @@ plan.
   `WalletCreationStep.tsx` lines 230-241 for the existing pattern.
 - **`preferredCurrency` hook typing**: `usePreferredCurrency` already returns
   `CurrencyType` (never null) via device-timezone fallback. That's fine for
-  display. For the routing gate's `hasCashAccount` input, query `accounts`
-  collection directly — don't rely on the `preferredCurrency` hook.
+  display. The routing gate no longer takes currency-related inputs — the
+  per-step resume logic lives in `onboarding.tsx` against the AsyncStorage
+  cursor — so no cash-account lookup is needed from `index.tsx`.
 - **Profile row might not exist immediately after sign-up**: the Supabase
   `handle_new_user()` trigger creates it, and the initial pull-sync brings it
   down. Guard against an empty observation — if no profile row exists after sync
