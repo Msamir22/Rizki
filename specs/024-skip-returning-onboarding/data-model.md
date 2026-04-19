@@ -1,132 +1,132 @@
 # Phase 1 Data Model: Skip Onboarding for Returning Users
 
-**Branch**: `024-skip-returning-onboarding` | **Date**: 2026-04-18
+**Branch**: `024-skip-returning-onboarding` | **Last rewritten**: 2026-04-18
 
 ## Scope
 
-This feature changes exactly one table's shape: `profiles`. No new tables. No
-relationship changes. Two columns are added; one existing column is repurposed
-as the routing gate.
+This feature changes exactly **one database table**: `profiles`. One new column
+(`preferred_language`) is added, and one existing column
+(`onboarding_completed`) has its semantic meaning pinned.
+
+A new **Postgres enum** (`preferred_language_code`) is introduced to
+type-constrain the language column.
+
+All **per-step onboarding progress is tracked in AsyncStorage**, not the
+database — see § 3.
 
 ## 1. `profiles` table — post-migration shape
 
 Existing columns (unchanged by this feature):
 
-| Column                  | Type                     | Nullable | Default | Notes                                                                                                               |
-| ----------------------- | ------------------------ | -------- | ------- | ------------------------------------------------------------------------------------------------------------------- |
-| `id` (PK)               | uuid                     | NO       | —       | Standard Supabase/Watermelon PK.                                                                                    |
-| `user_id`               | uuid (FK → `auth.users`) | NO       | —       | RLS subject. Indexed.                                                                                               |
-| `created_at`            | timestamptz              | NO       | `now()` | Sync envelope.                                                                                                      |
-| `updated_at`            | timestamptz              | NO       | `now()` | Sync envelope.                                                                                                      |
-| `deleted`               | boolean                  | NO       | `false` | Sync envelope (tombstone).                                                                                          |
-| `display_name`          | text                     | YES      | NULL    | Out of scope.                                                                                                       |
-| `first_name`            | text                     | YES      | NULL    | Out of scope.                                                                                                       |
-| `last_name`             | text                     | YES      | NULL    | Out of scope.                                                                                                       |
-| `avatar_url`            | text                     | YES      | NULL    | Out of scope.                                                                                                       |
-| `preferred_currency`    | text                     | NO       | —       | Populated at Currency step. FR-009 makes it non-skippable at the product level; schema was already NOT NULL.        |
-| `theme`                 | text                     | NO       | —       | Out of scope.                                                                                                       |
-| `notification_settings` | jsonb                    | YES      | NULL    | Out of scope.                                                                                                       |
-| `sms_detection_enabled` | boolean                  | NO       | `false` | Out of scope.                                                                                                       |
-| `onboarding_completed`  | boolean                  | NO       | `false` | **Repurposed** as the single routing gate. Flips to `true` only when the user reaches the end of the flow (FR-011). |
-| `setup_guide_completed` | boolean                  | NO       | `false` | Dashboard setup card — **out of scope** per FR-013.                                                                 |
+| Column                                                     | Type                     | Nullable | Default | Notes                                                                                                                                 |
+| ---------------------------------------------------------- | ------------------------ | -------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `id` (PK)                                                  | uuid                     | NO       | —       | Standard Supabase/Watermelon PK.                                                                                                      |
+| `user_id`                                                  | uuid (FK → `auth.users`) | NO       | —       | RLS subject. Indexed.                                                                                                                 |
+| `created_at`                                               | timestamptz              | NO       | `now()` | Sync envelope.                                                                                                                        |
+| `updated_at`                                               | timestamptz              | NO       | `now()` | Sync envelope.                                                                                                                        |
+| `deleted`                                                  | boolean                  | NO       | `false` | Sync envelope (tombstone).                                                                                                            |
+| `display_name` / `first_name` / `last_name` / `avatar_url` | text                     | YES      | NULL    | Out of scope.                                                                                                                         |
+| `preferred_currency`                                       | text                     | NO       | —       | Populated at Currency step. FR-009 makes it non-skippable at the product level; schema was already NOT NULL.                          |
+| `theme`                                                    | text                     | NO       | —       | Out of scope.                                                                                                                         |
+| `notification_settings`                                    | jsonb                    | YES      | NULL    | Out of scope.                                                                                                                         |
+| `sms_detection_enabled`                                    | boolean                  | NO       | `false` | Out of scope.                                                                                                                         |
+| `onboarding_completed`                                     | boolean                  | NO       | `false` | **Single source of truth for the routing gate**. Flips to `true` only when the user dismisses the cash-account confirmation (FR-011). |
+| `setup_guide_completed`                                    | boolean                  | NO       | `false` | Dashboard setup card — **out of scope** per FR-013.                                                                                   |
 
-**New columns added by this feature**:
+**New column added by this feature**:
 
-| Column               | Type    | Nullable | Default | Purpose                                                                                                                                                                                                                                                                      |
-| -------------------- | ------- | -------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `preferred_language` | text    | YES      | NULL    | FR-007. Populated when the Language step is completed. Values constrained by the app layer to `'en'` or `'ar'` (current supported set). Used as (a) a per-step resume signal and (b) the startup i18n source for subsequent launches (replaces AsyncStorage `LANGUAGE_KEY`). |
-| `slides_viewed`      | boolean | NO       | `false` | FR-008. Set to `true` when the user views or skips the onboarding carousel. Per-step resume signal.                                                                                                                                                                          |
+| Column               | Type                                      | Nullable | Default | Purpose                                                                                                                                                                                                                            |
+| -------------------- | ----------------------------------------- | -------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `preferred_language` | `preferred_language_code` (enum, see § 2) | **NO**   | `'en'`  | FR-007. Populated at the Language step. On subsequent launches, read locally and passed to the i18n `changeLanguage()` helper so the UI renders in the right language. Non-nullable so the app always has a valid language to use. |
 
-### Constraints and checks
+### Removed from prior draft
 
-- `preferred_language`: No DB-level enum or check constraint; the
-  product-supported set (`'en'`, `'ar'`) is enforced in `profile-service.ts`
-  (Zod or TypeScript literal union). Rationale: keeps the migration minimal and
-  allows future language additions without a schema change.
-- `slides_viewed`: No check constraint needed; it's a pure boolean gate.
-- `preferred_currency`: Existing NOT NULL constraint stays. It is still
-  initially populated (to an app-provided default or first valid value) when the
-  row is created via the `handle_new_user()` Supabase trigger — verify this
-  during implementation. After the Currency step, the column reflects the user's
-  chosen value.
+- **`slides_viewed`** — removed. Per-step progress (including whether slides
+  were viewed) lives in AsyncStorage, not the DB. See § 3.
+- **Dedicated-vs-derived routing signal** — the earlier draft debated whether
+  onboarding-completed was dedicated or derived from per-step signals.
+  Simplified: only `onboarding_completed` (dedicated, authoritative) is on the
+  server; per-step progress is a purely local concern.
 
 ### RLS (Row-Level Security)
 
 No policy changes. The existing `profiles` policies (user can read/update their
-own row) cover the new columns automatically.
+own row) cover the new column automatically.
 
 ### Indexes
 
 No new indexes. The `user_id` index already supports the router's lookup.
 
----
+## 2. `preferred_language_code` Postgres enum
 
-## 2. State transitions for `profiles` relevant to this feature
-
-Routing-relevant fields only:
-
-```
-                    ┌─────────────────────────────────────┐
-                    │ Profile row created by trigger on   │
-                    │ first successful sign-in            │
-                    │                                     │
-                    │ preferred_language     = NULL       │
-                    │ slides_viewed          = false      │
-                    │ preferred_currency     = <default>  │
-                    │ onboarding_completed   = false      │
-                    └──────────────┬──────────────────────┘
-                                   │
-                     Language step │ sets preferred_language = <en|ar>
-                                   ▼
-                    ┌─────────────────────────────────────┐
-                    │ preferred_language     = 'en' | 'ar'│
-                    │ slides_viewed          = false      │
-                    │ preferred_currency     = <default>  │
-                    │ onboarding_completed   = false      │
-                    └──────────────┬──────────────────────┘
-                                   │
-                     Slides step   │ sets slides_viewed = true
-                                   ▼
-                    ┌─────────────────────────────────────┐
-                    │ preferred_language     = 'en' | 'ar'│
-                    │ slides_viewed          = true       │
-                    │ preferred_currency     = <default>  │
-                    │ onboarding_completed   = false      │
-                    └──────────────┬──────────────────────┘
-                                   │
-                     Currency step │ sets preferred_currency = <user choice>
-                                   │ + creates cash account
-                                   ▼
-                    ┌─────────────────────────────────────┐
-                    │ preferred_language     = 'en' | 'ar'│
-                    │ slides_viewed          = true       │
-                    │ preferred_currency     = <choice>   │
-                    │ onboarding_completed   = false      │
-                    │ (cash account row exists)           │
-                    └──────────────┬──────────────────────┘
-                                   │
-                     Cash-account  │ sets onboarding_completed = true
-                     confirmation  │ (user taps "Got it")
-                                   ▼
-                    ┌─────────────────────────────────────┐
-                    │ preferred_language     = 'en' | 'ar'│
-                    │ slides_viewed          = true       │
-                    │ preferred_currency     = <choice>   │
-                    │ onboarding_completed   = true       │
-                    └─────────────────────────────────────┘
-                             Terminal state — routing gate returns "dashboard".
+```sql
+CREATE TYPE preferred_language_code AS ENUM ('en', 'ar');
 ```
 
-Each transition is driven by a function in `profile-service.ts`. Writes go
-through WatermelonDB's `database.write()` and are synced to Supabase on the next
-push-sync cycle.
+- Values are **lowercase** to match the existing `apps/mobile/i18n` codebase
+  (`changeLanguage('en')`, `i18n.language === 'ar'`).
+- Adding new languages in the future requires
+  `ALTER TYPE preferred_language_code ADD VALUE 'xx';` — not a concern right now
+  but worth knowing.
+- On the TypeScript side, `npm run db:migrate` auto-regenerates
+  `packages/db/src/types.ts` to export
+  `type PreferredLanguageCode = "en" | "ar"` (mirroring existing entries like
+  `CurrencyType`). App code imports `PreferredLanguageCode` from `@rizqi/db` —
+  no shadow union type is defined anywhere else. See research.md § 4 for the
+  convention note.
 
----
+## 3. Per-user onboarding cursor (AsyncStorage, not DB)
 
-## 3. Routing decision — pure function
+Per FR-008, the onboarding flow's per-step progress is tracked in AsyncStorage.
+This is **not a database entity**; it is documented here because it is part of
+the feature's data contract.
 
-Not a persisted entity; a planning artifact. The routing gate is a pure function
-of four booleans plus the sync state:
+### Key format
+
+```
+onboarding:<userId>:step
+```
+
+- `<userId>` is the authenticated user's `auth.users.id` (same value used
+  elsewhere as `user_id`).
+- Keying by userId isolates progress between different accounts signed in on the
+  same device.
+
+### Values
+
+Exactly one of the following strings:
+
+- `"language"` — next step is the Language picker (effectively the same as a
+  missing key).
+- `"slides"` — next step is the Slides carousel.
+- `"currency"` — next step is the Currency picker.
+- `"cash-account"` — next step is the Cash-account confirmation.
+
+### Lifecycle
+
+| Event                                             | AsyncStorage action                                                                                                    |
+| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| User completes Language step                      | Write `onboarding:<userId>:step = "slides"`.                                                                           |
+| User views or skips the Slides step               | Write `onboarding:<userId>:step = "currency"`.                                                                         |
+| User completes Currency step (picks a currency)   | Write `onboarding:<userId>:step = "cash-account"`.                                                                     |
+| User dismisses the Cash-account confirmation      | **Delete** the key `onboarding:<userId>:step` (atomic with setting `profiles.onboarding_completed = true` per FR-011). |
+| User signs out mid-flow                           | **Preserve** the key — if they sign back in as the same user before completing, they resume.                           |
+| User taps "Sign out" on the retry screen (FR-006) | Not yet onboarded, so no cursor exists to clear. No-op.                                                                |
+
+### Failure semantics
+
+- Reading the cursor for a user key that does not exist MUST be treated as
+  `"language"` (i.e., start at the first step). No error, no prompt.
+- If an AsyncStorage write fails, the user continues through the flow for the
+  current session; on next app launch they may resume at an earlier step than
+  expected. This is acceptable — AsyncStorage writes rarely fail on modern
+  platforms, and worst case the user repeats one step.
+
+## 4. Routing decision — pure function
+
+The routing gate in `apps/mobile/app/index.tsx` is now **binary**
+(dashboard-or-onboarding), not a multi-step derivation. Resume logic lives
+inside the onboarding screen itself.
 
 ```ts
 type SyncState = "in-progress" | "success" | "failed" | "timeout";
@@ -134,86 +134,58 @@ type SyncState = "in-progress" | "success" | "failed" | "timeout";
 interface RoutingInputs {
   readonly syncState: SyncState;
   readonly onboardingCompleted: boolean;
-  readonly hasPreferredLanguage: boolean;
-  readonly slidesViewed: boolean;
-  readonly hasCashAccount: boolean; // cash account present ⇒ user confirmed currency (per FR-010)
 }
 
 type RoutingOutcome =
-  | "loading"
-  | "dashboard"
-  | "language"
-  | "slides"
-  | "currency"
-  | "cash-account-confirmation"
-  | "retry";
+  | "loading" // overlay shown, no navigation
+  | "dashboard" // redirect to /(tabs)
+  | "onboarding" // redirect to /onboarding
+  | "retry"; // render RetrySyncScreen
 
 function getRoutingDecision(inputs: RoutingInputs): RoutingOutcome {
   if (inputs.syncState === "in-progress") return "loading";
   if (inputs.syncState !== "success") return "retry";
-  if (inputs.onboardingCompleted) return "dashboard";
-  if (!inputs.hasPreferredLanguage) return "language";
-  if (!inputs.slidesViewed) return "slides";
-  if (!inputs.hasCashAccount) return "currency";
-  return "cash-account-confirmation";
+  return inputs.onboardingCompleted ? "dashboard" : "onboarding";
 }
 ```
 
-**"User completed currency step" signal — DECIDED 2026-04-18: Option B
-(cash-account presence)**.
+The onboarding screen is responsible for reading the per-user AsyncStorage
+cursor and starting at the right phase; see FR-004.
 
-Because `preferred_currency` is NOT NULL at the schema level and seeded by
-`handle_new_user()`, we cannot use `preferred_currency IS NULL` as the "user
-hasn't picked yet" signal. We use the **presence of a cash account row** as the
-confirmation signal instead — cash accounts are only created after the user
-confirms a currency (FR-010). This:
+## 5. Validation rules sourced from requirements
 
-- Matches FR-010 directly (the account IS the side effect of the currency step).
-- Avoids any dependency on `handle_new_user()` seeding behavior.
-- Is straightforward to test (query `accounts` collection by user, filter by
-  type=CASH).
+| FR     | Validation rule                                                                          | Enforced where                                                                                                                                                                                                                                                                        |
+| ------ | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| FR-007 | `preferred_language` ∈ `{'en', 'ar'}`.                                                   | Postgres enum (authoritative) + `profile-service.setPreferredLanguage(language: PreferredLanguageCode)` — type imported from `@rizqi/db` (auto-generated).                                                                                                                            |
+| FR-008 | AsyncStorage cursor value is one of the four named steps.                                | `profile-service.setOnboardingStep()` accepts a typed `OnboardingStep` parameter.                                                                                                                                                                                                     |
+| FR-009 | Currency step requires a non-null `preferred_currency` AND a corresponding cash account. | `profile-service.setPreferredCurrencyAndCreateCashAccount()` — atomic `database.write` that updates profile + calls `ensureCashAccount`.                                                                                                                                              |
+| FR-010 | Cash account must exist after currency step.                                             | Same function as FR-009.                                                                                                                                                                                                                                                              |
+| FR-011 | `onboarding_completed` flips to `true` AND the cursor is cleared atomically.             | `profile-service.completeOnboarding()` — single `database.write` + the AsyncStorage removal runs inside the same async function. If the cursor removal fails, log but do not rollback the DB write (the user is done; a stale cursor is harmless because the gate reads the DB flag). |
+| FR-012 | Routing gate runs on every post-auth entry.                                              | `apps/mobile/app/index.tsx` (the gate). No caching of outcome.                                                                                                                                                                                                                        |
+| FR-013 | `setup_guide_completed` is untouched.                                                    | Code review; no writes to that column in any new service function.                                                                                                                                                                                                                    |
+| FR-015 | Legacy AsyncStorage keys deleted.                                                        | `apps/mobile/constants/storage-keys.ts` exports removed; all callers either deleted or migrated to the new key/DB.                                                                                                                                                                    |
 
-The routing function therefore takes `hasCashAccount: boolean` rather than
-`hasPreferredCurrency: boolean` — see `contracts/profile-service.ts`.
-
----
-
-## 4. Validation rules sourced from requirements
-
-| FR     | Validation rule                                                                          | Enforced where                                                                                                                           |
-| ------ | ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| FR-007 | `preferred_language` ∈ `{'en', 'ar'}` (current app support).                             | `profile-service.setPreferredLanguage()` TS type guard.                                                                                  |
-| FR-008 | `slides_viewed` is a boolean; defaults to `false`.                                       | DB `NOT NULL DEFAULT false`.                                                                                                             |
-| FR-009 | Currency step requires a non-null `preferred_currency` AND a corresponding cash account. | `profile-service.setPreferredCurrencyAndCreateCashAccount()` — atomic `database.write` that updates profile + calls `ensureCashAccount`. |
-| FR-010 | Cash account must exist after currency step.                                             | Same function as FR-009.                                                                                                                 |
-| FR-011 | `onboarding_completed` flips to `true` only on final confirmation dismissal.             | `profile-service.completeOnboarding()` — called only from `WalletCreationStep.onComplete`.                                               |
-| FR-012 | Routing gate runs on every post-auth entry.                                              | `apps/mobile/app/index.tsx` (the gate). No caching of outcome.                                                                           |
-| FR-013 | `setup_guide_completed` is untouched.                                                    | Code review; no writes to that column in any new service function.                                                                       |
-
----
-
-## 5. Out-of-scope entities
-
-The following entities are referenced by the feature but not modified:
+## 6. Out-of-scope entities
 
 - `accounts` — the cash account row is created via the existing
   `ensureCashAccount` helper. No schema change.
 - `auth.users` — unchanged.
 - All other tables — unchanged.
 
----
+## 7. Migration file outline
 
-## 6. Migration file outline
-
-File: `supabase/migrations/040_add_language_and_slides_viewed_to_profiles.sql`
+File: `supabase/migrations/040_add_preferred_language_to_profiles.sql`
 
 ```sql
-ALTER TABLE profiles
-  ADD COLUMN preferred_language TEXT NULL,
-  ADD COLUMN slides_viewed BOOLEAN NOT NULL DEFAULT FALSE;
+-- Create the language enum (lowercase to match the existing i18n codebase).
+CREATE TYPE preferred_language_code AS ENUM ('en', 'ar');
 
--- No index needed; no constraint needed (enum enforced at app layer).
--- RLS policies on profiles automatically cover the new columns.
+-- Add the column with the enum type. Non-nullable with a default so existing
+-- rows get a valid value immediately and new signups inherit it.
+ALTER TABLE profiles
+  ADD COLUMN preferred_language preferred_language_code NOT NULL DEFAULT 'en';
+
+-- RLS: no policy changes; the existing profiles policies cover the new column.
 ```
 
 Post-migration commands per Constitution VII:
@@ -222,3 +194,13 @@ Post-migration commands per Constitution VII:
 2. `npm run db:migrate` (regenerates `packages/db/src/schema.ts`,
    `supabase-types.ts`, `migrations.ts`, and `base-profile.ts`).
 3. Commit the migration SQL and all regenerated files together.
+
+### WatermelonDB representation note
+
+WatermelonDB represents Postgres enums as plain `string` columns client-side.
+The `base-profile.ts` regeneration will produce
+`@field("preferred_language") preferredLanguage!: string`. The narrower
+`PreferredLanguageCode` union (imported from `@rizqi/db`) is enforced at the
+service layer — callers cast from the raw `profile.preferredLanguage` only after
+narrowing, typically at the top of `profile-service.setPreferredLanguage()` or
+wherever the value is read before being passed to `changeLanguage()`.

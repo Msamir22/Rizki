@@ -1,11 +1,9 @@
 # Phase 0 Research: Skip Onboarding for Returning Users
 
-**Branch**: `024-skip-returning-onboarding` | **Date**: 2026-04-18
+**Branch**: `024-skip-returning-onboarding` | **Last rewritten**: 2026-04-18
 
-This document resolves all "NEEDS CLARIFICATION" markers and gathers
-best-practice references for the design. No `[NEEDS CLARIFICATION]` markers
-remained after `/speckit.clarify`; the investigations below answer the two
-planning-phase open items the spec flagged explicitly.
+This document records the investigations behind the design decisions in
+`plan.md` and `data-model.md`. No `[NEEDS CLARIFICATION]` markers remain.
 
 ---
 
@@ -17,33 +15,23 @@ if `"true"`, otherwise to `/onboarding`. It does NOT consult
 `profiles.onboarding_completed` on the server or via WatermelonDB.
 
 **Rationale**: Code inspection confirms the gate is AsyncStorage-only.
-`apps/mobile/app/index.tsx` lines 15-59:
-
-```tsx
-const value = await AsyncStorage.getItem(HAS_ONBOARDED_KEY);
-if (value === "true") setHasOnboarded(true);
-// ...
-if (hasOnboarded) return <Redirect href="/(tabs)" />;
-else return <Redirect href="/onboarding" />;
-```
+`apps/mobile/app/index.tsx` lines 15-59 read the key and redirect immediately
+without awaiting sync.
 
 `HAS_ONBOARDED_KEY` is written in a single place — `onboarding.tsx`
 `handleCarouselFinish` — after the user finishes the slides carousel (not after
-the cash-account confirmation, which is the actual end of the flow). That means
-today's flag flips at the wrong step; the move to the server-authoritative
-`profiles.onboarding_completed` field will also correctly realign it to flip at
-the end of the flow (FR-011).
+the cash-account confirmation, which is the actual end of the flow). The legacy
+flow therefore flips its flag at the wrong step; the new flow corrects this.
 
-**Alternatives considered**:
+**Alternatives considered and rejected**:
 
-- **Keep AsyncStorage + add a server write**: Rejected because it preserves the
-  reinstall/new-device bug (empty local storage → user sees onboarding again
-  even though their server profile says they're done). This is exactly what
-  issue #226 reports.
-- **Use a dedicated hook with React Query against the Supabase REST endpoint**:
-  Rejected because it bypasses WatermelonDB and creates a second source of truth
-  for profile data. The constitution makes WatermelonDB the single source of
-  truth.
+- **Keep AsyncStorage as the gate + add a server write alongside**: Rejected
+  because it preserves the reinstall/new-device bug (empty local storage → user
+  sees onboarding again even though their server profile says they're done).
+  This is exactly what issue #226 reports.
+- **Use a dedicated React Query hook against Supabase REST**: Rejected because
+  it bypasses WatermelonDB and creates a second source of truth for profile
+  data. The constitution makes WatermelonDB the single source of truth.
 
 ---
 
@@ -81,60 +69,115 @@ tracks whether the AsyncStorage read completed — not whether the sync resolved
   - Easier to unit-test.
 
 - A 20-second timeout (Clarification Q2) is implemented by `setTimeout` inside
-  `SyncProvider.initialSync` racing against `syncDatabase`. On timeout, state →
+  `SyncProvider.initialSync` racing against the pull-sync. On timeout, state →
   `'timeout'` (surfaced as `'failed'` to UI — same recovery path).
 
-**Alternatives considered**:
+**Alternatives considered and rejected**:
 
-- **Block inside `AuthGuard`**: Rejected because `AuthGuard` is concerned with
-  authentication, not data readiness. Mixing the two concerns violates SRP.
-- **React Query with suspense**: Rejected because the initial sync is not a pull
-  from a REST endpoint but a WatermelonDB pull-sync; React Query is the wrong
-  abstraction.
-
----
-
-## 3. `profiles` schema: current columns and what we need to add
-
-**Decision**: Two new columns required on `profiles`:
-
-| Column               | Type    | Nullable                            | Default | Purpose                                                                                                                                    |
-| -------------------- | ------- | ----------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `preferred_language` | text    | YES (until language step completes) | NULL    | FR-007. Populated when the user completes the Language step; used as a per-step resume signal AND for i18n startup on subsequent launches. |
-| `slides_viewed`      | boolean | NO                                  | `false` | FR-008. Populated when the user views or skips the carousel. Second per-step resume signal.                                                |
-
-Existing relevant columns on `profiles` (per `packages/db/src/schema.ts` lines
-230-247):
-
-| Column                                           | Type          | Notes                                                                                      |
-| ------------------------------------------------ | ------------- | ------------------------------------------------------------------------------------------ |
-| `onboarding_completed`                           | boolean       | Exists. Currently unused by router. Becomes the single gate per FR-011.                    |
-| `preferred_currency`                             | text          | Exists, NOT NULL at schema level. FR-009 makes it NOT NULL at product level too (no skip). |
-| `setup_guide_completed`                          | boolean       | Separate feature — untouched per FR-013.                                                   |
-| `user_id`, `created_at`, `updated_at`, `deleted` | sync envelope | Required by Constitution I. Already present.                                               |
-
-**Rationale**: Grepped `preferred_language` — zero matches in `packages/db`,
-confirming the column is missing. `onboarding_completed` exists but has zero
-consumers in components/screens (grep found only schema, types, and one test
-file). Tests will need to be updated.
-
-**Alternatives considered**:
-
-- **Derive `slides_viewed` from the presence of `preferred_language` +
-  `preferred_currency`**: Rejected because slides can be skipped independently
-  of the other steps — there's no proxy signal for "user saw the carousel". A
-  dedicated boolean is correct.
-- **Use a `step_reached` text enum instead of three per-step signals**: Rejected
-  as less composable and more prone to typos/rename bugs; the flag + three
-  signal columns model matches the spec's Assumption 1.
+- **Block inside `AuthGuard`**: Rejected — `AuthGuard` is concerned with
+  authentication, not data readiness. Mixing concerns violates SRP.
+- **React Query with suspense**: Rejected — the initial sync is a WatermelonDB
+  pull-sync, not a REST call; React Query is the wrong abstraction.
 
 ---
 
-## 4. Cash-account creation: existing primitive and its fit
+## 3. Where should per-step onboarding progress live — DB or AsyncStorage?
+
+**Decision** (confirmed by user, 2026-04-18 second clarify pass):
+**AsyncStorage, keyed by userId.**
+
+**Rationale**:
+
+- Onboarding is a one-time, device-local event. The user's _choices_ (language,
+  currency) are synced to the server; the _position_ within the flow is
+  ephemeral and does not benefit from sync.
+- Keeping per-step progress off the server makes the schema simpler (one new
+  column instead of two), reduces sync load, and removes the design question of
+  "what does 'resume on device B' mean" (answer: it doesn't — restart from
+  Language, which is acceptable per Assumptions).
+- Keying by `userId` isolates different accounts on the same device. Without
+  this namespacing, User A's progress could leak into User B's session.
+
+**Trade-offs accepted**:
+
+- Partial progress does NOT survive reinstall (AsyncStorage is wiped with app
+  data).
+- Partial progress does NOT cross devices (AsyncStorage is per-device).
+
+Both are fine because onboarding is a one-time event and returning users (the
+primary audience of this fix) already have `onboarding_completed = true`.
+
+**Alternatives considered and rejected**:
+
+- **Store `slides_viewed` as a server column**: Rejected in the second clarify
+  pass. The only downside of AsyncStorage (loss on reinstall) is tolerable; the
+  upside is a simpler schema and no debate about the semantics of "completed a
+  skippable step" across devices.
+- **Derive "next step" from field populations on the server profile** (e.g.,
+  `preferred_currency set but no cash account` → start at Currency): Rejected
+  because it conflates progress tracking with user preferences and requires
+  careful reasoning about default-seeded values. The explicit AsyncStorage
+  cursor is unambiguous.
+- **Use device-level AsyncStorage keys without userId namespacing**: Rejected —
+  collides between accounts on the same device.
+
+---
+
+## 4. `profiles` schema: current columns and what needs to change
+
+**Decision**:
+
+- **Add** `profiles.preferred_language` as a `preferred_language_code` enum
+  (non-nullable, default `'en'`). New migration
+  `040_add_preferred_language_to_profiles.sql`.
+- **Reuse** the existing `profiles.onboarding_completed` column as the single
+  routing gate. Its current state in the code: declared in
+  `packages/db/src/schema.ts` and `base-profile.ts`, but **not consumed by any
+  component or screen**. We start consuming it in this feature.
+- **Do NOT add** a `slides_viewed` column (removed from earlier draft; now
+  tracked in AsyncStorage per § 3).
+- **Do NOT add** any other columns.
+
+**Rationale**:
+
+- Grep confirmed: zero consumers of `profiles.onboarding_completed` today
+  outside types/schema files and one test. No migration path to worry about for
+  existing readers.
+- Grep confirmed: zero occurrences of `preferred_language` or
+  `preferredLanguage` in `packages/db` — the column is definitively missing and
+  we own its introduction.
+- Postgres enum (rather than a CHECK constraint or free-text) is used for
+  `preferred_language` because it gives a clean type signal in
+  `supabase-types.ts` and constrains bad values at the DB layer. Lowercase
+  values chosen to match existing i18n conventions.
+
+**Alternatives considered and rejected**:
+
+- **Text column with CHECK constraint** instead of a Postgres enum: slightly
+  more flexible for ad-hoc debugging but gives a weaker type contract in the
+  generated TS types. Enum chosen for correctness.
+- **Nullable `preferred_language`**: rejected by user preference — always having
+  a valid language is simpler and matches the "default to English" app behavior.
+
+**Type-source convention (confirmed by user 2026-04-18)**: Postgres-enum-backed
+TS types used by app code come from **`packages/db/src/types.ts`**, exposed
+through the `@rizqi/db` package index. The file is auto-generated by
+`npm run db:migrate` (see its header comment: "AUTO-GENERATED — DO NOT EDIT
+MANUALLY") and already exports string-union types for every Postgres enum in the
+schema — for example, `CurrencyType` is a 36-value union covering
+`"EGP" | ... | "BTC"`. When migration 040 lands, `types.ts` will regenerate with
+`export type PreferredLanguageCode = "en" | "ar"` following the same pattern.
+**Do not define a shadow `SupportedLanguage = "en" | "ar"` type in
+`profile-service.ts`** — always import the canonical `PreferredLanguageCode`
+from `@rizqi/db`. The contract file reflects this convention.
+
+---
+
+## 5. Cash-account creation: existing primitive and its fit
 
 **Decision**: Reuse `ensureCashAccount(userId, currency)` from
 `apps/mobile/services/account-service.ts`. No changes needed beyond calling it
-unconditionally (currency is no longer skippable).
+unconditionally (currency is no longer skippable per FR-009).
 
 **Rationale**: The existing helper already:
 
@@ -144,145 +187,133 @@ unconditionally (currency is no longer skippable).
 - Handles the `CURRENCY_UNKNOWN` sentinel case — which will become unreachable
   once FR-009 lands but remains defensive.
 
-The `WalletCreationStep` component (renamed conceptually to "cash-account
-confirmation" in the spec; file rename optional) already calls this helper
-inside its `useEffect`.
+The `WalletCreationStep` component (conceptually "cash-account confirmation" in
+the new spec; file name retained for minimal blast radius) already calls this
+helper inside its `useEffect`.
 
-**Alternatives considered**:
+**Alternatives considered and rejected**:
 
-- **Replace `ensureCashAccount` with a combined
-  `setPreferredCurrencyAndCreateCashAccount`**: Rejected. Better to keep the
-  primitives small and compose them in `profile-service.ts`. This preserves the
-  current helper's usefulness for other flows (e.g., account restoration after a
-  sync).
+- **Inline the cash-account creation into a new
+  `setPreferredCurrencyAndCreateCashAccount`**: selected for the profile-service
+  (wraps it in a single `database.write()` alongside the currency update for
+  atomicity), but the `ensureCashAccount` helper stays intact — we compose with
+  it rather than replacing it.
 
 ---
 
-## 5. Sign-in / logout integration with the new gate
+## 6. Sign-in / logout integration with the retry screen
 
 **Decision**: Sign-out from the retry screen (Clarification Q1) reuses the
-existing logout service.
+existing `signOut()` helper in `apps/mobile/services/logout-service.ts`.
 
-**Rationale**: `apps/mobile/services/logout-service.ts` is referenced by
-`SyncProvider` (`completeInterruptedLogout`) and tests show it clears the
-session and local data. For the retry screen's "Sign out" action, call the same
-`signOut()` function already used by Settings. After sign-out, the `AuthGuard`
-in `_layout.tsx` will detect `!isAuthenticated` and redirect to `/auth`. No new
-logout primitive required.
+**Rationale**: The logout service is already referenced by `SyncProvider`
+(`completeInterruptedLogout`) and by Settings. For the retry screen's "Sign out"
+action, call the same function. After sign-out, the `AuthGuard` in `_layout.tsx`
+detects `!isAuthenticated` and redirects to `/auth`. No new logout primitive
+required.
 
-**Alternatives considered**:
+**Alternatives considered and rejected**:
 
-- **Direct Supabase call from the retry screen**: Rejected — reimplements
+- **Direct Supabase call from the retry screen**: rejected — reimplements
   existing code and bypasses the structured logout flow (which handles
   interrupted-logout cleanup).
 
 ---
 
-## 6. Observability (FR-014) — logger choice and log shape
+## 7. Observability (FR-014) — logger choice and log shape
 
 **Decision**: Use the existing `apps/mobile/utils/logger.ts` at info level. One
 log call per routing-gate evaluation.
 
-**Shape**:
+**Shape** (simpler now that the gate is binary):
 
 ```ts
 logger.info("onboarding.routing.decision", {
-  outcome:
-    "dashboard" |
-    "language" |
-    "slides" |
-    "currency" |
-    "cash-account-confirmation" |
-    "retry",
-  inputs: {
-    onboardingCompleted: boolean,
-    hasPreferredLanguage: boolean,
-    slidesViewed: boolean,
-    hasPreferredCurrency: boolean,
-  },
-  syncState: "success" | "failed" | "timeout",
+  outcome: "dashboard" | "onboarding" | "retry" | "loading",
+  onboardingCompleted: boolean,
+  syncState: "in-progress" | "success" | "failed" | "timeout",
 });
 ```
 
-**Rationale**: Mirrors the taxonomy defined in the spec. No PII: the profile's
-personal fields (name, email, avatar_url, preferences) are not logged — only the
-four boolean conditions and the outcome label. `logger` is already wired into
-Sentry for production per `_layout.tsx` lines 56-67.
-
-**Alternatives considered**:
-
-- **Per-step logs (every step entered/completed)**: Rejected — broader surface,
-  deferred to planning discretion as captured in the clarify coverage summary.
+**Rationale**: Mirrors the taxonomy in the spec and contracts. No PII: the
+profile's personal fields (name, email, avatar_url, preferences) are not logged.
+`logger` is already wired into Sentry for production per `_layout.tsx` lines
+56-67.
 
 ---
 
-## 7. i18n for new/changed copy
+## 8. Legacy AsyncStorage keys (FR-015)
 
-**Decision**: Add new keys to `apps/mobile/locales/{en,ar}/onboarding.json` and
-`common.json`:
+**Decision**: Delete `HAS_ONBOARDED_KEY` and `LANGUAGE_KEY` from
+`apps/mobile/constants/storage-keys.ts` as part of this change.
 
-| Key (namespace)                  | Purpose                                                        |
-| -------------------------------- | -------------------------------------------------------------- |
-| `common.sync_failed_title`       | Retry screen title.                                            |
-| `common.sync_failed_description` | Retry screen body explanation.                                 |
-| `common.retry`                   | Already exists; verify during implementation.                  |
-| `common.sign_out`                | Already exists in Settings; reuse.                             |
-| `onboarding.wallet_cta`          | Already exists; final confirmation button copy may be tweaked. |
+**Rationale**:
 
-**Rationale**: Constitution II and the `i18n` rule in CLAUDE.md require
-translated, token-based strings. No hardcoded retry-screen text.
+- `HAS_ONBOARDED_KEY` — its only consumer is `apps/mobile/app/index.tsx`, which
+  is being rewritten. No longer needed.
+- `LANGUAGE_KEY` — its consumers are the i18n startup path and `onboarding.tsx`.
+  After FR-007 lands, language lives on `profiles.preferred_language`. The i18n
+  startup path should read from the profile instead.
+- Pre-production status (Assumption 5) means no migration window is needed;
+  pre-release testers flow through onboarding once.
+
+**Alternatives considered and rejected**:
+
+- **Deprecate-then-delete in two PRs**: overkill for a pre-production app.
+  Delete immediately.
 
 ---
 
-## 8. Testing strategy (TDD per Constitution + CLAUDE.md testing rule)
+## 9. Testing strategy (TDD per Constitution + CLAUDE.md testing rule)
 
-**Decision**: Three test tiers, written before implementation per TDD:
+**Decision**: Four test tiers, written before implementation per TDD:
 
 1. **Unit (`apps/mobile/__tests__/utils/routing-decision.test.ts`)**: Cover all
-   6 outcomes (dashboard / 4 onboarding steps / retry) via table-driven tests on
-   the pure `getRoutingDecision(profile, syncState)` function.
+   4 outcomes (loading / dashboard / onboarding / retry) × 4 sync states via
+   table-driven tests on the pure `getRoutingDecision` function.
 2. **Unit (`apps/mobile/__tests__/services/profile-service.test.ts`)**: Cover
-   each mutation: `setPreferredLanguage`, `markSlidesViewed`,
-   `setPreferredCurrencyAndCreateCashAccount`, `completeOnboarding`. Mock
-   WatermelonDB's `database.write`.
-3. **Integration (`apps/mobile/__tests__/app/index.test.tsx`)**: Render the gate
-   with mocked `SyncProvider` in each state (`in-progress`, `success`, `failed`,
-   `timeout`) and assert the correct child is rendered (overlay, redirect, retry
-   screen).
+   `setPreferredLanguage`, `setPreferredCurrencyAndCreateCashAccount`,
+   `completeOnboarding`. Mock `database.write` and `ensureCashAccount`.
+3. **Unit
+   (`apps/mobile/__tests__/services/onboarding-cursor-service.test.ts`)**: Cover
+   `readOnboardingStep`, `writeOnboardingStep`, `clearOnboardingStep`. Mock
+   AsyncStorage; verify key format `onboarding:<userId>:step`.
+4. **Integration (`apps/mobile/__tests__/app/index.test.tsx`)**: Render the gate
+   with mocked `SyncProvider` in each state and with `onboardingCompleted`
+   true/false; assert the correct child is rendered (overlay, dashboard
+   redirect, onboarding redirect, retry screen).
 
-**Rationale**: The routing logic and the service mutations are the high-leverage
-test targets. End-to-end (sign-in → sync → dashboard) is best covered by a
-Maestro script, tracked separately in Phase 2 if time permits.
+**Rationale**: Lines up with the 3 services + 1 gate; each has clear testable
+outputs.
 
-**Alternatives considered**:
+**Alternatives considered and rejected**:
 
-- **Component-level snapshot testing for the retry screen**: Rejected —
-  snapshots are brittle for UI screens and mockups are still pending.
+- **Component-level snapshot testing for the retry screen**: rejected — brittle
+  and mockups are the source of truth for visual validation.
 
 ---
 
-## 9. Rollout considerations
+## 10. Rollout considerations
 
 **Decision**: No feature flag, no staged rollout. The app is pre-production per
-the spec's Assumption 5. Ship with the migration + code change in a single PR.
+the spec's Assumptions. Ship the migration + code change in a single PR.
 
-**Rationale**: No real users are affected; no backward-compatibility burden. The
-existing AsyncStorage keys are documented as deprecated in the plan but not
-deleted — they may still be written by pre-release installs during the one-time
-flow-through.
+**Rationale**: No real users are affected; no backward-compatibility burden.
+Pre-release testers flow through the new onboarding once.
 
 ---
 
 ## Summary of resolved open questions
 
-| Planning question                                | Answer                                                                              |
-| ------------------------------------------------ | ----------------------------------------------------------------------------------- |
-| Where does the current gate live?                | `apps/mobile/app/index.tsx` (confirmed).                                            |
-| Is the initial pull-sync blocking routing today? | No — `index.tsx` runs its redirect independently of sync state. Must be wired.      |
-| What columns need to be added?                   | `preferred_language` (text, nullable) and `slides_viewed` (boolean, default false). |
-| Do we need new cash-account logic?               | No — reuse `ensureCashAccount`.                                                     |
-| How does sign-out on the retry screen work?      | Call existing `signOut()`; `AuthGuard` handles the redirect to `/auth`.             |
-| How is routing logged?                           | `logger.info("onboarding.routing.decision", {...})` — no PII.                       |
-| Do we need a feature flag?                       | No — pre-production.                                                                |
-
-All planning-phase open items are resolved. Ready for Phase 1.
+| Planning question                                             | Answer                                                                                                                         |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Where does the current gate live?                             | `apps/mobile/app/index.tsx` (confirmed).                                                                                       |
+| Is the initial pull-sync blocking routing today?              | No — `index.tsx` runs its redirect independently of sync state. Must be wired (T009 / T010).                                   |
+| Where does per-step progress live — DB or local?              | **AsyncStorage**, keyed by userId.                                                                                             |
+| What columns need to be added?                                | **One**: `preferred_language` (enum `preferred_language_code`, NOT NULL, default `'en'`).                                      |
+| Do we need new cash-account logic?                            | No — reuse `ensureCashAccount`.                                                                                                |
+| How does sign-out on the retry screen work?                   | Call existing `signOut()`; `AuthGuard` handles the redirect to `/auth`.                                                        |
+| How is routing logged?                                        | `logger.info("onboarding.routing.decision", { outcome, onboardingCompleted, syncState })` — no PII.                            |
+| Legacy AsyncStorage keys?                                     | Deleted (`HAS_ONBOARDED_KEY`, `LANGUAGE_KEY`).                                                                                 |
+| Do we need a feature flag?                                    | No — pre-production.                                                                                                           |
+| Are sign-out during onboarding and back/forward nav in scope? | No — tracked as [#242](https://github.com/Msamir22/Rizqi/issues/242) and [#243](https://github.com/Msamir22/Rizqi/issues/243). |

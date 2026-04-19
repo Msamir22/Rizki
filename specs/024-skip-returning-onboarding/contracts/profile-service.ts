@@ -1,78 +1,96 @@
 /**
- * Contract: profile-service
+ * Contract: profile-service + onboarding-cursor-service
  *
  * This file is a planning-phase contract, NOT production code. It defines the
- * TypeScript signatures that `apps/mobile/services/profile-service.ts` must
- * implement in Phase 2 (/speckit.tasks → /speckit.implement). Once the real
- * file exists, this contract remains as reference documentation.
+ * TypeScript signatures that `apps/mobile/services/profile-service.ts` and
+ * `apps/mobile/services/onboarding-cursor-service.ts` must implement in Phase 2
+ * (/speckit.implement). Once the real files exist, this contract remains as
+ * reference documentation.
  *
- * All functions are plain async functions (NOT hooks) per Constitution IV.
+ * All profile functions are plain async functions (NOT hooks) per Constitution IV.
  * Each one performs its write through `database.write()` (WatermelonDB); push
  * sync to Supabase is non-blocking and happens on the existing cadence.
  *
+ * Per-step onboarding progress is a purely LOCAL concern (per FR-008) and
+ * lives in AsyncStorage, keyed by userId. It never syncs.
+ *
  * Branch: 024-skip-returning-onboarding
- * Date:   2026-04-18
+ * Last rewritten: 2026-04-18
  */
 
 // --- Supporting types -------------------------------------------------------
 
-/** Languages supported by the app today. Keep in sync with `apps/mobile/i18n`. */
-export type SupportedLanguage = "en" | "ar";
-
-/** Re-exported for convenience; the real type lives in `@rizqi/db`. */
-export type CurrencyType = string; // placeholder; use `CurrencyType` from @rizqi/db
+/**
+ * Postgres-enum-backed types come from `@rizqi/db` (generated into
+ * `packages/db/src/types.ts` by `npm run db:migrate`). The real
+ * implementation imports them directly; this contract references them by
+ * name only.
+ *
+ * Expected type after migration 040 lands:
+ *   import type { PreferredLanguageCode, CurrencyType } from "@rizqi/db";
+ *
+ * - `PreferredLanguageCode` — generated from the new Postgres enum
+ *   `preferred_language_code` (`'en' | 'ar'`). Lowercase to match existing i18n.
+ * - `CurrencyType` — already exists in `types.ts` as a 36-value string union
+ *   (`"EGP" | "SAR" | ... | "BTC"`).
+ *
+ * Do NOT redefine these types in `profile-service.ts`; always import from
+ * `@rizqi/db`. If a future caller needs a narrower shape, derive it with
+ * `Extract<PreferredLanguageCode, "en">` rather than rebuilding the union.
+ */
+import type { PreferredLanguageCode, CurrencyType } from "@rizqi/db";
+export type { PreferredLanguageCode, CurrencyType };
 
 /** The sync state owned by `SyncProvider`, read by the gate. */
 export type InitialSyncState = "in-progress" | "success" | "failed" | "timeout";
 
-/** Outcomes returned by the pure routing function. */
-export type RoutingOutcome =
-  | "loading"
-  | "dashboard"
+/** Outcomes returned by the pure routing function. Now binary for the router. */
+export type RoutingOutcome = "loading" | "dashboard" | "onboarding" | "retry";
+
+/**
+ * The per-step onboarding progress cursor stored in AsyncStorage per user.
+ * Persists the user's position in the flow between app launches.
+ */
+export type OnboardingStep =
   | "language"
   | "slides"
   | "currency"
-  | "cash-account-confirmation"
-  | "retry";
+  | "cash-account";
 
 /** Inputs to the pure routing function. */
 export interface RoutingInputs {
   readonly syncState: InitialSyncState;
   readonly onboardingCompleted: boolean;
-  readonly hasPreferredLanguage: boolean;
-  readonly slidesViewed: boolean;
-  /** True when a cash account exists (equivalent to "user confirmed currency"). */
-  readonly hasCashAccount: boolean;
 }
 
 // --- Pure routing decision (implemented in utils/routing-decision.ts) -------
 
 /**
- * Pure function mapping profile state + sync state to the next route.
+ * Pure function mapping sync state + the single DB flag to the next route.
  * No I/O, no React, no side effects — easy to unit test.
+ *
+ * The onboarding screen itself resolves which step to render by reading the
+ * per-user AsyncStorage cursor (see `onboarding-cursor-service`).
  */
 export declare function getRoutingDecision(
   inputs: RoutingInputs
 ): RoutingOutcome;
 
-// --- Mutations (implemented in services/profile-service.ts) -----------------
+// --- Profile mutations (implemented in services/profile-service.ts) ---------
 
 /**
  * Persist the language the user picked at the Language step.
  * Resolves FR-007.
  *
+ * Writes `profiles.preferred_language` via `database.write()`. Also calls the
+ * existing `changeLanguage()` i18n helper so the UI updates immediately.
+ *
  * Throws if no profile row exists for the current user (should not happen
  * post-sync; caller logs and falls back to `retry`).
  */
 export declare function setPreferredLanguage(
-  language: SupportedLanguage
+  language: PreferredLanguageCode
 ): Promise<void>;
-
-/**
- * Mark the onboarding slides as viewed/skipped.
- * Resolves FR-008.
- */
-export declare function markSlidesViewed(): Promise<void>;
 
 /**
  * Atomic operation: set the user's preferred currency AND create the cash
@@ -89,13 +107,47 @@ export declare function setPreferredCurrencyAndCreateCashAccount(
 ): Promise<{ readonly accountId: string }>;
 
 /**
- * Flip the `onboarding_completed` flag to true. Called exactly once per user,
- * from the `WalletCreationStep`'s `onComplete` callback.
- * Resolves FR-011.
+ * Flip the `onboarding_completed` flag to true AND clear the per-user
+ * AsyncStorage cursor. Called exactly once per user when the cash-account
+ * confirmation is dismissed. Resolves FR-011.
  *
- * Idempotent — safe to call if already true (no-op).
+ * The DB write and the AsyncStorage clear are both awaited in sequence:
+ * 1. `database.write()` sets `onboarding_completed = true`.
+ * 2. `AsyncStorage.removeItem('onboarding:<userId>:step')`.
+ *
+ * If step 2 fails, the error is logged but not re-thrown — the user IS done,
+ * and a stale cursor is harmless because the router reads the DB flag. Step 1
+ * is the contract-critical write.
+ *
+ * Idempotent — safe to call if already completed (no-op).
  */
-export declare function completeOnboarding(): Promise<void>;
+export declare function completeOnboarding(userId: string): Promise<void>;
+
+// --- Per-user onboarding cursor (implemented in services/onboarding-cursor-service.ts)
+
+/**
+ * Return the user's current onboarding step cursor, or `null` if absent.
+ * Absent means the user has not started onboarding yet — caller should start
+ * at `"language"` (FR-004).
+ */
+export declare function readOnboardingStep(
+  userId: string
+): Promise<OnboardingStep | null>;
+
+/**
+ * Persist the user's next-unfinished step. Called on every forward transition
+ * between onboarding phases (FR-008).
+ */
+export declare function writeOnboardingStep(
+  userId: string,
+  step: OnboardingStep
+): Promise<void>;
+
+/**
+ * Remove the user's cursor. Called from `completeOnboarding` as part of the
+ * end-of-flow clear (FR-011). Idempotent.
+ */
+export declare function clearOnboardingStep(userId: string): Promise<void>;
 
 // --- Sync-provider extension (implemented in providers/SyncProvider.tsx) ----
 
@@ -127,11 +179,6 @@ export interface SyncContextRoutingExtension {
  */
 export interface RoutingDecisionLog {
   readonly outcome: RoutingOutcome;
-  readonly inputs: {
-    readonly onboardingCompleted: boolean;
-    readonly hasPreferredLanguage: boolean;
-    readonly slidesViewed: boolean;
-    readonly hasCashAccount: boolean;
-  };
+  readonly onboardingCompleted: boolean;
   readonly syncState: InitialSyncState;
 }
