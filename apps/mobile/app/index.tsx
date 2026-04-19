@@ -1,21 +1,20 @@
 /**
  * App Entry Point — Routing Gate
  *
- * Determines the user's first screen after authentication by reading the
- * profile state from WatermelonDB (post initial pull-sync). Replaces the
- * legacy AsyncStorage HAS_ONBOARDED_KEY gate.
+ * Binary gate driven by profiles.onboarding_completed (from WatermelonDB,
+ * post initial pull-sync). Per-step resume lives in onboarding.tsx via
+ * AsyncStorage cursor; this gate only decides dashboard-vs-onboarding.
  *
  * Priority:
- * 1. Sync in-progress → show loading skeleton
+ * 1. Sync in-progress / profile loading → neutral backdrop (StarryBackground)
  * 2. Sync failed/timeout → RetrySyncScreen
- * 3. Profile.onboardingCompleted = true → dashboard
- * 4. Resume at first incomplete step → onboarding
+ * 3. profile.onboarding_completed === true → dashboard
+ * 4. else → onboarding (resume handled by onboarding.tsx)
  *
  * @module Index
  */
 
-import { Account, database } from "@rizqi/db";
-import { DashboardSkeleton } from "@/components/dashboard/skeletons/DashboardSkeleton";
+import { database } from "@rizqi/db";
 import { RetrySyncScreen } from "@/components/ui/RetrySyncScreen";
 import { StarryBackground } from "@/components/ui/StarryBackground";
 import { useProfile } from "@/hooks/useProfile";
@@ -25,42 +24,22 @@ import {
   buildRoutingDecisionLog,
   getRoutingDecision,
 } from "@/utils/routing-decision";
-import { Redirect } from "expo-router";
-import { Q } from "@nozbe/watermelondb";
-import React, { useCallback, useEffect, useRef, useState } from "react";
 import { logger } from "@/utils/logger";
+import { Redirect } from "expo-router";
+import React, { useCallback, useEffect, useRef } from "react";
 
 export default function Index(): React.ReactNode {
   const { initialSyncState, retryInitialSync } = useSync();
   const { profile, isLoading: isProfileLoading } = useProfile();
-  const [hasCashAccount, setHasCashAccount] = useState(false);
   const hasLoggedRef = useRef(false);
-
-  // Observe cash-account presence for the routing gate (Option B per data-model.md § 3)
-  useEffect(() => {
-    const subscription = database
-      .get<Account>("accounts")
-      .query(Q.where("type", "CASH"), Q.where("deleted", false), Q.take(1))
-      .observe()
-      .subscribe({
-        next: (accounts) => setHasCashAccount(accounts.length > 0),
-        error: () => setHasCashAccount(false),
-      });
-
-    return () => subscription.unsubscribe();
-  }, []);
 
   const routingInputs = {
     syncState: initialSyncState,
     onboardingCompleted: profile?.onboardingCompleted ?? false,
-    hasPreferredLanguage: !!profile?.preferredLanguage,
-    slidesViewed: profile?.slidesViewed ?? false,
-    hasCashAccount,
   };
-
   const outcome = getRoutingDecision(routingInputs);
 
-  // FR-014: Emit one structured log per routing-gate evaluation
+  // FR-014: one structured log per gate evaluation (no PII).
   useEffect(() => {
     if (!hasLoggedRef.current && initialSyncState !== "in-progress") {
       hasLoggedRef.current = true;
@@ -72,19 +51,19 @@ export default function Index(): React.ReactNode {
   }, [initialSyncState]);
 
   /** Sign-out handler for RetrySyncScreen — uses existing logout service. */
-  const handleSignOut = useCallback(() => {
-    performLogout(database).catch(() => {});
-    // Explicitly return void to satisfy ESLint
-    return;
+  const handleSignOut = useCallback((): void => {
+    performLogout(database).catch(() => {
+      // Logout errors are surfaced through the logout service's own toast path.
+    });
   }, []);
 
-  // Show loading skeleton while profile is being observed or sync is running
+  // While reading the onboarding flag we don't yet know whether the user is
+  // destination-bound for the dashboard or onboarding, so render a neutral
+  // backdrop rather than a content-shaped skeleton. Showing DashboardSkeleton
+  // here flashes a fake dashboard for brand-new users who are about to be
+  // redirected to /onboarding — more jarring than a neutral transition.
   if (initialSyncState === "in-progress" || isProfileLoading) {
-    return (
-      <StarryBackground>
-        <DashboardSkeleton />
-      </StarryBackground>
-    );
+    return <StarryBackground />;
   }
 
   switch (outcome) {
@@ -100,13 +79,9 @@ export default function Index(): React.ReactNode {
         />
       );
     case "loading":
-      return (
-        <StarryBackground>
-          <DashboardSkeleton />
-        </StarryBackground>
-      );
+      return <StarryBackground />;
     default:
-      // language | slides | currency | cash-account-confirmation → onboarding
+      // "onboarding" — resume handled by onboarding.tsx via AsyncStorage cursor
       return <Redirect href="/onboarding" />;
   }
 }
