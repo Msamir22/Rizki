@@ -124,25 +124,29 @@ export declare function setPreferredCurrencyAndCreateCashAccount(
  * AsyncStorage cursor. Called exactly once per user when the cash-account
  * confirmation is dismissed. Resolves FR-011.
  *
- * The DB write and the AsyncStorage clear are both awaited in sequence:
- * 1. `database.write()` sets `onboarding_completed = true`.
- * 2. `AsyncStorage.removeItem('onboarding:<userId>:step')`.
+ * Takes no parameters — the userId is derived internally from the
+ * authenticated session (via `getProfile()`), consistent with the
+ * other mutation functions in this module.
  *
- * If step 2 fails, the error is logged but not re-thrown — the user IS done,
- * and a stale cursor is harmless because the router reads the DB flag. Step 1
- * is the contract-critical write.
+ * Sequence:
+ * 1. `database.write()` sets `onboarding_completed = true`.
+ * 2. Best-effort `clearOnboardingStep(userId)` (removes
+ *    `onboarding:<userId>:step` from AsyncStorage). This is NOT atomic
+ *    with step 1 — AsyncStorage and WatermelonDB are independent stores.
+ *    A stale cursor is harmless because the router reads the DB flag,
+ *    so step 2 errors are logged but not re-thrown.
  *
  * **Callers MUST `await` this call before navigating.** A rejected promise
- * means step 1 failed; continuing to the dashboard would leave the user with
- * `onboarding_completed = false` and they would re-enter the onboarding flow
- * on the next launch. `WalletCreationStep` intentionally does NOT call this
- * itself — it forwards the completion signal upward to `app/onboarding.tsx`,
- * which owns the await-then-navigate sequence.
+ * means step 1 failed; continuing to the dashboard would leave the user
+ * with `onboarding_completed = false` and they would re-enter the
+ * onboarding flow on the next launch. `WalletCreationStep` intentionally
+ * does NOT call this itself — it forwards the completion signal upward to
+ * `app/onboarding.tsx`, which owns the await-then-navigate sequence.
  *
  * Idempotent — safe to call if already completed (no-op on the DB write;
  * the cursor clear still runs defensively).
  */
-export declare function completeOnboarding(userId: string): Promise<void>;
+export declare function completeOnboarding(): Promise<void>;
 
 // --- Per-user onboarding cursor (implemented in services/onboarding-cursor-service.ts)
 

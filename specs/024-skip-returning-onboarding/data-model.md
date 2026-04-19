@@ -104,14 +104,14 @@ Exactly one of the following strings:
 
 ### Lifecycle
 
-| Event                                             | AsyncStorage action                                                                                                    |
-| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| User completes Language step                      | Write `onboarding:<userId>:step = "slides"`.                                                                           |
-| User views or skips the Slides step               | Write `onboarding:<userId>:step = "currency"`.                                                                         |
-| User completes Currency step (picks a currency)   | Write `onboarding:<userId>:step = "cash-account"`.                                                                     |
-| User dismisses the Cash-account confirmation      | **Delete** the key `onboarding:<userId>:step` (atomic with setting `profiles.onboarding_completed = true` per FR-011). |
-| User signs out mid-flow                           | **Preserve** the key — if they sign back in as the same user before completing, they resume.                           |
-| User taps "Sign out" on the retry screen (FR-006) | Not yet onboarded, so no cursor exists to clear. No-op.                                                                |
+| Event                                             | AsyncStorage action                                                                                                                                                                                                                                                                                           |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| User completes Language step                      | Write `onboarding:<userId>:step = "slides"`.                                                                                                                                                                                                                                                                  |
+| User views or skips the Slides step               | Write `onboarding:<userId>:step = "currency"`.                                                                                                                                                                                                                                                                |
+| User completes Currency step (picks a currency)   | Write `onboarding:<userId>:step = "cash-account"`.                                                                                                                                                                                                                                                            |
+| User dismisses the Cash-account confirmation      | Set `profiles.onboarding_completed = true` via WatermelonDB, then best-effort `AsyncStorage.removeItem('onboarding:<userId>:step')`. The two stores are independent so this is **NOT atomic**; a stale cursor after a successful DB flag flip is harmless because the router reads the DB flag only (FR-011). |
+| User signs out mid-flow                           | **Preserve** the key — if they sign back in as the same user before completing, they resume.                                                                                                                                                                                                                  |
+| User taps "Sign out" on the retry screen (FR-006) | Not yet onboarded, so no cursor exists to clear. No-op.                                                                                                                                                                                                                                                       |
 
 ### Failure semantics
 
@@ -157,7 +157,7 @@ cursor and starting at the right phase; see FR-004.
 | FR     | Validation rule                                                                          | Enforced where                                                                                                                                                                                                                                                                        |
 | ------ | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | FR-007 | `preferred_language` ∈ `{'en', 'ar'}`.                                                   | Postgres enum (authoritative) + `profile-service.setPreferredLanguage(language: PreferredLanguageCode)` — type imported from `@rizqi/db` (auto-generated).                                                                                                                            |
-| FR-008 | AsyncStorage cursor value is one of the four named steps.                                | `profile-service.setOnboardingStep()` accepts a typed `OnboardingStep` parameter.                                                                                                                                                                                                     |
+| FR-008 | AsyncStorage cursor value is one of the four named steps.                                | `onboarding-cursor-service.writeOnboardingStep()` accepts a typed `OnboardingStep` parameter.                                                                                                                                                                                         |
 | FR-009 | Currency step requires a non-null `preferred_currency` AND a corresponding cash account. | `profile-service.setPreferredCurrencyAndCreateCashAccount()` — atomic `database.write` that updates profile + calls `ensureCashAccount`.                                                                                                                                              |
 | FR-010 | Cash account must exist after currency step.                                             | Same function as FR-009.                                                                                                                                                                                                                                                              |
 | FR-011 | `onboarding_completed` flips to `true` AND the cursor is cleared atomically.             | `profile-service.completeOnboarding()` — single `database.write` + the AsyncStorage removal runs inside the same async function. If the cursor removal fails, log but do not rollback the DB write (the user is done; a stale cursor is harmless because the gate reads the DB flag). |
@@ -174,16 +174,34 @@ cursor and starting at the right phase; see FR-004.
 
 ## 7. Migration file outline
 
-File: `supabase/migrations/040_add_preferred_language_to_profiles.sql`
+> **Note on migration history**: the feature actually shipped with two
+> migrations (`040_add_language_and_slides_viewed_to_profiles.sql` and
+> `041_refine_preferred_language_drop_slides_viewed.sql`, plus `042` for
+> `preferred_currency`). The single-file outline below is the canonical
+> "one-shot" version for a greenfield apply or a future squash. Match the
+> defensive `DO $$ … EXCEPTION` pattern used throughout the real migrations so a
+> re-run against an already-migrated environment doesn't fail.
+
+File (canonical):
+`supabase/migrations/NNN_add_preferred_language_to_profiles.sql`
 
 ```sql
 -- Create the language enum (lowercase to match the existing i18n codebase).
-CREATE TYPE preferred_language_code AS ENUM ('en', 'ar');
+-- Wrapped defensively so a re-run against an environment that already
+-- applied this migration doesn't fail with SQLSTATE 42710.
+DO $$
+BEGIN
+  CREATE TYPE preferred_language_code AS ENUM ('en', 'ar');
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END
+$$;
 
 -- Add the column with the enum type. Non-nullable with a default so existing
--- rows get a valid value immediately and new signups inherit it.
+-- rows get a valid value immediately and new signups inherit it. IF NOT EXISTS
+-- makes the statement idempotent for the same reason as the DO block.
 ALTER TABLE profiles
-  ADD COLUMN preferred_language preferred_language_code NOT NULL DEFAULT 'en';
+  ADD COLUMN IF NOT EXISTS preferred_language preferred_language_code NOT NULL DEFAULT 'en';
 
 -- RLS: no policy changes; the existing profiles policies cover the new column.
 ```
