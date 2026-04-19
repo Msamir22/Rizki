@@ -5,14 +5,11 @@
  * Two actions only: Retry (re-triggers sync) and Sign out (clears session).
  * No top-app-bar — the retry screen has no valid close destination.
  *
- * **Theming note:** this screen intentionally renders in the dark palette
- * regardless of the system / app theme setting. The approved mockup
- * (`mockups/retry-sync-screen.html`) is a single forced-dark variant because
- * (a) it only appears pre-sign-in / pre-profile-load, when no user theme
- * preference has been read yet, and (b) the status-card + red accent chip
- * were tuned against a dark backdrop. That's why the `slate-*` classes here
- * don't carry `dark:` variants and the `text-text-primary` /
- * `text-text-secondary` semantic tokens aren't used — don't "fix" them.
+ * Theming: follows the app's standard pattern — semantic tokens
+ * (`bg-background`, `bg-surface`, `text-text-primary`, …) + `dark:` variants,
+ * so the screen adapts to the system theme. The approved mockup
+ * (`mockups/retry-sync-screen.html`) was drawn in dark mode only, but the
+ * color families map cleanly onto the light-mode tokens.
  *
  * Mockup reference: specs/024-skip-returning-onboarding/mockups/retry-sync-screen.html
  *
@@ -50,32 +47,32 @@ export function RetrySyncScreen({
 
   return (
     <View
-      className="flex-1 items-center justify-center px-4 bg-slate-900"
+      className="flex-1 items-center justify-center px-4 bg-background dark:bg-background-dark"
       style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}
     >
       {/* Status Card */}
-      <View className="w-full max-w-[342px] bg-slate-800 rounded-2xl p-6 items-center shadow-lg">
+      <View className="w-full max-w-[342px] bg-surface dark:bg-surface-dark rounded-2xl p-6 items-center shadow-lg">
         {/* Icon Tile */}
-        <View className="w-12 h-12 rounded-xl items-center justify-center mb-5 bg-red-500/10">
+        <View className="w-12 h-12 rounded-xl items-center justify-center mb-5 bg-red-500/10 dark:bg-red-500/[0.15]">
           <Ionicons name="cloud-offline" size={24} color={palette.red[400]} />
         </View>
 
         {/* Status Chip — dedicated i18n key per review Finding #3.
             Previously derived via sync_failed_title.split(" ").slice(-2),
             which breaks in Arabic (RTL + different word order). */}
-        <View className="px-3 py-1 rounded-full mb-4 bg-red-500/15">
-          <Text className="text-xs font-semibold uppercase tracking-wider text-red-400">
+        <View className="px-3 py-1 rounded-full mb-4 bg-red-500/10 dark:bg-red-500/15">
+          <Text className="text-xs font-semibold uppercase tracking-wider text-red-600 dark:text-red-400">
             {t("sync_failed_chip")}
           </Text>
         </View>
 
         {/* Headline */}
-        <Text className="text-[22px] font-bold leading-tight mb-3 text-slate-25 text-center max-w-[280px]">
+        <Text className="text-[22px] font-bold leading-tight mb-3 text-text-primary dark:text-text-primary-dark text-center max-w-[280px]">
           {t("sync_failed_title")}
         </Text>
 
         {/* Body */}
-        <Text className="text-sm leading-relaxed mb-6 text-slate-400 text-center max-w-[280px]">
+        <Text className="text-sm leading-relaxed mb-6 text-text-secondary dark:text-text-secondary-dark text-center max-w-[280px]">
           {t("sync_failed_description")}
         </Text>
 
@@ -87,9 +84,9 @@ export function RetrySyncScreen({
             activeOpacity={0.7}
             accessibilityRole="button"
             accessibilityLabel={t("sign_out")}
-            className="flex-1 h-12 items-center justify-center rounded-xl border border-slate-700"
+            className="flex-1 h-12 items-center justify-center rounded-xl border border-slate-300 dark:border-slate-700"
           >
-            <Text className="text-[15px] font-medium text-slate-25">
+            <Text className="text-[15px] font-medium text-text-primary dark:text-text-primary-dark">
               {t("sign_out")}
             </Text>
           </TouchableOpacity>
@@ -111,7 +108,7 @@ export function RetrySyncScreen({
               shadowRadius: 8,
             }}
           >
-            <Text className="text-[15px] font-semibold text-slate-25">
+            <Text className="text-[15px] font-semibold text-white">
               {t("retry")}
             </Text>
           </TouchableOpacity>
@@ -119,7 +116,7 @@ export function RetrySyncScreen({
       </View>
 
       {/* Helper line */}
-      <Text className="mt-6 text-xs text-slate-500 text-center max-w-[300px]">
+      <Text className="mt-6 text-xs text-text-muted dark:text-text-muted-dark text-center max-w-[300px]">
         {t("sync_helper_text")}
       </Text>
     </View>
