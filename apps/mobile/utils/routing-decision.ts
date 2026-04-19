@@ -44,15 +44,21 @@ export interface RoutingDecisionLog {
  *
  * Priority order:
  * 1. Sync still in progress → loading (splash / neutral backdrop)
- * 2. Sync failed/timeout → retry (RetrySyncScreen with Retry + Sign out)
- * 3. onboarding_completed = true → dashboard
- * 4. Otherwise → onboarding (the onboarding screen picks the phase from
- *    its per-user AsyncStorage cursor)
+ * 2. Already-onboarded user (flag = true) → dashboard regardless of sync
+ *    state. Per Constitution I, WatermelonDB is the authoritative local
+ *    source; an onboarded user with valid local state doesn't need the
+ *    network to use the app. Background retries recover sync.
+ * 3. Sync succeeded AND flag = false → onboarding (the onboarding screen
+ *    resolves the exact phase from its per-user AsyncStorage cursor).
+ * 4. Sync failed/timeout AND flag = false → retry. A not-yet-onboarded
+ *    user has no local state yet, and without a successful initial pull
+ *    we can't route them safely into the onboarding flow.
  */
 export function getRoutingDecision(inputs: RoutingInputs): RoutingOutcome {
   if (inputs.syncState === "in-progress") return "loading";
+  if (inputs.onboardingCompleted) return "dashboard";
   if (inputs.syncState !== "success") return "retry";
-  return inputs.onboardingCompleted ? "dashboard" : "onboarding";
+  return "onboarding";
 }
 
 // =============================================================================

@@ -19,6 +19,7 @@ import { useAuth } from "../context/AuthContext";
 import { isAuthenticated as checkIsAuthenticated } from "../services/supabase";
 import { completeInterruptedLogout } from "../services/logout-service";
 import { syncDatabase } from "../services/sync";
+import { logger } from "../utils/logger";
 
 // Sync intervals in milliseconds
 const SYNC_INTERVAL_ACTIVE = 15 * 60 * 1000; // 15 minutes when app is active
@@ -93,12 +94,13 @@ export function SyncProvider({ children }: SyncProviderProps): JSX.Element {
     setInitialSyncState("in-progress");
 
     let syncResult: InitialSyncState = "success";
+    let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
 
     try {
       await Promise.race([
         sync(true),
         new Promise<never>((_resolve, reject) => {
-          setTimeout(
+          timeoutHandle = setTimeout(
             () => reject(new Error("initial-sync-timeout")),
             INITIAL_SYNC_TIMEOUT_MS
           );
@@ -109,6 +111,13 @@ export function SyncProvider({ children }: SyncProviderProps): JSX.Element {
         error instanceof Error && error.message === "initial-sync-timeout"
           ? "timeout"
           : "failed";
+    } finally {
+      // Always clear the timer — otherwise the losing branch of Promise.race
+      // leaks a pending timer that fires 20s later with an unhandled rejection
+      // on the detached Promise (fires after Android/iOS wake-ups too).
+      if (timeoutHandle !== null) {
+        clearTimeout(timeoutHandle);
+      }
     }
 
     setInitialSyncState(syncResult);
@@ -215,9 +224,21 @@ export function SyncProvider({ children }: SyncProviderProps): JSX.Element {
         await runInitialSync();
         setIsInitialSync(false);
       } else {
-        // Non-empty DB — data already exists, sync is non-blocking
-        await sync();
+        // Non-empty DB — data already exists, so the app is fully usable
+        // offline. Mark the initial-sync gate as "success" immediately so
+        // the routing gate unblocks, then run the background sync
+        // non-awaited. Previously this path `await`ed `sync()`, which on a
+        // slow network could leave `initialSyncState === "in-progress"`
+        // well past the 20s timeout and violate FR-006 for returning users.
         setInitialSyncState("success");
+        sync().catch((error: unknown) => {
+          // Background sync failure is non-fatal; regular sync-interval retries
+          // will recover. Log so it is diagnosable but don't flip the gate.
+          logger.warn(
+            "sync.backgroundRefreshOnBoot.failed",
+            error instanceof Error ? { message: error.message } : { error }
+          );
+        });
       }
 
       // Set up initial interval (app starts active)

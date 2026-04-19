@@ -5,11 +5,12 @@
  * post initial pull-sync). Per-step resume lives in onboarding.tsx via
  * AsyncStorage cursor; this gate only decides dashboard-vs-onboarding.
  *
- * Priority:
- * 1. Sync in-progress / profile loading → neutral backdrop (StarryBackground)
- * 2. Sync failed/timeout → RetrySyncScreen
- * 3. profile.onboarding_completed === true → dashboard
- * 4. else → onboarding (resume handled by onboarding.tsx)
+ * Priority (see utils/routing-decision.ts for the authoritative rule):
+ * 1. Sync in-progress / profile loading → neutral backdrop (splash)
+ * 2. onboarding_completed = true → dashboard (regardless of sync state —
+ *    offline-first for returning users)
+ * 3. Sync succeeded AND flag = false → onboarding (resume via cursor)
+ * 4. Sync failed/timeout AND flag = false → retry screen
  *
  * @module Index
  */
@@ -32,29 +33,54 @@ export default function Index(): React.ReactNode {
   const { profile, isLoading: isProfileLoading } = useProfile();
   const hasLoggedRef = useRef(false);
 
+  const onboardingCompleted = profile?.onboardingCompleted ?? false;
+
   const routingInputs = {
     syncState: initialSyncState,
-    onboardingCompleted: profile?.onboardingCompleted ?? false,
+    onboardingCompleted,
   };
   const outcome = getRoutingDecision(routingInputs);
 
   // FR-014: one structured log per gate evaluation (no PII).
+  //
+  // Fires once the sync AND profile observation have both settled — logging
+  // before `isProfileLoading` resolves would emit `onboardingCompleted:false`
+  // for an already-onboarded returning user and poison the telemetry
+  // (review Finding #5). The payload is rebuilt inside the effect from the
+  // same primitive inputs that appear in the dep array, so there is no
+  // need to suppress exhaustive-deps; `hasLoggedRef` guarantees the log
+  // fires at most once per session.
   useEffect(() => {
-    if (!hasLoggedRef.current && initialSyncState !== "in-progress") {
-      hasLoggedRef.current = true;
-      logger.info("onboarding.routing.decision", {
-        ...buildRoutingDecisionLog(routingInputs, outcome),
-      });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- log once per resolved sync state
-  }, [initialSyncState]);
+    const syncSettled = initialSyncState !== "in-progress";
+    const profileSettled = !isProfileLoading;
+    if (hasLoggedRef.current || !syncSettled || !profileSettled) return;
+
+    hasLoggedRef.current = true;
+    const inputs = { syncState: initialSyncState, onboardingCompleted };
+    logger.info("onboarding.routing.decision", {
+      ...buildRoutingDecisionLog(inputs, getRoutingDecision(inputs)),
+    });
+  }, [initialSyncState, isProfileLoading, onboardingCompleted]);
 
   /** Sign-out handler for RetrySyncScreen — uses existing logout service. */
   const handleSignOut = useCallback((): void => {
-    performLogout(database).catch(() => {
-      // Logout errors are surfaced through the logout service's own toast path.
+    performLogout(database).catch((error: unknown) => {
+      logger.warn(
+        "onboarding.retryScreen.signOut.failed",
+        error instanceof Error ? { message: error.message } : { error }
+      );
     });
   }, []);
+
+  /** Retry handler for RetrySyncScreen — re-enters the initial sync. */
+  const handleRetry = useCallback((): void => {
+    retryInitialSync().catch((error: unknown) => {
+      logger.warn(
+        "onboarding.retryScreen.retryInitialSync.failed",
+        error instanceof Error ? { message: error.message } : { error }
+      );
+    });
+  }, [retryInitialSync]);
 
   // Loading states render nothing — the native Expo splash screen is held
   // by <AppReadyGate /> (see _layout.tsx) until sync + profile resolve, so
@@ -69,12 +95,7 @@ export default function Index(): React.ReactNode {
       return <Redirect href="/(tabs)" />;
     case "retry":
       return (
-        <RetrySyncScreen
-          onRetry={(): void => {
-            retryInitialSync().catch(() => {});
-          }}
-          onSignOut={handleSignOut}
-        />
+        <RetrySyncScreen onRetry={handleRetry} onSignOut={handleSignOut} />
       );
     case "loading":
       return null;

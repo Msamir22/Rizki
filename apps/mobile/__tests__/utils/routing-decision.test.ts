@@ -64,13 +64,17 @@ describe("getRoutingDecision", () => {
     });
 
     it.each(["failed", "timeout"] as SyncState[])(
-      'returns "retry" when syncState is "%s"',
+      'returns "retry" when syncState is "%s" and onboardingCompleted=false',
       (syncState) => {
-        expect(getRoutingDecision(makeInputs({ syncState }))).toBe("retry");
+        expect(
+          getRoutingDecision(
+            makeInputs({ syncState, onboardingCompleted: false })
+          )
+        ).toBe("retry");
       }
     );
 
-    it("does not short-circuit to dashboard when sync is in-progress even if onboardingCompleted=true", () => {
+    it("still renders the loading backdrop when sync is in-progress even if onboardingCompleted=true", () => {
       expect(
         getRoutingDecision(
           makeInputs({ syncState: "in-progress", onboardingCompleted: true })
@@ -78,20 +82,20 @@ describe("getRoutingDecision", () => {
       ).toBe("loading");
     });
 
-    it("does not short-circuit to dashboard when sync failed even if onboardingCompleted=true", () => {
+    it("routes the already-onboarded user to dashboard when sync failed — WatermelonDB is authoritative offline (Constitution I; CR review on routing-decision.ts)", () => {
       expect(
         getRoutingDecision(
           makeInputs({ syncState: "failed", onboardingCompleted: true })
         )
-      ).toBe("retry");
+      ).toBe("dashboard");
     });
 
-    it("does not short-circuit to dashboard when sync timed out even if onboardingCompleted=true", () => {
+    it("routes the already-onboarded user to dashboard when sync timed out — same rationale, offline-first", () => {
       expect(
         getRoutingDecision(
           makeInputs({ syncState: "timeout", onboardingCompleted: true })
         )
-      ).toBe("retry");
+      ).toBe("dashboard");
     });
   });
 

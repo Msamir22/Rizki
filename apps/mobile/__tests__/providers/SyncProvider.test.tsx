@@ -57,7 +57,7 @@ jest.mock("@rizqi/db", () => ({
   },
 }));
 
-jest.mock("../context/AuthContext", () => ({
+jest.mock("@/context/AuthContext", () => ({
   useAuth: () => ({ isAuthenticated: true }),
 }));
 
@@ -144,14 +144,21 @@ describe("SyncProvider initialSyncState", () => {
     expect(result.current.initialSyncState).toBe("failed");
   });
 
-  it('transitions to "timeout" when sync takes longer than 20 seconds', () => {
+  it('transitions to "timeout" when sync takes longer than 20 seconds', async () => {
     // Sync never resolves
     mockSyncDatabase.mockReturnValue(new Promise(() => {}));
     const { result } = renderAndCapture();
 
-    // Advance past 20-second timeout
+    // Advance past 20-second timeout. The rejected timeout promise settles the
+    // Promise.race chain, but the `.catch` handler in runInitialSync runs as
+    // a microtask followed by `setInitialSyncState(syncResult)`. A purely
+    // synchronous advanceTimersByTime would not flush those microtasks and
+    // the assertion below would see stale "in-progress" (CodeRabbit review,
+    // SyncProvider.test.tsx:158).
+    await jest.advanceTimersByTimeAsync(20000);
+    await jest.runAllTimersAsync();
     actSync(() => {
-      jest.advanceTimersByTime(20000);
+      // Trigger a React update so the captured ref sees the latest state.
     });
 
     expect(result.current.initialSyncState).toBe("timeout");
