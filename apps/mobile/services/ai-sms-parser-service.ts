@@ -140,9 +140,15 @@ function parseAiResponse(data: unknown): ChunkAiResult {
       transactions.push(parsed.data);
     } else {
       invalidCount++;
+      // PII/privacy: do NOT log `raw` or full `issues` — they include amounts,
+      // senders, counterparties, etc. Log only aggregate diagnostics so Sentry
+      // doesn't retain user financial data.
       logger.warn("[ai-sms-parser] Skipping malformed transaction entry", {
-        raw,
-        issues: parsed.error.issues,
+        issueCount: parsed.error.issues.length,
+        issuePaths: parsed.error.issues
+          .map((i) => i.path.join("."))
+          .slice(0, 5),
+        issueCodes: Array.from(new Set(parsed.error.issues.map((i) => i.code))),
       });
     }
   }
@@ -188,10 +194,12 @@ function mapAiTransactions(
 
     // Filter out untrusted transactions (promotional offers, ambiguous messages)
     if (!aiTx.isTrusted) {
+      // PII/privacy: do NOT log the sender address or amount — those are
+      // financial identifiers. Log only the parsed messageId and currency
+      // enum for correlation and debugging.
       logger.info("[ai-sms-parser] Untrusted transaction, skipping", {
-        sender: candidate.message.address,
-        amount: aiTx.amount,
-        currency: aiTx.currency,
+        messageId: aiTx.messageId,
+        currency,
       });
       continue;
     }
@@ -258,23 +266,26 @@ async function invokeParseChunk(
     // (a Response). Read them so we can tell auth (401) apart from
     // payload/runtime errors (4xx/5xx) without guessing.
     let status: number | undefined;
-    let bodyText = "";
+    let bodyLength: number | undefined;
     const ctx = (response.error as { context?: unknown }).context;
     if (ctx instanceof Response) {
       status = ctx.status;
       try {
-        bodyText = await ctx.clone().text();
+        bodyLength = (await ctx.clone().text()).length;
       } catch {
-        bodyText = "<unreadable response body>";
+        bodyLength = undefined;
       }
     }
 
+    // PII/privacy: do NOT include the response body — upstream providers
+    // sometimes echo the original SMS text in error responses. Log only
+    // the HTTP status, body length, and chunk size for diagnostics.
     logger.error(
       "[ai-sms-parser] parse-sms chunk failed",
       response.error instanceof Error ? response.error : new Error(errorMsg),
       {
         status,
-        body: bodyText.slice(0, 500),
+        bodyLength,
         chunkSize: messagesPayload.length,
       }
     );

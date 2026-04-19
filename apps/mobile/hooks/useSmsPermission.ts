@@ -19,6 +19,7 @@ import {
   PermissionsAndroid,
   Platform,
 } from "react-native";
+import { logger } from "@/utils/logger";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -87,8 +88,13 @@ export function useSmsPermission(): UseSmsPermissionResult {
         // Otherwise preserve current state (undetermined/denied/blocked).
         return current;
       });
-    } catch {
-      // Preserve current status on error.
+    } catch (error: unknown) {
+      // Preserve the current status (don't clobber denied/blocked) but make
+      // the failure observable — otherwise permission regressions on
+      // Android updates would be silent and hard to diagnose.
+      logger.warn("PermissionsAndroid.check(READ_SMS) threw", {
+        error: error instanceof Error ? error.message : String(error),
+      });
     } finally {
       setIsLoading(false);
     }
@@ -130,7 +136,10 @@ export function useSmsPermission(): UseSmsPermissionResult {
 
         setStatus(newStatus);
         return newStatus;
-      } catch {
+      } catch (error: unknown) {
+        logger.warn("PermissionsAndroid.request(READ_SMS) threw", {
+          error: error instanceof Error ? error.message : String(error),
+        });
         setStatus("denied");
         return "denied";
       }

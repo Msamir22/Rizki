@@ -165,7 +165,12 @@ function OnboardingGuideCardComponent(): React.ReactElement | null {
     setIsExpanded((prev) => !prev);
   }, []);
 
-  // Don't render if dismissed, all complete, or still loading
+  // Don't render if dismissed, all complete, or still loading.
+  // NOTE: `useOnboardingGuide` deliberately defaults `isDismissed` to `true`
+  // while the profile observation is in flight, so `isLoading` returning
+  // null here avoids flashing any content for returning users who have
+  // already dismissed the card. Showing a skeleton in this window caused
+  // exactly the flash we want to prevent.
   if (isDismissed || isAllComplete || isLoading) {
     return null;
   }

@@ -135,38 +135,45 @@ For notable decisions, state:
 
 When handing off to an engineer, produce a spec in this shape:
 
-```
+```md
 ## Screen: <name>
 
 ### Layout
+
 <top-to-bottom structure>
 
 ### Tokens
+
 - Background: bg-slate-50 / dark:bg-slate-950
-- Surface:    bg-white    / dark:bg-slate-900
-- Primary:    bg-nileGreen-600 / dark:bg-nileGreen-500
-- Text primary:   text-slate-900 / dark:text-slate-50
+- Surface: bg-white / dark:bg-slate-900
+- Primary: bg-nileGreen-600 / dark:bg-nileGreen-500
+- Text primary: text-slate-900 / dark:text-slate-50
 - Text secondary: text-slate-600 / dark:text-slate-400
 
 ### Typography
-- Title:     text-2xl font-semibold leading-tight
-- Body:      text-base font-normal leading-relaxed
-- Caption:   text-xs font-medium text-slate-500
+
+- Title: text-2xl font-semibold leading-tight
+- Body: text-base font-normal leading-relaxed
+- Caption: text-xs font-medium text-slate-500
 
 ### Spacing
+
 - Screen padding: px-5 py-6
-- Section gap:    gap-6
-- Item gap:       gap-3
+- Section gap: gap-6
+- Item gap: gap-3
 
 ### Components reused
+
 - PageHeader, Button (variant=primary), TextField, Skeleton
 
 ### States
+
 - Loading: <Skeleton composition>
-- Empty:   <EmptyStateCard with illustration X>
-- Error:   <Toast + inline retry>
+- Empty: <EmptyStateCard with illustration X>
+- Error: <Toast + inline retry>
 
 ### Motion
+
 - Entry: fade + 8px translateY, 200ms ease-out
 - Press: scale 0.98, 100ms ease-in-out
 ```

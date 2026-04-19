@@ -11,6 +11,7 @@ import {
   View,
 } from "react-native";
 import { palette } from "@/constants/colors";
+import { LiveRatesSkeleton } from "@/components/dashboard/skeletons/LiveRatesSkeleton";
 import { useTheme } from "@/context/ThemeContext";
 import { useTranslation } from "react-i18next";
 import { formatTimeAgo } from "@/utils/dateHelpers";
@@ -227,6 +228,18 @@ function LiveRatesComponent({
   const handlePress = useCallback((): void => {
     router.push("/live-rates" as never);
   }, []);
+
+  // Show the skeleton only on the true first load (no cached rates yet).
+  // During a pull-to-refresh of existing rates, keep the stale pills on
+  // screen and rely on the small inline spinner in the header — that's a
+  // "refresh indicator", not a "content loading" state. Both guards are
+  // required: `isLoading` alone would clobber existing pills on refresh;
+  // `ratesDisplay.length === 0` alone would render an empty block when
+  // the first load fails.
+  const showSkeleton = isLoading && ratesDisplay.length === 0;
+  if (showSkeleton) {
+    return <LiveRatesSkeleton />;
+  }
 
   return (
     <View className="my-4">

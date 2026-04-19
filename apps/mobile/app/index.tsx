@@ -11,12 +11,11 @@
  * @module Index
  */
 
-import { palette } from "@/constants/colors";
+import { StarryBackground } from "@/components/ui/StarryBackground";
 import { HAS_ONBOARDED_KEY } from "@/constants/storage-keys";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Redirect } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, View } from "react-native";
 
 export default function Index(): React.ReactNode {
   const [isReady, setIsReady] = useState(false);
@@ -43,12 +42,14 @@ export default function Index(): React.ReactNode {
     });
   }, []);
 
+  // While reading the onboarding flag from AsyncStorage we don't yet know
+  // whether the user is destination-bound for the dashboard or onboarding,
+  // so render a neutral backdrop rather than a content-shaped skeleton.
+  // Showing DashboardSkeleton here flashes a fake dashboard for brand-new
+  // users who are about to be redirected to /onboarding — more jarring
+  // than a neutral transition.
   if (!isReady) {
-    return (
-      <View className="flex-1 justify-center items-center bg-slate-50 dark:bg-slate-900">
-        <ActivityIndicator size="large" color={palette.nileGreen[500]} />
-      </View>
-    );
+    return <StarryBackground />;
   }
 
   if (hasOnboarded) {
