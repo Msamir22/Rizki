@@ -322,4 +322,30 @@ describe("onboarding.tsx state machine", () => {
     expect(mockCompleteOnboarding).toHaveBeenCalledTimes(1);
     expect(mockRouterReplace).toHaveBeenCalledWith("/(tabs)");
   });
+
+  it("does NOT navigate to /(tabs) when completeOnboarding fails — user stays on wallet step to retry (round-3 CR finding)", async () => {
+    mockReadOnboardingStep.mockResolvedValue("cash-account");
+    setProfile({ userId: "user-1", preferredCurrency: "EGP" });
+    mockCompleteOnboarding.mockRejectedValueOnce(new Error("db write failed"));
+
+    const renderer = await renderOnboarding();
+
+    const walletNodes = renderer.root.findAllByProps({ testID: "step-wallet" });
+    const walletNode = walletNodes[0] as
+      | { props: { onStartShouldSetResponder?: () => void } }
+      | undefined;
+    expect(walletNode).toBeDefined();
+
+    await RTR.act(async () => {
+      walletNode?.props.onStartShouldSetResponder?.();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(mockCompleteOnboarding).toHaveBeenCalledTimes(1);
+    // Guard — navigation must not fire when the DB flag write rejected.
+    // Previously the handler fell through and navigated anyway, leaving the
+    // router gate bouncing the user back to onboarding on next launch.
+    expect(mockRouterReplace).not.toHaveBeenCalled();
+  });
 });

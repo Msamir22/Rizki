@@ -277,19 +277,18 @@ export default function OnboardingScreen(): React.JSX.Element | null {
   );
 
   /** Carousel finished or skipped — advance cursor to "currency". */
-  const handleCarouselFinish = useCallback(async (): Promise<void> => {
+  const handleCarouselFinish = useCallback((): void => {
     if (!userId) return;
-    try {
-      await writeOnboardingStep(userId, "currency");
-      setPhase("currency-picker");
-    } catch (error) {
+    // Cursor write is best-effort — per data-model.md § 3, an AsyncStorage
+    // failure here is acceptable (next launch resumes at an earlier but
+    // idempotent step). Don't let it block the phase transition.
+    writeOnboardingStep(userId, "currency").catch((err: unknown) => {
       logger.warn(
         "onboarding.carousel.cursorWrite.failed",
-        error instanceof Error ? { message: error.message } : { error }
+        err instanceof Error ? { message: err.message } : { error: err }
       );
-      // Cursor write is best-effort; advance the local phase regardless.
-      setPhase("currency-picker");
-    }
+    });
+    setPhase("currency-picker");
   }, [userId]);
 
   /** Currency picked — persist currency + create cash account, advance cursor. */
@@ -330,30 +329,38 @@ export default function OnboardingScreen(): React.JSX.Element | null {
     try {
       await completeOnboarding();
     } catch (error) {
+      // The DB flag write failed — do NOT navigate. If we navigated anyway,
+      // the user would land on /(tabs) while the routing gate thinks
+      // onboarding is still incomplete; on the next launch they'd be
+      // bounced back to onboarding with no explanation. Surface a toast
+      // and keep them on the wallet-creation screen where tapping
+      // "Let's Go!" again will retry. (CodeRabbit review Finding, round 3.)
       logger.warn(
         "onboarding.complete.failed",
         error instanceof Error ? { message: error.message } : { error }
       );
-      // Fall through and still navigate — a failed flag write means the
-      // user will see onboarding again on next launch, which is the safe
-      // failure mode (not silently losing data).
+      showToast({
+        type: "error",
+        title: tCommon("error"),
+        message: tCommon("error_generic"),
+      });
+      return;
     }
 
+    // DB write succeeded — navigate now (or after auth settles).
     if (isAuthLoading) {
       pendingNavigationRef.current = true;
       return;
     }
     navigateAfterOnboarding();
-  }, [isAuthLoading, navigateAfterOnboarding]);
+  }, [isAuthLoading, navigateAfterOnboarding, showToast, tCommon]);
 
   // ---------------------------------------------------------------------
   // Carousel helpers
   // ---------------------------------------------------------------------
   const handleNext = useCallback((): void => {
     if (currentIndex === slides.length - 1) {
-      // Inner handler owns its own try/catch + logger.warn; no outer
-      // swallow required.
-      void handleCarouselFinish();
+      handleCarouselFinish();
     } else {
       carouselRef.current?.next();
     }
@@ -468,9 +475,7 @@ export default function OnboardingScreen(): React.JSX.Element | null {
       {/* Skip Button */}
       <TouchableOpacity
         className="absolute p-2 end-6 z-10"
-        onPress={(): void => {
-          void handleCarouselFinish();
-        }}
+        onPress={handleCarouselFinish}
         style={{ top: insets.top + 16 }}
       >
         <Text className="text-text-secondary dark:text-text-secondary-dark text-base">

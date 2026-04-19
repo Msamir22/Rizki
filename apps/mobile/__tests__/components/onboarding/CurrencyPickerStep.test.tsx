@@ -140,6 +140,62 @@ describe("CurrencyPickerStep", () => {
     expect(onCurrencySelected).toHaveBeenCalledWith("USD");
   });
 
+  it("uses the row the user tapped — not the pre-selected detection — when Continue fires", () => {
+    // Detection pre-selects EGP; the user then taps a different row (the
+    // FlatList renders the first ~10 rows under react-test-renderer, with
+    // the suggested currency sorted to index 0). `buttons[1]` is the first
+    // non-suggested row. This guards against a regression where tapping a
+    // row is ignored and Continue forwards the detection instead.
+    mockDetectCurrency.mockReturnValue("EGP");
+    const onCurrencySelected = jest.fn();
+
+    const renderer = RTR.create(
+      React.createElement(CurrencyPickerStep, { onCurrencySelected })
+    );
+
+    const buttons = renderer.root.findAllByType(TouchableOpacity);
+    // Find the first row whose children don't include the suggested code.
+    // We collect text leaves from the button's subtree and pick the first
+    // non-EGP row so the assertion below is tolerant of the exact sort
+    // order of the SUPPORTED_CURRENCIES list.
+    function textsOf(node: unknown, out: string[]): void {
+      if (node === null || node === undefined) return;
+      if (typeof node === "string") {
+        out.push(node);
+        return;
+      }
+      if (Array.isArray(node)) {
+        for (const c of node) textsOf(c, out);
+        return;
+      }
+      if (typeof node === "object") {
+        textsOf((node as { children?: unknown }).children, out);
+      }
+    }
+
+    let tappedCode: string | undefined;
+    for (const btn of buttons.slice(0, -1)) {
+      const texts: string[] = [];
+      textsOf(
+        (btn as unknown as { children: unknown[] }).children ?? [],
+        texts
+      );
+      const code = texts.find((t) => /^[A-Z]{3}$/.test(t) && t !== "EGP");
+      if (code) {
+        (btn.props.onPress as () => void)();
+        tappedCode = code;
+        break;
+      }
+    }
+    expect(tappedCode).toBeDefined();
+
+    const continueBtn = buttons[buttons.length - 1];
+    (continueBtn?.props.onPress as () => void | undefined)?.();
+
+    expect(onCurrencySelected).toHaveBeenCalledTimes(1);
+    expect(onCurrencySelected).toHaveBeenCalledWith(tappedCode);
+  });
+
   it("never calls setPreferredCurrencyAndCreateCashAccount directly — persistence is the parent's job", () => {
     mockDetectCurrency.mockReturnValue("EGP");
 
