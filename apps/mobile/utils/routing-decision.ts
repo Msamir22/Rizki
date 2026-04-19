@@ -1,8 +1,13 @@
 /**
  * Pure routing-decision function for the post-sign-in onboarding gate.
  *
- * No I/O, no React, no side effects. Maps profile state + sync state
+ * No I/O, no React, no side effects. Maps sync state + the single DB flag
  * to the next screen the user should see. Unit-testable in isolation.
+ *
+ * Binary gate per spec (simplified 2026-04-18): the router only decides
+ * dashboard-vs-onboarding. Per-step resume within the onboarding flow is
+ * resolved inside `onboarding.tsx` via the AsyncStorage cursor
+ * (`onboarding:<userId>:step`) — not here.
  *
  * @module routing-decision
  */
@@ -15,34 +20,18 @@
 export type InitialSyncState = "in-progress" | "success" | "failed" | "timeout";
 
 /** Possible outcomes of the routing decision. */
-export type RoutingOutcome =
-  | "loading"
-  | "dashboard"
-  | "language"
-  | "slides"
-  | "currency"
-  | "cash-account-confirmation"
-  | "retry";
+export type RoutingOutcome = "loading" | "dashboard" | "onboarding" | "retry";
 
 /** Inputs to the routing decision. */
 export interface RoutingInputs {
   readonly syncState: InitialSyncState;
   readonly onboardingCompleted: boolean;
-  readonly hasPreferredLanguage: boolean;
-  readonly slidesViewed: boolean;
-  /** True when a cash account exists (equivalent to "user confirmed currency"). */
-  readonly hasCashAccount: boolean;
 }
 
 /** Log payload emitted per routing-gate evaluation (FR-014). No PII. */
 export interface RoutingDecisionLog {
   readonly outcome: RoutingOutcome;
-  readonly inputs: {
-    readonly onboardingCompleted: boolean;
-    readonly hasPreferredLanguage: boolean;
-    readonly slidesViewed: boolean;
-    readonly hasCashAccount: boolean;
-  };
+  readonly onboardingCompleted: boolean;
   readonly syncState: InitialSyncState;
 }
 
@@ -51,22 +40,19 @@ export interface RoutingDecisionLog {
 // =============================================================================
 
 /**
- * Maps profile state + sync state to the next route.
+ * Maps sync state + `profile.onboarding_completed` to the next route.
  *
  * Priority order:
- * 1. Sync still in progress → loading
- * 2. Sync failed/timeout → retry
- * 3. Onboarding completed → dashboard
- * 4. Resume-point: first incomplete step (language → slides → currency → cash-account)
+ * 1. Sync still in progress → loading (splash / neutral backdrop)
+ * 2. Sync failed/timeout → retry (RetrySyncScreen with Retry + Sign out)
+ * 3. onboarding_completed = true → dashboard
+ * 4. Otherwise → onboarding (the onboarding screen picks the phase from
+ *    its per-user AsyncStorage cursor)
  */
 export function getRoutingDecision(inputs: RoutingInputs): RoutingOutcome {
   if (inputs.syncState === "in-progress") return "loading";
   if (inputs.syncState !== "success") return "retry";
-  if (inputs.onboardingCompleted) return "dashboard";
-  if (!inputs.hasPreferredLanguage) return "language";
-  if (!inputs.slidesViewed) return "slides";
-  if (!inputs.hasCashAccount) return "currency";
-  return "cash-account-confirmation";
+  return inputs.onboardingCompleted ? "dashboard" : "onboarding";
 }
 
 // =============================================================================
@@ -83,12 +69,7 @@ export function buildRoutingDecisionLog(
 ): RoutingDecisionLog {
   return {
     outcome,
-    inputs: {
-      onboardingCompleted: inputs.onboardingCompleted,
-      hasPreferredLanguage: inputs.hasPreferredLanguage,
-      slidesViewed: inputs.slidesViewed,
-      hasCashAccount: inputs.hasCashAccount,
-    },
+    onboardingCompleted: inputs.onboardingCompleted,
     syncState: inputs.syncState,
   };
 }

@@ -1,6 +1,6 @@
 /**
  * @file profile-service.test.ts
- * @description Unit tests for profile-service mutations.
+ * @description Unit tests for profile-service mutations (simplified data model).
  *
  * Mock strategy: inline factory pattern with __mocks re-export (project convention).
  */
@@ -74,12 +74,42 @@ function getAccountServiceMocks(): AccountServiceMocks {
 }
 
 // =============================================================================
+// Mock: onboarding-cursor-service (clearOnboardingStep)
+// =============================================================================
+
+jest.mock("@/services/onboarding-cursor-service", () => {
+  const clearOnboardingStep = jest.fn().mockResolvedValue(undefined);
+  return { clearOnboardingStep, __mocks: { clearOnboardingStep } };
+});
+
+interface CursorServiceMocks {
+  clearOnboardingStep: jest.Mock;
+}
+
+function getCursorServiceMocks(): CursorServiceMocks {
+  return jest.requireMock<{ __mocks: CursorServiceMocks }>(
+    "@/services/onboarding-cursor-service"
+  ).__mocks;
+}
+
+// =============================================================================
+// Mock: logger
+// =============================================================================
+
+jest.mock("@/utils/logger", () => ({
+  logger: {
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+  },
+}));
+
+// =============================================================================
 // Import module under test (after mocks)
 // =============================================================================
 
 import {
   setPreferredLanguage,
-  markSlidesViewed,
   setPreferredCurrencyAndCreateCashAccount,
   completeOnboarding,
 } from "@/services/profile-service";
@@ -94,8 +124,7 @@ function createMockProfile(
   return {
     id: "profile-1",
     onboardingCompleted: false,
-    preferredLanguage: null,
-    slidesViewed: false,
+    preferredLanguage: "en",
     userId: "user-1",
     deleted: false,
     update: jest.fn((fn: (p: Record<string, unknown>) => void) => {
@@ -130,11 +159,21 @@ beforeEach(() => {
 // =============================================================================
 
 describe("setPreferredLanguage", () => {
-  it("updates the profile's preferredLanguage field", async (): Promise<void> => {
+  it("updates the profile's preferredLanguage field via database.write", async (): Promise<void> => {
     const profile = createMockProfile();
     setupProfileFound(profile);
 
     await setPreferredLanguage("en");
+
+    const { mockWrite } = getDbMocks();
+    expect(mockWrite).toHaveBeenCalledTimes(1);
+  });
+
+  it("accepts 'ar' as a supported language", async (): Promise<void> => {
+    const profile = createMockProfile();
+    setupProfileFound(profile);
+
+    await setPreferredLanguage("ar");
 
     const { mockWrite } = getDbMocks();
     expect(mockWrite).toHaveBeenCalledTimes(1);
@@ -146,30 +185,9 @@ describe("setPreferredLanguage", () => {
   });
 });
 
-describe("markSlidesViewed", () => {
-  it("sets slidesViewed to true on the profile", async (): Promise<void> => {
-    const profile = createMockProfile({ preferredLanguage: "en" });
-    setupProfileFound(profile);
-
-    await markSlidesViewed();
-
-    const { mockWrite } = getDbMocks();
-    expect(mockWrite).toHaveBeenCalledTimes(1);
-  });
-
-  it("throws if no profile row exists", async (): Promise<void> => {
-    setupProfileNotFound();
-    await expect(markSlidesViewed()).rejects.toThrow();
-  });
-});
-
 describe("setPreferredCurrencyAndCreateCashAccount", () => {
   it("wraps profile update and ensureCashAccount in a single database.write", async (): Promise<void> => {
-    const profile = createMockProfile({
-      preferredLanguage: "en",
-      slidesViewed: true,
-      userId: "user-1",
-    });
+    const profile = createMockProfile({ userId: "user-1" });
     setupProfileFound(profile);
 
     const result = await setPreferredCurrencyAndCreateCashAccount("EGP");
@@ -182,12 +200,8 @@ describe("setPreferredCurrencyAndCreateCashAccount", () => {
     expect(result.accountId).toBe("cash-account-1");
   });
 
-  it("returns existing accountId when cash account already exists", async (): Promise<void> => {
-    const profile = createMockProfile({
-      preferredLanguage: "en",
-      slidesViewed: true,
-      userId: "user-1",
-    });
+  it("returns existing accountId when cash account already exists (idempotent)", async (): Promise<void> => {
+    const profile = createMockProfile({ userId: "user-1" });
     setupProfileFound(profile);
 
     const { ensureCashAccount } = getAccountServiceMocks();
@@ -203,11 +217,10 @@ describe("setPreferredCurrencyAndCreateCashAccount", () => {
 });
 
 describe("completeOnboarding", () => {
-  it("sets onboardingCompleted to true on the profile", async (): Promise<void> => {
+  it("sets onboardingCompleted to true AND clears the AsyncStorage cursor", async (): Promise<void> => {
     const profile = createMockProfile({
-      preferredLanguage: "en",
-      slidesViewed: true,
       onboardingCompleted: false,
+      userId: "user-1",
     });
     setupProfileFound(profile);
 
@@ -215,15 +228,42 @@ describe("completeOnboarding", () => {
 
     const { mockWrite } = getDbMocks();
     expect(mockWrite).toHaveBeenCalledTimes(1);
+
+    const { clearOnboardingStep } = getCursorServiceMocks();
+    expect(clearOnboardingStep).toHaveBeenCalledWith("user-1");
   });
 
-  it("is idempotent — skips write when already completed", async (): Promise<void> => {
-    const profile = createMockProfile({ onboardingCompleted: true });
+  it("is idempotent — skips DB write when already completed but still clears cursor", async (): Promise<void> => {
+    const profile = createMockProfile({
+      onboardingCompleted: true,
+      userId: "user-1",
+    });
     setupProfileFound(profile);
 
     await completeOnboarding();
 
     const { mockWrite } = getDbMocks();
     expect(mockWrite).not.toHaveBeenCalled();
+
+    const { clearOnboardingStep } = getCursorServiceMocks();
+    expect(clearOnboardingStep).toHaveBeenCalledWith("user-1");
+  });
+
+  it("does NOT re-throw when cursor clear fails — DB write is contract-critical, cursor clear is best-effort", async (): Promise<void> => {
+    const profile = createMockProfile({
+      onboardingCompleted: false,
+      userId: "user-1",
+    });
+    setupProfileFound(profile);
+
+    const { clearOnboardingStep } = getCursorServiceMocks();
+    clearOnboardingStep.mockRejectedValueOnce(
+      new Error("AsyncStorage unavailable")
+    );
+
+    await expect(completeOnboarding()).resolves.toBeUndefined();
+
+    const { mockWrite } = getDbMocks();
+    expect(mockWrite).toHaveBeenCalledTimes(1);
   });
 });

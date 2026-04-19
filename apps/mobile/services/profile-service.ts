@@ -10,16 +10,16 @@
  * @module profile-service
  */
 
-import { Profile, type CurrencyType, database } from "@rizqi/db";
+import {
+  Profile,
+  type CurrencyType,
+  type PreferredLanguageCode,
+  database,
+} from "@rizqi/db";
 import { ensureCashAccount } from "@/services/account-service";
+import { clearOnboardingStep } from "@/services/onboarding-cursor-service";
+import { logger } from "@/utils/logger";
 import { t } from "i18next";
-
-// =============================================================================
-// Types
-// =============================================================================
-
-/** Languages supported by the app today. */
-export type SupportedLanguage = "en" | "ar";
 
 // =============================================================================
 // Helpers
@@ -50,25 +50,12 @@ async function getProfile(): Promise<Profile> {
  * Resolves FR-007.
  */
 export async function setPreferredLanguage(
-  language: SupportedLanguage
+  language: PreferredLanguageCode
 ): Promise<void> {
   const profile = await getProfile();
   await database.write(async () => {
     await profile.update((p) => {
       p.preferredLanguage = language;
-    });
-  });
-}
-
-/**
- * Mark the onboarding slides as viewed/skipped.
- * Resolves FR-008.
- */
-export async function markSlidesViewed(): Promise<void> {
-  const profile = await getProfile();
-  await database.write(async () => {
-    await profile.update((p) => {
-      p.slidesViewed = true;
     });
   });
 }
@@ -106,19 +93,39 @@ export async function setPreferredCurrencyAndCreateCashAccount(
 }
 
 /**
- * Flip the `onboarding_completed` flag to true. Called exactly once per user,
- * from the WalletCreationStep's onComplete callback.
- * Resolves FR-011.
+ * Flip the `onboarding_completed` flag to true AND clear the per-user
+ * AsyncStorage cursor. Called exactly once per user when the cash-account
+ * confirmation step is dismissed. Resolves FR-011.
  *
- * Idempotent — safe to call if already true.
+ * Lifecycle per contract:
+ * 1. `database.write()` sets `onboarding_completed = true`.
+ * 2. `clearOnboardingStep(userId)` removes `onboarding:<userId>:step`.
+ *
+ * If step 2 fails, the error is logged but NOT re-thrown. Step 1 is the
+ * contract-critical write; the router reads the DB flag, so a stale cursor
+ * is harmless.
+ *
+ * Idempotent — safe to call if already completed (no DB write; cursor
+ * clear still runs defensively).
  */
 export async function completeOnboarding(): Promise<void> {
   const profile = await getProfile();
-  if (profile.onboardingCompleted) return;
+  const userId = profile.userId;
 
-  await database.write(async () => {
-    await profile.update((p) => {
-      p.onboardingCompleted = true;
+  if (!profile.onboardingCompleted) {
+    await database.write(async () => {
+      await profile.update((p) => {
+        p.onboardingCompleted = true;
+      });
     });
-  });
+  }
+
+  try {
+    await clearOnboardingStep(userId);
+  } catch (error) {
+    logger.warn(
+      "onboarding.completeOnboarding.clearCursor.failed",
+      error instanceof Error ? { message: error.message } : { error }
+    );
+  }
 }

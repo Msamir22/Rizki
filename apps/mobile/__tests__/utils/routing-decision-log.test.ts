@@ -2,13 +2,14 @@
  * Unit tests for buildRoutingDecisionLog helper.
  *
  * Validates the exact payload shape emitted by the routing gate (FR-014):
- * - Contains outcome, inputs, and syncState
- * - No PII fields (no userId, email, preference values)
- * - All values are serializable (JSON-safe)
+ * - Contains outcome, onboardingCompleted, syncState — no more, no less.
+ * - No PII fields (no userId, email, preference values).
+ * - All values are serializable (JSON-safe).
  */
 
 import type {
   RoutingInputs,
+  RoutingOutcome,
   RoutingDecisionLog,
 } from "@/utils/routing-decision";
 
@@ -20,21 +21,16 @@ function makeInputs(overrides: Partial<RoutingInputs> = {}): RoutingInputs {
   return {
     syncState: "success",
     onboardingCompleted: false,
-    hasPreferredLanguage: false,
-    slidesViewed: false,
-    hasCashAccount: false,
     ...overrides,
   };
 }
 
 // ---------------------------------------------------------------------------
-// Import guard
-// ---------------------------------------------------------------------------
 
 describe("buildRoutingDecisionLog", () => {
   let buildRoutingDecisionLog: (
     inputs: RoutingInputs,
-    outcome: string
+    outcome: RoutingOutcome
   ) => RoutingDecisionLog;
 
   beforeAll(() => {
@@ -42,14 +38,14 @@ describe("buildRoutingDecisionLog", () => {
     const mod = require("@/utils/routing-decision") as {
       buildRoutingDecisionLog: (
         inputs: RoutingInputs,
-        outcome: string
+        outcome: RoutingOutcome
       ) => RoutingDecisionLog;
     };
     buildRoutingDecisionLog = mod.buildRoutingDecisionLog;
   });
 
   it("produces a serializable object", () => {
-    const log = buildRoutingDecisionLog(makeInputs(), "language");
+    const log = buildRoutingDecisionLog(makeInputs(), "onboarding");
     expect(() => JSON.stringify(log)).not.toThrow();
   });
 
@@ -66,24 +62,21 @@ describe("buildRoutingDecisionLog", () => {
     expect(log.syncState).toBe("failed");
   });
 
-  it("includes all four input booleans", () => {
-    const log = buildRoutingDecisionLog(
-      makeInputs({
-        onboardingCompleted: true,
-        hasPreferredLanguage: true,
-        slidesViewed: true,
-        hasCashAccount: true,
-      }),
+  it("includes onboardingCompleted", () => {
+    const logTrue = buildRoutingDecisionLog(
+      makeInputs({ onboardingCompleted: true }),
       "dashboard"
     );
-    expect(log.inputs.onboardingCompleted).toBe(true);
-    expect(log.inputs.hasPreferredLanguage).toBe(true);
-    expect(log.inputs.slidesViewed).toBe(true);
-    expect(log.inputs.hasCashAccount).toBe(true);
+    const logFalse = buildRoutingDecisionLog(
+      makeInputs({ onboardingCompleted: false }),
+      "onboarding"
+    );
+    expect(logTrue.onboardingCompleted).toBe(true);
+    expect(logFalse.onboardingCompleted).toBe(false);
   });
 
   it("contains no PII fields (no userId, email, or preference values)", () => {
-    const log = buildRoutingDecisionLog(makeInputs(), "language");
+    const log = buildRoutingDecisionLog(makeInputs(), "onboarding");
     const serialized = JSON.stringify(log);
 
     expect(serialized).not.toContain("userId");
@@ -92,20 +85,9 @@ describe("buildRoutingDecisionLog", () => {
     expect(serialized).not.toContain("preferredLanguage");
   });
 
-  it("has exactly the expected top-level keys", () => {
+  it("has exactly the expected top-level keys — nothing more, nothing less", () => {
     const log = buildRoutingDecisionLog(makeInputs(), "loading");
     const keys = Object.keys(log).sort();
-    expect(keys).toEqual(["inputs", "outcome", "syncState"]);
-  });
-
-  it("has exactly the expected input keys", () => {
-    const log = buildRoutingDecisionLog(makeInputs(), "loading");
-    const inputKeys = Object.keys(log.inputs).sort();
-    expect(inputKeys).toEqual([
-      "hasCashAccount",
-      "hasPreferredLanguage",
-      "onboardingCompleted",
-      "slidesViewed",
-    ]);
+    expect(keys).toEqual(["onboardingCompleted", "outcome", "syncState"]);
   });
 });

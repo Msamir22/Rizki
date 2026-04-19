@@ -2,8 +2,9 @@
  * Unit tests for getRoutingDecision and buildRoutingDecisionLog.
  *
  * These are pure functions — no React, no WatermelonDB, no network.
- * The routing decision is the core of the onboarding gate; every
- * combination of inputs must be covered.
+ * The routing decision is the binary core of the onboarding gate:
+ * dashboard-vs-onboarding. Per-step resume is handled inside onboarding.tsx
+ * via the AsyncStorage cursor and is NOT tested here.
  */
 
 import type { RoutingInputs, RoutingOutcome } from "@/utils/routing-decision";
@@ -19,9 +20,6 @@ function makeInputs(overrides: Partial<RoutingInputs> = {}): RoutingInputs {
   return {
     syncState: "success",
     onboardingCompleted: false,
-    hasPreferredLanguage: false,
-    slidesViewed: false,
-    hasCashAccount: false,
     ...overrides,
   };
 }
@@ -34,15 +32,19 @@ const ALL_SYNC_STATES: SyncState[] = [
   "timeout",
 ];
 
-// ---------------------------------------------------------------------------
-// Import guard — the module under test may not exist yet (TDD RED phase).
+const ALL_OUTCOMES: RoutingOutcome[] = [
+  "loading",
+  "dashboard",
+  "onboarding",
+  "retry",
+];
+
 // ---------------------------------------------------------------------------
 
 describe("getRoutingDecision", () => {
   let getRoutingDecision: (inputs: RoutingInputs) => RoutingOutcome;
 
   beforeAll(() => {
-    // Dynamic import so the test file can be written before the implementation.
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const mod = require("@/utils/routing-decision") as {
       getRoutingDecision: (inputs: RoutingInputs) => RoutingOutcome;
@@ -68,144 +70,75 @@ describe("getRoutingDecision", () => {
       }
     );
 
-    it("does not short-circuit to dashboard when sync is in-progress even if profile is fully onboarded", () => {
+    it("does not short-circuit to dashboard when sync is in-progress even if onboardingCompleted=true", () => {
       expect(
         getRoutingDecision(
-          makeInputs({
-            syncState: "in-progress",
-            onboardingCompleted: true,
-            hasPreferredLanguage: true,
-            slidesViewed: true,
-            hasCashAccount: true,
-          })
+          makeInputs({ syncState: "in-progress", onboardingCompleted: true })
         )
       ).toBe("loading");
     });
 
-    it("does not short-circuit to dashboard when sync failed even if profile is fully onboarded", () => {
+    it("does not short-circuit to dashboard when sync failed even if onboardingCompleted=true", () => {
       expect(
         getRoutingDecision(
-          makeInputs({
-            syncState: "failed",
-            onboardingCompleted: true,
-            hasPreferredLanguage: true,
-            slidesViewed: true,
-            hasCashAccount: true,
-          })
+          makeInputs({ syncState: "failed", onboardingCompleted: true })
+        )
+      ).toBe("retry");
+    });
+
+    it("does not short-circuit to dashboard when sync timed out even if onboardingCompleted=true", () => {
+      expect(
+        getRoutingDecision(
+          makeInputs({ syncState: "timeout", onboardingCompleted: true })
         )
       ).toBe("retry");
     });
   });
 
   // =========================================================================
-  // Dashboard (onboarding completed)
+  // Dashboard vs onboarding (sync=success path)
   // =========================================================================
 
-  describe("completed onboarding", () => {
-    it("returns dashboard when onboardingCompleted is true", () => {
+  describe("sync=success path", () => {
+    it('returns "dashboard" when onboardingCompleted=true', () => {
       expect(
         getRoutingDecision(
-          makeInputs({
-            onboardingCompleted: true,
-            hasPreferredLanguage: true,
-            slidesViewed: true,
-            hasCashAccount: true,
-          })
+          makeInputs({ syncState: "success", onboardingCompleted: true })
         )
       ).toBe("dashboard");
     });
 
-    it("returns dashboard even when some per-step signals are false (flag is authoritative)", () => {
+    it('returns "onboarding" when onboardingCompleted=false', () => {
       expect(
         getRoutingDecision(
-          makeInputs({
-            onboardingCompleted: true,
-            hasPreferredLanguage: false,
-            slidesViewed: false,
-            hasCashAccount: false,
-          })
+          makeInputs({ syncState: "success", onboardingCompleted: false })
         )
-      ).toBe("dashboard");
+      ).toBe("onboarding");
     });
   });
 
   // =========================================================================
-  // Resume-point decisions (flag false, sync success)
-  // =========================================================================
-
-  describe("resume-point routing (onboarding not completed)", () => {
-    it('returns "language" when no per-step signals are set (new user)', () => {
-      expect(
-        getRoutingDecision(
-          makeInputs({
-            onboardingCompleted: false,
-            hasPreferredLanguage: false,
-            slidesViewed: false,
-            hasCashAccount: false,
-          })
-        )
-      ).toBe("language");
-    });
-
-    it('returns "slides" when language is set but slides not viewed', () => {
-      expect(
-        getRoutingDecision(
-          makeInputs({
-            onboardingCompleted: false,
-            hasPreferredLanguage: true,
-            slidesViewed: false,
-            hasCashAccount: false,
-          })
-        )
-      ).toBe("slides");
-    });
-
-    it('returns "currency" when language + slides done but no cash account', () => {
-      expect(
-        getRoutingDecision(
-          makeInputs({
-            onboardingCompleted: false,
-            hasPreferredLanguage: true,
-            slidesViewed: true,
-            hasCashAccount: false,
-          })
-        )
-      ).toBe("currency");
-    });
-
-    it('returns "cash-account-confirmation" when language + slides + cash account done but flag still false', () => {
-      expect(
-        getRoutingDecision(
-          makeInputs({
-            onboardingCompleted: false,
-            hasPreferredLanguage: true,
-            slidesViewed: true,
-            hasCashAccount: true,
-          })
-        )
-      ).toBe("cash-account-confirmation");
-    });
-  });
-
-  // =========================================================================
-  // Exhaustive: every sync state × every onboardingCompleted value
+  // Exhaustive: every sync-state × onboardingCompleted combination
   // =========================================================================
 
   describe("exhaustive sync-state combinations", () => {
     it.each(ALL_SYNC_STATES)(
-      "never returns an unexpected outcome for syncState=%s",
+      "returns a valid outcome for syncState=%s, onboardingCompleted=false",
       (syncState) => {
-        const validOutcomes: RoutingOutcome[] = [
-          "loading",
-          "dashboard",
-          "language",
-          "slides",
-          "currency",
-          "cash-account-confirmation",
-          "retry",
-        ];
-        const result = getRoutingDecision(makeInputs({ syncState }));
-        expect(validOutcomes).toContain(result);
+        const result = getRoutingDecision(
+          makeInputs({ syncState, onboardingCompleted: false })
+        );
+        expect(ALL_OUTCOMES).toContain(result);
+      }
+    );
+
+    it.each(ALL_SYNC_STATES)(
+      "returns a valid outcome for syncState=%s, onboardingCompleted=true",
+      (syncState) => {
+        const result = getRoutingDecision(
+          makeInputs({ syncState, onboardingCompleted: true })
+        );
+        expect(ALL_OUTCOMES).toContain(result);
       }
     );
   });
