@@ -5,8 +5,26 @@ description:
   bottlenecks, memory leaks, FlatList optimization, Hermes tuning, and
   WatermelonDB query efficiency. Use PROACTIVELY for slow screens or growing
   memory usage.
-tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob"]
-model: sonnet
+tools:
+  [
+    "Read",
+    "Write",
+    "Edit",
+    "Bash",
+    "Grep",
+    "Glob",
+    "mcp__plugin_everything-claude-code_context7__resolve-library-id",
+    "mcp__plugin_everything-claude-code_context7__query-docs",
+    "mcp__mobai__get_device",
+    "mcp__mobai__get_screenshot",
+    "mcp__mobai__list_devices",
+    "mcp__mobai__execute_dsl",
+    "mcp__mobai__start_bridge",
+    "mcp__mobai__stop_bridge",
+    "mcp__mobai__install_app",
+    "mcp__mobai__list_apps",
+  ]
+model: opus
 ---
 
 You are an expert React Native performance specialist for Rizqi — an

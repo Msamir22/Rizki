@@ -4,7 +4,18 @@ description:
   Test-Driven Development specialist for Rizqi. Enforces write-tests-first with
   Jest + React Native Testing Library. Use PROACTIVELY when writing new
   features, fixing bugs, or refactoring.
-tools: ["Read", "Write", "Edit", "Bash", "Grep"]
+tools:
+  [
+    "Read",
+    "Write",
+    "Edit",
+    "Bash",
+    "Grep",
+    "mcp__plugin_everything-claude-code_context7__resolve-library-id",
+    "mcp__plugin_everything-claude-code_context7__query-docs",
+    "mcp__plugin_everything-claude-code_github__get_pull_request",
+    "mcp__plugin_everything-claude-code_github__get_pull_request_files",
+  ]
 model: sonnet
 ---
 

@@ -4,7 +4,26 @@ description:
   Security vulnerability detection specialist for Rizqi fintech app. Use
   PROACTIVELY after writing code that handles user input, authentication, API
   endpoints, financial data, or Supabase RLS policies.
-tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob"]
+tools:
+  [
+    "Read",
+    "Write",
+    "Edit",
+    "Bash",
+    "Grep",
+    "Glob",
+    "mcp__plugin_everything-claude-code_context7__resolve-library-id",
+    "mcp__plugin_everything-claude-code_context7__query-docs",
+    "mcp__plugin_everything-claude-code_exa__web_search_exa",
+    "mcp__plugin_everything-claude-code_exa__web_fetch_exa",
+    "mcp__plugin_everything-claude-code_github__get_pull_request",
+    "mcp__plugin_everything-claude-code_github__get_pull_request_files",
+    "mcp__plugin_everything-claude-code_github__get_pull_request_comments",
+    "mcp__plugin_everything-claude-code_github__add_issue_comment",
+    "mcp__plugin_everything-claude-code_github__create_pull_request_review",
+    "mcp__42cc8679-f477-4f07-b673-602dcd34db9c__get_advisors",
+    "mcp__42cc8679-f477-4f07-b673-602dcd34db9c__search_docs",
+  ]
 model: sonnet
 ---
 

@@ -4,7 +4,17 @@ description:
   Documentation and codemap specialist for Rizqi. Updates READMEs, codemaps, and
   guides to match current codebase state. Use PROACTIVELY after major features
   or architecture changes.
-tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob"]
+tools:
+  [
+    "Read",
+    "Write",
+    "Edit",
+    "Bash",
+    "Grep",
+    "Glob",
+    "mcp__plugin_everything-claude-code_github__get_file_contents",
+    "mcp__plugin_everything-claude-code_github__list_commits",
+  ]
 model: haiku
 ---
 

@@ -4,7 +4,31 @@ description:
   Database specialist for Rizqi's dual-database architecture (WatermelonDB +
   Supabase PostgreSQL). Use PROACTIVELY when writing migrations, designing
   schemas, or troubleshooting sync issues.
-tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob"]
+tools:
+  [
+    "Read",
+    "Write",
+    "Edit",
+    "Bash",
+    "Grep",
+    "Glob",
+    "mcp__plugin_everything-claude-code_context7__resolve-library-id",
+    "mcp__plugin_everything-claude-code_context7__query-docs",
+    "mcp__42cc8679-f477-4f07-b673-602dcd34db9c__list_tables",
+    "mcp__42cc8679-f477-4f07-b673-602dcd34db9c__list_migrations",
+    "mcp__42cc8679-f477-4f07-b673-602dcd34db9c__list_extensions",
+    "mcp__42cc8679-f477-4f07-b673-602dcd34db9c__get_advisors",
+    "mcp__42cc8679-f477-4f07-b673-602dcd34db9c__generate_typescript_types",
+    "mcp__42cc8679-f477-4f07-b673-602dcd34db9c__search_docs",
+    "mcp__42cc8679-f477-4f07-b673-602dcd34db9c__list_branches",
+    "mcp__42cc8679-f477-4f07-b673-602dcd34db9c__execute_sql",
+    "mcp__42cc8679-f477-4f07-b673-602dcd34db9c__get_logs",
+    "mcp__plugin_everything-claude-code_github__get_pull_request",
+    "mcp__plugin_everything-claude-code_github__get_pull_request_files",
+    "mcp__plugin_everything-claude-code_github__get_pull_request_comments",
+    "mcp__plugin_everything-claude-code_github__add_issue_comment",
+    "mcp__plugin_everything-claude-code_github__create_pull_request_review",
+  ]
 model: sonnet
 ---
 

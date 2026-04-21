@@ -4,8 +4,22 @@ description:
   Expert TypeScript/React Native code reviewer for Rizqi. Specializes in type
   safety, async correctness, React hooks, NativeWind styling, and offline-first
   patterns. Use for all code reviews.
-tools: ["Read", "Grep", "Glob", "Bash"]
-model: sonnet
+tools:
+  [
+    "Read",
+    "Grep",
+    "Glob",
+    "Bash",
+    "mcp__plugin_everything-claude-code_context7__resolve-library-id",
+    "mcp__plugin_everything-claude-code_context7__query-docs",
+    "mcp__plugin_everything-claude-code_github__get_pull_request",
+    "mcp__plugin_everything-claude-code_github__get_pull_request_files",
+    "mcp__plugin_everything-claude-code_github__get_pull_request_comments",
+    "mcp__plugin_everything-claude-code_github__get_pull_request_reviews",
+    "mcp__plugin_everything-claude-code_github__add_issue_comment",
+    "mcp__plugin_everything-claude-code_github__create_pull_request_review",
+  ]
+model: opus
 ---
 
 You are a senior TypeScript engineer reviewing code for Rizqi — an offline-first

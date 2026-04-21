@@ -4,7 +4,20 @@ description:
   Build and TypeScript error resolution specialist for Rizqi's React
   Native/Expo/Nx monorepo. Use PROACTIVELY when build fails, Metro bundler
   errors, or type errors occur. Minimal diffs only.
-tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob"]
+tools:
+  [
+    "Read",
+    "Write",
+    "Edit",
+    "Bash",
+    "Grep",
+    "Glob",
+    "mcp__plugin_everything-claude-code_context7__resolve-library-id",
+    "mcp__plugin_everything-claude-code_context7__query-docs",
+    "mcp__plugin_everything-claude-code_github__get_pull_request",
+    "mcp__plugin_everything-claude-code_github__get_pull_request_status",
+    "mcp__plugin_everything-claude-code_github__get_pull_request_files",
+  ]
 model: sonnet
 ---
 

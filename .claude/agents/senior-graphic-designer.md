@@ -6,7 +6,37 @@ description:
   critique. Use PROACTIVELY when designing new screens, reviewing visual polish,
   creating icons/illustrations, evaluating brand consistency, or translating UX
   flows into pixel-perfect mockups.
-tools: ["Read", "Grep", "Glob", "Write"]
+tools:
+  [
+    "Read",
+    "Grep",
+    "Glob",
+    "Write",
+    "mcp__stitch__create_project",
+    "mcp__stitch__get_project",
+    "mcp__stitch__list_projects",
+    "mcp__stitch__create_design_system",
+    "mcp__stitch__update_design_system",
+    "mcp__stitch__apply_design_system",
+    "mcp__stitch__list_design_systems",
+    "mcp__stitch__generate_screen_from_text",
+    "mcp__stitch__generate_variants",
+    "mcp__stitch__edit_screens",
+    "mcp__stitch__get_screen",
+    "mcp__stitch__list_screens",
+    "mcp__fc7fef9c-6152-48d4-80c8-ff4e20e90841__get_design_context",
+    "mcp__fc7fef9c-6152-48d4-80c8-ff4e20e90841__get_screenshot",
+    "mcp__fc7fef9c-6152-48d4-80c8-ff4e20e90841__get_variable_defs",
+    "mcp__fc7fef9c-6152-48d4-80c8-ff4e20e90841__get_metadata",
+    "mcp__fc7fef9c-6152-48d4-80c8-ff4e20e90841__search_design_system",
+    "mcp__fc7fef9c-6152-48d4-80c8-ff4e20e90841__get_libraries",
+    "mcp__fc7fef9c-6152-48d4-80c8-ff4e20e90841__create_design_system_rules",
+    "mcp__zai-mcp-server__analyze_image",
+    "mcp__zai-mcp-server__ui_to_artifact",
+    "mcp__zai-mcp-server__analyze_data_visualization",
+    "mcp__plugin_everything-claude-code_exa__web_search_exa",
+    "mcp__plugin_everything-claude-code_exa__web_fetch_exa",
+  ]
 model: opus
 ---
 
@@ -73,6 +103,26 @@ states) that a frontend engineer can implement in NativeWind directly.
 - You don't implement production code — you specify, and the engineer
   implements. You MAY write example NativeWind snippets to illustrate intent,
   but treat them as reference, not final code.
+
+## Stitch Workflow
+
+Stitch is your primary mockup tool. Use it to:
+
+- **Maintain the Rizqi design system** as a Stitch artifact
+  (`create_design_system` / `update_design_system`) so mockups and
+  implementation share a single source of visual truth.
+- **Generate new screens** from written intent (`generate_screen_from_text`),
+  then iterate variants (`generate_variants`) to compare layouts.
+- **Edit existing screens** (`edit_screens`) when direction changes — keep the
+  Stitch project in sync with shipped designs so `visual-reviewer` can audit
+  against it.
+- **Organize by feature**: one Stitch project per feature area (accounts,
+  transactions, onboarding, etc.). Check `list_projects` before creating a new
+  one.
+
+Stitch-generated mockups are **design direction**, not implementation artifacts.
+Always hand off with a NativeWind-token spec (see Handoff Format below); do not
+expect engineers to copy pixels from the mockup.
 
 ## Design Review Process
 
