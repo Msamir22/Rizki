@@ -71,6 +71,25 @@ jest.mock("@/utils/logger", () => ({
   logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
 }));
 
+// `app/index.tsx` (feature 026) pulls `useAuth` + `useIntroSeen` into the gate.
+// Both transitively import `services/supabase.ts`, which throws at module load
+// when `EXPO_PUBLIC_SUPABASE_*` env vars are absent (CI does not ship the
+// committed `.env` through `npm ci`). Mock these hooks directly so the gate is
+// testable in isolation without spinning up a Supabase client.
+jest.mock("@/context/AuthContext", () => ({
+  useAuth: (): unknown => ({
+    isAuthenticated: true,
+    isLoading: false,
+  }),
+}));
+
+jest.mock("@/hooks/useIntroSeen", () => ({
+  useIntroSeen: (): unknown => ({
+    isSeen: true,
+    isLoading: false,
+  }),
+}));
+
 // RetrySyncScreen pulled in via the gate — stub that forwards the two
 // callbacks onto the node's `onRetry` / `onSignOut` props so tests can
 // invoke them via renderer lookup.
