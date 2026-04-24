@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { useFocusEffect, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -19,7 +20,7 @@ import { confirmCurrencyAndOnboard } from "@/services/profile-service";
 import { detectCurrencyFromTimezone } from "@/utils/currency-detection";
 import { logger } from "@/utils/logger";
 import type { CurrencyType } from "@rizqi/db";
-import { CurrencyInfo, SUPPORTED_CURRENCIES } from "@rizqi/logic";
+import { SUPPORTED_CURRENCIES, type CurrencyInfo } from "@rizqi/logic";
 import { LanguageSwitcherPill } from "./LanguageSwitcherPill";
 
 const CURRENCY_ITEM_HEIGHT = 80;
@@ -30,7 +31,17 @@ interface CurrencyItemProps {
   readonly isSuggested: boolean;
   readonly onSelect: (code: CurrencyType) => void;
   readonly tSuggested: string;
+  readonly isDark: boolean;
 }
+
+// NativeWind v4 known bug (.claude/rules/android-modal-overlay-pattern.md):
+// `bg-color/opacity` classes on `TouchableOpacity` / `Pressable` trigger a
+// render-loop crash. Apply tinted backgrounds via inline `style` and keep
+// border / radius / layout concerns on `className`.
+const ROW_BG_LIGHT_SELECTED = "rgba(16, 185, 129, 0.05)"; // nileGreen tint
+const ROW_BG_DARK_SELECTED = "rgba(16, 185, 129, 0.10)";
+const ROW_BG_LIGHT_DEFAULT = "rgba(0, 0, 0, 0.03)";
+const ROW_BG_DARK_DEFAULT = "rgba(255, 255, 255, 0.05)";
 
 function CurrencyItemRow({
   item,
@@ -38,14 +49,24 @@ function CurrencyItemRow({
   isSuggested,
   onSelect,
   tSuggested,
+  isDark,
 }: CurrencyItemProps): React.ReactElement {
+  const backgroundColor = isSelected
+    ? isDark
+      ? ROW_BG_DARK_SELECTED
+      : ROW_BG_LIGHT_SELECTED
+    : isDark
+      ? ROW_BG_DARK_DEFAULT
+      : ROW_BG_LIGHT_DEFAULT;
+
   return (
     <TouchableOpacity
       onPress={(): void => onSelect(item.code)}
+      style={{ backgroundColor }}
       className={`flex-row items-center py-4 px-4 mx-4 rounded-xl mb-2 ${
         isSelected
-          ? "border-2 border-nileGreen-500 bg-emerald-500/[0.05] dark:bg-emerald-500/10"
-          : "border border-transparent bg-black/[0.03] dark:bg-white/5"
+          ? "border-2 border-nileGreen-500"
+          : "border border-transparent"
       }`}
       activeOpacity={0.7}
     >
@@ -92,6 +113,7 @@ export function CurrencyStep(): React.ReactElement {
   const { showToast } = useToast();
   const { t } = useTranslation("onboarding");
   const { t: tCommon } = useTranslation("common");
+  const insets = useSafeAreaInsets();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isConfirming, setIsConfirming] = useState(false);
@@ -134,7 +156,11 @@ export function CurrencyStep(): React.ReactElement {
           markFirstRunPending();
         },
       });
+      // Success path: navigate and return WITHOUT flipping `isConfirming`
+      // back. `router.replace` unmounts this screen; setting state after
+      // unmount is wasted work at best and a React warning at worst.
       router.replace("/(tabs)");
+      return;
     } catch (error: unknown) {
       logger.warn(
         "currencyStep.confirm.failed",
@@ -145,7 +171,7 @@ export function CurrencyStep(): React.ReactElement {
         title: tCommon("error"),
         message: t("currency_step_error_generic"),
       });
-    } finally {
+      // Only re-enable the button on the error path — we stay on this screen.
       setIsConfirming(false);
     }
   }, [
@@ -180,8 +206,11 @@ export function CurrencyStep(): React.ReactElement {
 
   return (
     <View className="flex-1 bg-background dark:bg-background-dark">
-      {/* Top bar */}
-      <View className="flex-row items-center justify-between px-6 pt-14">
+      {/* Top bar — inset-aware safe-area padding (FR-036 / landscape + notch). */}
+      <View
+        className="flex-row items-center justify-between px-6"
+        style={{ paddingTop: insets.top + 8 }}
+      >
         <LanguageSwitcherPill />
         <TouchableOpacity onPress={handleSignOut} hitSlop={12}>
           <Text className="text-sm font-medium text-slate-500 dark:text-slate-400">
@@ -234,6 +263,7 @@ export function CurrencyStep(): React.ReactElement {
             }
             onSelect={setSelectedCode}
             tSuggested={t("suggested")}
+            isDark={isDark}
           />
         )}
         keyExtractor={(item): string => item.code}
@@ -247,8 +277,8 @@ export function CurrencyStep(): React.ReactElement {
         keyboardShouldPersistTaps="handled"
       />
 
-      {/* Confirm button */}
-      <View className="px-6 pb-8">
+      {/* Confirm button — inset-aware safe-area padding. */}
+      <View className="px-6" style={{ paddingBottom: insets.bottom + 16 }}>
         <TouchableOpacity
           onPress={() => {
             void handleConfirm();

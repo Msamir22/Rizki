@@ -14,6 +14,7 @@
  */
 
 import { detectCurrencyFromTimezone } from "@/utils/currency-detection";
+import { logger } from "@/utils/logger";
 import { Account, type CurrencyType, database } from "@rizqi/db";
 import { Q } from "@nozbe/watermelondb";
 
@@ -145,7 +146,7 @@ export async function ensureCashAccount(
       error instanceof Error
         ? error.message
         : "Unknown error creating Cash account";
-    console.error("ensureCashAccount failed:", message);
+    logger.error("ensureCashAccount failed", { message });
     return { created: false, accountId: null, error: message };
   }
 }
@@ -179,8 +180,11 @@ export async function findCashAccount(userId: string): Promise<string | null> {
       .fetch();
 
     return existing.length > 0 ? existing[0].id : null;
-  } catch (error) {
-    console.error("findCashAccount failed:", error);
+  } catch (error: unknown) {
+    logger.error(
+      "findCashAccount failed",
+      error instanceof Error ? { message: error.message } : { error }
+    );
     return null;
   }
 }

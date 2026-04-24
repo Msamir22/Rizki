@@ -37,21 +37,17 @@ const mockFirstRunCtx = {
   markFirstRunConsumed: jest.fn(),
 };
 
-const mockSmsSync = {
-  shouldShowPrompt: false,
-};
-
 const mockFlags: {
   cash_account_tooltip_dismissed?: boolean;
   voice_tooltip_seen?: boolean;
 } = {};
 
+// `isSmsPromptVisible` is now a prop (not a hook instantiation inside the
+// component), so we hold it in a closure var the tests can flip.
+let mockIsSmsPromptVisible = false;
+
 jest.mock("@/context/FirstRunTooltipContext", () => ({
   useFirstRunTooltip: () => mockFirstRunCtx,
-}));
-
-jest.mock("@/hooks/useSmsSync", () => ({
-  useSmsSync: () => mockSmsSync,
 }));
 
 jest.mock("@/hooks/useOnboardingFlags", () => ({
@@ -89,20 +85,27 @@ import { CashAccountTooltip } from "@/components/dashboard/CashAccountTooltip";
 // Helpers
 // =============================================================================
 
-function resetCtx(
-  overrides: Partial<
-    typeof mockFirstRunCtx & typeof mockSmsSync & typeof mockFlags
-  >
-): void {
+interface Overrides {
+  isFirstRunPending?: boolean;
+  shouldShowPrompt?: boolean;
+  cash_account_tooltip_dismissed?: boolean;
+}
+
+function resetCtx(overrides: Overrides): void {
   mockFirstRunCtx.isFirstRunPending = overrides.isFirstRunPending ?? false;
-  mockSmsSync.shouldShowPrompt = overrides.shouldShowPrompt ?? false;
+  mockIsSmsPromptVisible = overrides.shouldShowPrompt ?? false;
   mockFlags.cash_account_tooltip_dismissed =
     overrides.cash_account_tooltip_dismissed ?? undefined;
 }
 
 function renderTooltip(): ReactTestRendererInstance {
   const anchorRef = createRef<View>();
-  return RTR.create(React.createElement(CashAccountTooltip, { anchorRef }));
+  return RTR.create(
+    React.createElement(CashAccountTooltip, {
+      anchorRef,
+      isSmsPromptVisible: mockIsSmsPromptVisible,
+    })
+  );
 }
 
 // =============================================================================
@@ -121,7 +124,7 @@ describe("CashAccountTooltip", () => {
     expect(r.toJSON()).toBeNull();
   });
 
-  it("renders null when SMS prompt is visible (gating by shouldShowPrompt)", () => {
+  it("renders null when SMS prompt is visible (gating by isSmsPromptVisible prop)", () => {
     resetCtx({ isFirstRunPending: true, shouldShowPrompt: true });
     const r = renderTooltip();
     expect(r.toJSON()).toBeNull();

@@ -19,6 +19,7 @@ import {
   database,
 } from "@rizqi/db";
 import { Q } from "@nozbe/watermelondb";
+import { SUPPORTED_CURRENCIES } from "@rizqi/logic";
 import {
   changeLanguage,
   getCurrentLanguage,
@@ -32,6 +33,16 @@ import { clearOnboardingStep } from "@/services/onboarding-cursor-service";
 import { getCurrentUserId } from "@/services/supabase";
 import { logger } from "@/utils/logger";
 import { t } from "i18next";
+
+/**
+ * Runtime-visible set of supported currency codes. Used to guard the
+ * entry to `confirmCurrencyAndOnboard` against an invalid value reaching
+ * the atomic write — compile-time `CurrencyType` is insufficient for any
+ * path that originates outside the app (deep-links, future API endpoints).
+ */
+const SUPPORTED_CURRENCY_CODES: ReadonlySet<CurrencyType> = new Set(
+  SUPPORTED_CURRENCIES.map((c) => c.code)
+);
 
 // =============================================================================
 // Helpers
@@ -190,19 +201,47 @@ export async function completeOnboarding(): Promise<void> {
 }
 
 /**
+ * Flip the setup-guide-dismissed flag on the user's profile.
+ *
+ * Service-layer wrapper so hooks and components never `database.write()`
+ * directly. The write is idempotent — calling this for an already-dismissed
+ * profile is a no-op at the DB level (observer re-emit only).
+ */
+export async function setSetupGuideCompleted(
+  completed: boolean
+): Promise<void> {
+  const profile = await getProfile();
+  if (profile.setupGuideCompleted === completed) {
+    return;
+  }
+  await database.write(async () => {
+    await profile.update((p) => {
+      p.setupGuideCompleted = completed;
+    });
+  });
+}
+
+/**
  * Set a single onboarding flag on the user's profile.
  *
- * Merges the new value into the existing `onboardingFlags` object and
- * persists the result as a JSON string in `onboardingFlagsRaw`.
+ * Atomicity: reads `profile.onboardingFlags` INSIDE the writer. Reading
+ * outside the writer (and relying on a captured snapshot) is a TOCTOU
+ * hazard — two concurrent callers starting from the same snapshot would
+ * both merge against stale JSON, and the second commit would silently
+ * drop the first caller's key.
+ *
+ * WatermelonDB serializes `database.write()` calls, so the `onboardingFlags`
+ * getter inside the writer is guaranteed to reflect any prior committed
+ * mutation on this row.
  */
 export async function setOnboardingFlag<K extends keyof OnboardingFlags>(
   flagKey: K,
   value: NonNullable<OnboardingFlags[K]>
 ): Promise<void> {
   const profile = await getProfile();
-  const current = profile.onboardingFlags;
-  const next = { ...current, [flagKey]: value };
   await database.write(async () => {
+    const current = profile.onboardingFlags;
+    const next = { ...current, [flagKey]: value };
     await profile.update((p) => {
       p.onboardingFlagsRaw = JSON.stringify(next);
     });
@@ -232,6 +271,18 @@ export async function confirmCurrencyAndOnboard(
     readonly onTransactionCommitted?: () => void;
   }
 ): Promise<{ readonly accountId: string }> {
+  // Runtime boundary guard — `CurrencyType` is compile-time only, and any
+  // future caller (deep-link, API endpoint, plugin) could feed an
+  // unsupported value. Rejecting before the write prevents a partial
+  // local-DB state that Supabase's enum constraint would later reject.
+  if (!SUPPORTED_CURRENCY_CODES.has(currency)) {
+    throw new Error(
+      `confirmCurrencyAndOnboard: unsupported currency code "${String(
+        currency
+      )}"`
+    );
+  }
+
   const profile = await getProfile();
   const userId = profile.userId;
   const language: SupportedLanguage = getCurrentLanguage();

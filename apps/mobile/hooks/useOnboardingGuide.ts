@@ -28,7 +28,10 @@ import { Q } from "@nozbe/watermelondb";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Platform } from "react-native";
 import { useOnboardingFlags } from "@/hooks/useOnboardingFlags";
-import { setOnboardingFlag } from "@/services/profile-service";
+import {
+  setOnboardingFlag,
+  setSetupGuideCompleted as persistSetupGuideCompleted,
+} from "@/services/profile-service";
 import { openVoiceEntry } from "@/services/voice-entry-service";
 
 // ---------------------------------------------------------------------------
@@ -255,15 +258,22 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
 
   const isAllComplete = completedCount === steps.length;
 
-  // Auto-dismiss when all steps complete
+  // Auto-dismiss when all steps complete. Delegates to the service layer so
+  // no `database.write()` lives inside a hook (Constitution IV / CLAUDE.md).
   useEffect(() => {
-    if (isAllComplete && profile && !profile.setupGuideCompleted) {
-      void database.write(async () => {
-        await profile.update((record) => {
-          record.setupGuideCompleted = true;
-        });
-      });
-    }
+    if (!isAllComplete || !profile || profile.setupGuideCompleted) return;
+
+    const run = async (): Promise<void> => {
+      try {
+        await persistSetupGuideCompleted(true);
+      } catch (error: unknown) {
+        logger.warn(
+          "onboarding.autoDismiss.failed",
+          error instanceof Error ? { message: error.message } : { error }
+        );
+      }
+    };
+    void run();
   }, [isAllComplete, profile]);
 
   const dismiss = useCallback(async (): Promise<void> => {
@@ -271,11 +281,7 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
       logger.warn("Cannot dismiss setup guide: profile not loaded");
       return;
     }
-    await database.write(async () => {
-      await profile.update((record) => {
-        record.setupGuideCompleted = true;
-      });
-    });
+    await persistSetupGuideCompleted(true);
   }, [profile]);
 
   // ── Mic tooltip state machine ──
@@ -288,26 +294,46 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
     }
   }, [voiceTooltipSeen]);
 
-  const markVoiceTooltipSeen = useCallback((): void => {
-    // Persist to profile flags — this is the durable source of truth that
-    // `voiceTooltipSeen` observes on subsequent mounts.
-    setOnboardingFlag("voice_tooltip_seen", true).catch((error: unknown) => {
-      logger.warn(
-        "onboarding.voiceTooltip.setFlag.failed",
-        error instanceof Error ? { message: error.message } : { error }
-      );
-    });
-  }, []);
+  /**
+   * Persist the voice-tooltip-seen flag, then hide the tooltip on success.
+   *
+   * Contract: local "is tooltip visible" state is flipped only AFTER the
+   * write resolves. If the write fails we keep the tooltip visible and log
+   * the failure — otherwise local state says "seen" while the DB flag stays
+   * false, and the next app launch would re-show the tooltip in violation
+   * of FR-024a ("any dismissal counts as seen forever").
+   *
+   * `afterSuccess` is invoked only on a successful write (e.g. "Try it now"
+   * uses it to open the voice flow; X uses it to just hide).
+   */
+  const markVoiceTooltipSeen = useCallback(
+    async (afterSuccess?: () => void): Promise<void> => {
+      try {
+        await setOnboardingFlag("voice_tooltip_seen", true);
+        setIsMicTooltipVisible(false);
+        afterSuccess?.();
+      } catch (error: unknown) {
+        logger.warn(
+          "onboarding.voiceTooltip.setFlag.failed",
+          error instanceof Error ? { message: error.message } : { error }
+        );
+        // Keep the tooltip visible so the user can retry and the state
+        // machine never drifts from the persisted flag.
+      }
+    },
+    []
+  );
 
   const onMicTooltipTryItNow = useCallback((): void => {
-    setIsMicTooltipVisible(false);
-    markVoiceTooltipSeen();
-    openVoiceEntry();
+    // Persist flag first; open voice only after the flag actually commits.
+    void markVoiceTooltipSeen(openVoiceEntry);
   }, [markVoiceTooltipSeen]);
 
   const onMicTooltipClose = useCallback((): void => {
-    setIsMicTooltipVisible(false);
-    markVoiceTooltipSeen();
+    // Hide via the same persisted-flag path — don't optimistically flip local
+    // state and drop the write. If the write fails, the tooltip remains
+    // visible so the user can retry (see `markVoiceTooltipSeen`).
+    void markVoiceTooltipSeen();
   }, [markVoiceTooltipSeen]);
 
   return {

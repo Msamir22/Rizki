@@ -11,7 +11,10 @@ import { useAccounts } from "@/hooks/useAccounts";
 import { useCategories } from "@/hooks/useCategories";
 import { usePreferredCurrency } from "@/hooks/usePreferredCurrency";
 import { useVoiceTransactionFlow } from "@/hooks/useVoiceTransactionFlow";
-import { registerVoiceEntry } from "@/services/voice-entry-service";
+import {
+  registerVoiceEntry,
+  unregisterVoiceEntry,
+} from "@/services/voice-entry-service";
 import { buildCategoryTree } from "@rizqi/logic";
 import { Tabs, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useMemo } from "react";
@@ -62,9 +65,14 @@ function TabLayoutInner(): React.ReactElement {
   });
 
   // Register the voice entry handler so the onboarding guide's mic tooltip
-  // can trigger the voice flow via openVoiceEntry().
+  // can trigger the voice flow via openVoiceEntry(). Unregister on unmount
+  // so a stale closure is never retained across tab-layout remounts (logout
+  // → re-login, hot reload, future multi-window architecture).
   useEffect(() => {
     registerVoiceEntry(voiceFlow.startFlow);
+    return (): void => {
+      unregisterVoiceEntry();
+    };
   }, [voiceFlow.startFlow]);
 
   return (

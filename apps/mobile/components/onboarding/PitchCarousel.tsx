@@ -35,13 +35,22 @@ export function PitchCarousel(): React.ReactElement {
   const carouselRef = useRef<ICarouselInstance>(null);
   const totalSlides = SLIDES.length;
 
+  /**
+   * Skip / Get-Started handler.
+   *
+   * Navigation MUST always run — even if `markIntroSeen` rejects. The flag is
+   * a best-effort AsyncStorage write (the service already logs + swallows
+   * internally), and blocking navigation on the write would leave the user
+   * stuck on the pitch with a frozen CTA if a transient storage error
+   * happened to occur right at this moment.
+   */
   const handleComplete = useCallback(async (): Promise<void> => {
     try {
       await markIntroSeen();
-      router.push("/auth");
     } catch (error: unknown) {
       logger.error("pitch: failed to mark intro seen", error);
     }
+    router.push("/auth");
   }, [router]);
 
   const goToSlide = useCallback((index: number): void => {

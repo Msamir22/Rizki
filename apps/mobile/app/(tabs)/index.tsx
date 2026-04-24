@@ -261,7 +261,10 @@ export default function DashboardScreen(): React.JSX.Element {
         onDismiss={handleSmsDismiss}
         requestPermission={requestPermission}
       />
-      <CashAccountTooltip anchorRef={cashAccountRef} />
+      <CashAccountTooltip
+        anchorRef={cashAccountRef}
+        isSmsPromptVisible={shouldShowPrompt}
+      />
     </StarryBackground>
   );
 }

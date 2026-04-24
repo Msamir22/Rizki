@@ -11,6 +11,12 @@
  * Architecture: Service Layer (Constitution IV) — plain async functions,
  * no React, no hooks.
  *
+ * Error policy: every read returns a safe default (`false` / `null`) when
+ * AsyncStorage rejects, every write logs + swallows. Callers that need to
+ * surface a write failure can wrap in their own try/catch; the defaults
+ * here exist so the pitch / language-switcher code paths never latch
+ * `isLoading=true` forever on a transient storage hiccup.
+ *
  * @module intro-flag-service
  */
 
@@ -35,6 +41,15 @@ const VALID_LOCALES: ReadonlySet<IntroLocale> = new Set<IntroLocale>([
 ]);
 
 // =============================================================================
+// Internal helpers
+// =============================================================================
+
+/** Convert the `unknown` caught value into a logger-ready payload. */
+function errorPayload(error: unknown): Record<string, unknown> {
+  return error instanceof Error ? { message: error.message } : { error };
+}
+
+// =============================================================================
 // Public API
 // =============================================================================
 
@@ -49,40 +64,65 @@ export async function readIntroSeen(): Promise<boolean> {
     const value = await AsyncStorage.getItem(INTRO_SEEN_KEY);
     return value === "true";
   } catch (error: unknown) {
-    if (error instanceof Error) {
-      logger.warn("[intro-flag] Failed to read intro-seen flag", {
-        message: error.message,
-      });
-    }
+    logger.warn(
+      "[intro-flag] Failed to read intro-seen flag",
+      errorPayload(error)
+    );
     return false;
   }
 }
 
 /**
  * Persist the intro-seen flag. Idempotent — writing `"true"` when already
- * present is a no-op at the storage layer.
+ * present is a no-op at the storage layer. Best-effort: a write failure is
+ * logged but not rethrown, so the pitch-completion code path is never
+ * blocked by a transient storage error.
  */
 export async function markIntroSeen(): Promise<void> {
-  await AsyncStorage.setItem(INTRO_SEEN_KEY, "true");
+  try {
+    await AsyncStorage.setItem(INTRO_SEEN_KEY, "true");
+  } catch (error: unknown) {
+    logger.warn(
+      "[intro-flag] Failed to write intro-seen flag",
+      errorPayload(error)
+    );
+  }
 }
 
 /**
  * Read the locale override chosen on a pre-auth surface.
  *
  * Returns the stored locale if it is a valid `"en"` | `"ar"` value, or
- * `null` when absent / invalid. Callers treat `null` as "use system locale".
+ * `null` when absent / invalid / on storage error. Callers treat `null`
+ * as "use system locale".
  */
 export async function readIntroLocaleOverride(): Promise<IntroLocale | null> {
-  const raw = await AsyncStorage.getItem(INTRO_LOCALE_OVERRIDE_KEY);
-  if (raw === null) return null;
-  return VALID_LOCALES.has(raw as IntroLocale) ? (raw as IntroLocale) : null;
+  try {
+    const raw = await AsyncStorage.getItem(INTRO_LOCALE_OVERRIDE_KEY);
+    if (raw === null) return null;
+    return VALID_LOCALES.has(raw as IntroLocale) ? (raw as IntroLocale) : null;
+  } catch (error: unknown) {
+    logger.warn(
+      "[intro-flag] Failed to read intro-locale-override",
+      errorPayload(error)
+    );
+    return null;
+  }
 }
 
 /**
  * Persist the locale override. Device-scoped — survives logout (FR-030).
  * There is intentionally no `clearIntroLocaleOverride` export; the override
- * persists forever.
+ * persists forever. Best-effort: a write failure is logged but not
+ * rethrown, so the language-switch UI interaction is never blocked.
  */
 export async function setIntroLocaleOverride(lang: IntroLocale): Promise<void> {
-  await AsyncStorage.setItem(INTRO_LOCALE_OVERRIDE_KEY, lang);
+  try {
+    await AsyncStorage.setItem(INTRO_LOCALE_OVERRIDE_KEY, lang);
+  } catch (error: unknown) {
+    logger.warn(
+      "[intro-flag] Failed to write intro-locale-override",
+      errorPayload(error)
+    );
+  }
 }

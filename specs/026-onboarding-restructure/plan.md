@@ -357,14 +357,19 @@ mobile-DB feature.
 ### Phase 1 outputs (resolved in `data-model.md`, `contracts/*`, `quickstart.md`)
 
 - Data model: profiles.onboarding_flags schema, AsyncStorage key shapes,
-  `OnboardingFlags` TS type, routing-gate input shape change.
+  `OnboardingFlags` TS type. Routing-gate input shape is UNCHANGED — see
+  decision #2 in the Implementation Strategy above.
 - Contracts: service function signatures (`confirmCurrencyAndOnboard`,
-  `setOnboardingFlag`, `markIntroSeen`, `setIntroLocaleOverride`), i18n key
-  namespaces, JSON shapes for `onboarding_flags`.
+  `setOnboardingFlag`, `setSetupGuideCompleted`, `markIntroSeen`,
+  `readIntroLocaleOverride`, `setIntroLocaleOverride`), i18n key namespaces,
+  JSON shapes for `onboarding_flags`.
 - Quickstart: step-by-step bootstrap for an implementer — migration first,
-  regenerate schema, update routing-decision, rewire onboarding.tsx, rewrite
-  FormView, update OnboardingGuideCard, wire up tooltip queue, test in light +
-  dark + Android + iOS.
+  regenerate schema, leave `routing-decision` UNCHANGED (per research §10),
+  rewire `onboarding.tsx` to single Currency step, rewrite `FormView`, update
+  `OnboardingGuideCard` and `useOnboardingGuide`, add the independent
+  `CashAccountTooltip` + `MicButtonTooltip` components (NOT a shared queue — SMS
+  prompt stays on its existing render path), test in light + dark + Android +
+  iOS.
 
 ## Testing Strategy
 

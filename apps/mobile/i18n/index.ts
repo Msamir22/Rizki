@@ -1,10 +1,9 @@
 import i18next, { type InitOptions, type Resource } from "i18next";
 import { initReactI18next } from "react-i18next";
 import * as Localization from "expo-localization";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { validateTranslationResources } from "./translation-schemas";
-import { INTRO_LOCALE_OVERRIDE_KEY } from "@/constants/storage-keys";
+import { readIntroLocaleOverride } from "@/services/intro-flag-service";
 
 // Import translation files
 import enCommon from "../locales/en/common.json";
@@ -65,19 +64,21 @@ const resources: Resource = {
 };
 
 /**
- * Detect the initial language from AsyncStorage override, then device locale.
+ * Detect the initial language for i18next.
  *
  * Priority:
- * 1. Device-scoped override (set by LanguageSwitcherPill) stored in
- *    AsyncStorage under INTRO_LOCALE_OVERRIDE_KEY.
- * 2. Device locale from expo-localization.
+ * 1. Device-scoped override (set by `LanguageSwitcherPill` on any pre-auth
+ *    surface) — read via `readIntroLocaleOverride()` so error handling and
+ *    the `"en" | "ar"` validation live in a single source of truth.
+ * 2. Device locale from `expo-localization`.
  * 3. English fallback.
+ *
+ * A null override (absent or storage error) transparently falls through to
+ * the device locale — the hook / service layer swallows and logs the error.
  */
 async function detectInitialLanguage(): Promise<"en" | "ar"> {
-  // 1. Device-scoped override (set by LanguageSwitcherPill)
-  const override = await AsyncStorage.getItem(INTRO_LOCALE_OVERRIDE_KEY);
-  if (override === "en" || override === "ar") return override;
-  // 2. Device locale
+  const override = await readIntroLocaleOverride();
+  if (override !== null) return override;
   const deviceLanguage = Localization.getLocales()[0]?.languageCode ?? "en";
   return deviceLanguage === "ar" ? "ar" : "en";
 }

@@ -491,21 +491,28 @@ semantics).
 
 ### Tests
 
-- [x] T067 [P] [US4] Update
-      `apps/mobile/__tests__/hooks/useOnboardingGuide.test.ts`: 4 steps on
-      Android + 3 on iOS; voice completion requires `source === "VOICE"` (not
-      any transaction); action-button state machine transitions (first tap →
-      tooltip; subsequent tap → voice); tooltip exits both set
-      `voice_tooltip_seen = true`
+- [ ] T067 [P] [US4] **DEFERRED to a follow-up test-coverage PR.** Update
+      `apps/mobile/__tests__/hooks/useOnboardingGuide.test.ts` to cover: 4 steps
+      on Android + 3 on iOS; voice completion requires `source === "VOICE"`;
+      action-button state machine transitions (first tap → tooltip; subsequent
+      tap → voice); tooltip exits both set `voice_tooltip_seen = true`. The
+      runtime behavior is exercised by the existing
+      `CashAccountTooltip.test.tsx` + `MicButtonTooltip.test.tsx` +
+      `profile-service.test.ts` `setOnboardingFlag` cases in this PR, but the
+      hook-level state-machine test is missing and should be added under its own
+      ticket.
 - [x] T068 [P] [US4] Component test
       `apps/mobile/__tests__/components/dashboard/MicButtonTooltip.test.tsx` —
       visible only when `visible === true`; "Try it now" fires `onTryItNow`; X
       fires `onClose`; hardware-back fires `onClose` (not `onTryItNow`)
-- [x] T069 [P] [US4] Component test
+- [ ] T069 [P] [US4] **DEFERRED to a follow-up test-coverage PR.** Component
+      test
       `apps/mobile/__tests__/components/dashboard/OnboardingGuideCard.test.tsx`
       — 4 rows Android / 3 rows iOS; progress pill math correct; NEW badge
       present on voice step row; completed steps have no action button; tapping
-      tab-bar mic directly does NOT render `MicButtonTooltip` (FR-024b)
+      tab-bar mic directly does NOT render `MicButtonTooltip` (FR-024b). The
+      hook-level tests in T067 cover most of the state; the card render-level
+      test is additional safety that can ship separately.
 
 **Checkpoint**: Setup Guide card shows 4 steps, derives completion from data,
 and mic tooltip educates voice step exactly once per profile. Commit:

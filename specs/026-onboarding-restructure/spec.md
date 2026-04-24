@@ -335,20 +335,27 @@ Guide card.
   (local session cleared); the user sees the pre-auth state; remote session
   revocation can occur later when connectivity resumes.
 - **Rapid taps or multiple open prompts**: Only one first-run tooltip is visible
-  at a time. The first-run sequence is queued in order (SMS prompt →
-  cash-account tooltip).
-- **Force-quit during first-run tooltip sequence**: If the user dismisses the
-  SMS prompt but force-quits before the cash-account tooltip appears, the
-  cash-account tooltip appears on the next dashboard entry for that profile.
+  at a time. The SMS permission prompt (rendered by the existing `useSmsSync`
+  path) and the new cash-account tooltip are NOT a managed queue — the
+  cash-account tooltip self-gates on `!shouldShowPrompt` so it only appears once
+  the SMS prompt has been dismissed.
+- **Force-quit during first-run tooltip sequence**: The cash-account tooltip is
+  scoped to the session that immediately follows a successful Currency-step
+  confirmation (via the in-memory `FirstRunTooltipContext.isFirstRunPending`
+  signal — per FR-020). If the user force-quits between dismissing the SMS
+  prompt and seeing the cash-account tooltip, the cash-account tooltip is lost
+  for that user — acceptable per FR-020 since they are already onboarded and the
+  tooltip is educational, not functional.
 - **Setup Guide card SMS step on iOS**: Hidden entirely on iOS (SMS auto-import
   is not available there). iOS users see 3 steps.
 - **Returning user on a new device signing in**: They land on the auth screen
   (device's "pitch seen" flag is false → pitch shows first), then sign in, and
-  the routing gate reads their profile's preferred currency — if set, they skip
-  Currency step and go to the dashboard. The first-run dashboard prompts (SMS
-  popup + cash-account tooltip) do NOT appear for them because they are
-  triggered by the post-Currency-confirmation transition, which happened long
-  ago on their original device.
+  the routing gate reads `profile.onboarding_completed` (per FR-031) — if
+  `true`, they skip the Currency step and go to the dashboard. The first-run
+  dashboard prompts (SMS popup + cash-account tooltip) do NOT appear for them
+  because `isFirstRunPending` is only set by a successful Currency-step
+  confirmation in the current session, which happened long ago on their original
+  device.
 - **Mic-button tooltip never shown if user abandons the voice step**: If the
   user sees the voice step on the Setup Guide card, dismisses the card entirely
   (manual dismiss) without ever tapping the voice step's action button, they
@@ -659,10 +666,13 @@ Guide card.
   explicit language choice made during the pitch, used to render subsequent
   pre-auth surfaces and hand off to the profile on first sign-up.
 - **User profile**: The user's account-scoped record. Relevant signals for this
-  feature are preferred currency (routing gate), preferred language
-  (authoritative once set), an "onboarding completed" boolean (maintained but
-  not read), and the Setup Guide dismissal flag. Synced between the local and
-  remote stores.
+  feature are the "onboarding completed" boolean (the routing gate per FR-031 —
+  always starts `false`, flipped `true` atomically during Currency
+  confirmation), preferred currency (confirmed in the Currency step; always has
+  a value due to `NOT NULL DEFAULT 'EGP'` so it cannot serve as the routing
+  signal), preferred language (overwritten atomically with the runtime language
+  during Currency confirmation), and the Setup Guide dismissal flag. Synced
+  between the local and remote stores.
 - **Default cash account**: The starter account created on currency
   confirmation. Owned by the user, in the chosen currency, with a default name.
   Deletable like any user-created account.

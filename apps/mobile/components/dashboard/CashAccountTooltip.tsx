@@ -5,40 +5,51 @@ import { AnchoredTooltip } from "@/components/ui/AnchoredTooltip";
 import { useFirstRunTooltip } from "@/context/FirstRunTooltipContext";
 import { useDismissOnBack } from "@/hooks/useDismissOnBack";
 import { useOnboardingFlags } from "@/hooks/useOnboardingFlags";
-import { useSmsSync } from "@/hooks/useSmsSync";
 import { setOnboardingFlag } from "@/services/profile-service";
 import { logger } from "@/utils/logger";
 
 interface CashAccountTooltipProps {
+  /** Ref to the rendered cash-account card for anchor measurement. */
   readonly anchorRef: React.RefObject<View>;
+  /**
+   * Whether the SMS permission prompt is currently visible. Passed in by the
+   * dashboard so both the SMS prompt and this tooltip share a SINGLE
+   * `useSmsSync()` state. Instantiating `useSmsSync()` here would produce an
+   * independent mutable state and race against the dashboard's prompt on
+   * Android.
+   */
+  readonly isSmsPromptVisible: boolean;
 }
 
 export function CashAccountTooltip({
   anchorRef,
+  isSmsPromptVisible,
 }: CashAccountTooltipProps): React.ReactElement | null {
   const { t } = useTranslation("onboarding");
   const { isFirstRunPending, markFirstRunConsumed } = useFirstRunTooltip();
-  const { shouldShowPrompt } = useSmsSync();
   const flags = useOnboardingFlags();
 
   const visible =
     isFirstRunPending &&
-    !shouldShowPrompt &&
+    !isSmsPromptVisible &&
     !flags.cash_account_tooltip_dismissed;
 
   const handleDismiss = useCallback((): void => {
+    // Do NOT update local state (mark-consumed) before the write resolves —
+    // on failure we still want the tooltip to hide and the session to
+    // advance, but we log so the issue is visible. The flag persists on
+    // success; on failure the sync retry catches it on the next mount.
+    const finalize = (): void => {
+      markFirstRunConsumed();
+    };
     setOnboardingFlag("cash_account_tooltip_dismissed", true)
-      .then(() => {
-        markFirstRunConsumed();
-      })
+      .then(finalize)
       .catch((error: unknown) => {
         logger.warn(
           "cashAccountTooltip.dismiss.failed",
           error instanceof Error ? { message: error.message } : undefined
         );
-        // Still mark consumed locally — the tooltip UX should not be blocked
-        // by a transient write failure; sync will retry.
-        markFirstRunConsumed();
+        finalize();
       });
   }, [markFirstRunConsumed]);
 

@@ -16,13 +16,13 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  Dimensions,
   type LayoutChangeEvent,
   StyleSheet,
   Text,
   TouchableOpacity,
   TouchableWithoutFeedback,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -36,8 +36,15 @@ import { useTheme } from "@/context/ThemeContext";
 interface AnchoredTooltipProps {
   /** Whether the tooltip is currently visible */
   readonly visible: boolean;
-  /** Ref to the anchor View the tooltip points at */
-  readonly anchorRef: React.RefObject<View>;
+  /**
+   * Ref to the anchor View the tooltip points at.
+   *
+   * Typed as `RefObject<View | null>` so that callers using React 19's
+   * updated `useRef<View>(null)` signature (which returns
+   * `RefObject<View | null>`) can pass the ref directly without a cast.
+   * Under `.measureInWindow(...)` we already null-check before reading.
+   */
+  readonly anchorRef: React.RefObject<View | null>;
   /** Tooltip title text */
   readonly title: string;
   /** Tooltip body text */
@@ -73,6 +80,10 @@ const CARD_BORDER_RADIUS = 14;
 const CARD_MAX_WIDTH = 280;
 const CARD_MIN_MARGIN = 16;
 const VERTICAL_GAP = 12;
+/** Dim-backdrop opacity over the rest of the screen. */
+const BACKDROP_OPACITY = 0.3;
+/** `rgba(...)` literal used by StyleSheet — keep in sync with BACKDROP_OPACITY. */
+const BACKDROP_COLOR = `rgba(0, 0, 0, ${BACKDROP_OPACITY})`;
 
 // ---------------------------------------------------------------------------
 // Styles -- StyleSheet for ALL overlay/backdrop/arrow to avoid NativeWind
@@ -86,7 +97,7 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0, 0, 0, 0.3)",
+    backgroundColor: BACKDROP_COLOR,
   },
   cardLight: {
     position: "absolute",
@@ -216,29 +227,38 @@ export function AnchoredTooltip({
   );
   const [cardHeight, setCardHeight] = useState<number>(0);
 
-  const screenWidth = Dimensions.get("window").width;
+  // Use `useWindowDimensions` (not `Dimensions.get("window")`) so the tooltip
+  // re-positions correctly on orientation changes, split-screen size changes,
+  // and keyboard-open layout shifts.
+  const { width: screenWidth } = useWindowDimensions();
 
-  // Measure anchor when tooltip becomes visible
+  // Measure anchor when the tooltip becomes visible.
+  //
+  // `.measureInWindow` may not have correct layout on the first frame (the
+  // anchor's `onLayout` hasn't fired yet). We defer the measurement to the
+  // next animation frame, which is RN's idiomatic "wait one frame" hook and
+  // avoids the flake of an arbitrary `setTimeout(..., 50)` on slow devices.
   useEffect(() => {
     if (!visible) {
       setAnchorMetrics(null);
       return;
     }
 
-    // measureInWindow may not have correct layout on the first frame;
-    // short delay ensures the anchor's onLayout has completed.
-    const timer = setTimeout(() => {
+    let cancelled = false;
+    const raf = requestAnimationFrame(() => {
+      if (cancelled) return;
       anchorRef.current?.measureInWindow(
         (x: number, y: number, width: number, height: number) => {
-          if (width > 0 && height > 0) {
+          if (!cancelled && width > 0 && height > 0) {
             setAnchorMetrics({ x, y, width, height });
           }
         }
       );
-    }, 50);
+    });
 
     return () => {
-      clearTimeout(timer);
+      cancelled = true;
+      cancelAnimationFrame(raf);
       setAnchorMetrics(null);
     };
   }, [visible, anchorRef]);
