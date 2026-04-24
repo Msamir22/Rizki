@@ -11,14 +11,23 @@
  */
 
 import {
+  Account,
   Profile,
   type CurrencyType,
+  type OnboardingFlags,
   type PreferredLanguageCode,
   database,
 } from "@rizqi/db";
 import { Q } from "@nozbe/watermelondb";
-import { changeLanguage } from "@/i18n/changeLanguage";
-import { ensureCashAccount } from "@/services/account-service";
+import {
+  changeLanguage,
+  getCurrentLanguage,
+  type SupportedLanguage,
+} from "@/i18n/changeLanguage";
+import {
+  createCashAccountWithinWriter,
+  ensureCashAccount,
+} from "@/services/account-service";
 import { clearOnboardingStep } from "@/services/onboarding-cursor-service";
 import { getCurrentUserId } from "@/services/supabase";
 import { logger } from "@/utils/logger";
@@ -91,6 +100,10 @@ export async function setPreferredLanguage(
  * Set the user's preferred currency AND create the cash account in that
  * currency. Resolves FR-009 + FR-010.
  *
+ * @deprecated Use `confirmCurrencyAndOnboard` instead — it performs all
+ *   mutations in a single atomic `database.write()`. This function runs two
+ *   separate writes which can leave partial state. See feature 026 spec.
+ *
  * One `database.write()` lives in this file (the profile update on line 115).
  * `ensureCashAccount` owns its own writer internally, so the two operations
  * run as two sequential (not nested) writes from WatermelonDB's perspective.
@@ -131,8 +144,12 @@ export async function setPreferredCurrencyAndCreateCashAccount(
 
 /**
  * Flip the `onboarding_completed` flag to true AND clear the per-user
- * AsyncStorage cursor. Called exactly once per user when the cash-account
- * confirmation step is dismissed. Resolves FR-011.
+ * AsyncStorage cursor.
+ *
+ * @deprecated No longer called directly. `confirmCurrencyAndOnboard` now
+ *   sets `onboardingCompleted = true` atomically alongside currency, language,
+ *   and cash-account creation. This function is retained only until the
+ *   remaining callers are migrated. See feature 026 spec.
  *
  * Lifecycle per contract:
  * 1. `database.write()` sets `onboarding_completed = true`.
@@ -170,4 +187,86 @@ export async function completeOnboarding(): Promise<void> {
       error instanceof Error ? { message: error.message } : { error }
     );
   }
+}
+
+/**
+ * Set a single onboarding flag on the user's profile.
+ *
+ * Merges the new value into the existing `onboardingFlags` object and
+ * persists the result as a JSON string in `onboardingFlagsRaw`.
+ */
+export async function setOnboardingFlag<K extends keyof OnboardingFlags>(
+  flagKey: K,
+  value: NonNullable<OnboardingFlags[K]>
+): Promise<void> {
+  const profile = await getProfile();
+  const current = profile.onboardingFlags;
+  const next = { ...current, [flagKey]: value };
+  await database.write(async () => {
+    await profile.update((p) => {
+      p.onboardingFlagsRaw = JSON.stringify(next);
+    });
+  });
+}
+
+/**
+ * Single atomic write that confirms the user's currency choice and completes
+ * onboarding. All four mutations happen inside one `database.write()`:
+ *
+ * 1. Cash account created (or found) via `createCashAccountWithinWriter`
+ * 2. `preferredCurrency` set on profile
+ * 3. `preferredLanguage` overwritten with the current runtime language
+ * 4. `onboardingCompleted` flipped to `true`
+ *
+ * After the transaction commits, `options.onTransactionCommitted?.()` fires
+ * (e.g., to trigger first-run tooltip state). The onboarding cursor is cleared
+ * defensively — failure is logged but not re-thrown.
+ *
+ * Does NOT clear `@rizqi/intro-locale-override` (FR-030).
+ *
+ * Resolves FR-009, FR-010, FR-011, FR-013, FR-031.
+ */
+export async function confirmCurrencyAndOnboard(
+  currency: CurrencyType,
+  options?: {
+    readonly onTransactionCommitted?: () => void;
+  }
+): Promise<{ readonly accountId: string }> {
+  const profile = await getProfile();
+  const userId = profile.userId;
+  const language: SupportedLanguage = getCurrentLanguage();
+
+  let accountId = "";
+
+  await database.write(async () => {
+    // 1. Cash account
+    const accountsCollection = database.get<Account>("accounts");
+    const result = await createCashAccountWithinWriter(
+      userId,
+      currency,
+      accountsCollection
+    );
+    accountId = result.accountId;
+
+    // 2–4. Profile mutations in one batch
+    await profile.update((p) => {
+      p.preferredCurrency = currency;
+      p.preferredLanguage = language;
+      p.onboardingCompleted = true;
+    });
+  });
+
+  options?.onTransactionCommitted?.();
+
+  // Defensive cursor clear — non-critical
+  try {
+    await clearOnboardingStep(userId);
+  } catch (error: unknown) {
+    logger.warn(
+      "onboarding.confirmCurrencyAndOnboard.clearCursor.failed",
+      error instanceof Error ? { message: error.message } : { error }
+    );
+  }
+
+  return { accountId };
 }

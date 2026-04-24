@@ -204,5 +204,14 @@ export const migrations = schemaMigrations({
         }),
       ],
     },
+    {
+      toVersion: 17,
+      steps: [
+        addColumns({
+          table: "profiles",
+          columns: [{ name: "onboarding_flags", type: "string" }],
+        }),
+      ],
+    },
   ],
 });

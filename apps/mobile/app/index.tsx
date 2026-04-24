@@ -18,7 +18,9 @@
 import { database } from "@rizqi/db";
 import { RetrySyncScreen } from "@/components/ui/RetrySyncScreen";
 import { useProfile } from "@/hooks/useProfile";
+import { useIntroSeen } from "@/hooks/useIntroSeen";
 import { useSync } from "@/providers/SyncProvider";
+import { useAuth } from "@/context/AuthContext";
 import { performLogout } from "@/services/logout-service";
 import {
   buildRoutingDecisionLog,
@@ -29,6 +31,8 @@ import { Redirect } from "expo-router";
 import React, { useCallback, useEffect, useRef } from "react";
 
 export default function Index(): React.ReactNode {
+  const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
+  const { isSeen: introSeen, isLoading: isIntroLoading } = useIntroSeen();
   const { initialSyncState, retryInitialSync } = useSync();
   const { profile, isLoading: isProfileLoading } = useProfile();
   const hasLoggedRef = useRef(false);
@@ -86,6 +90,17 @@ export default function Index(): React.ReactNode {
   // by <AppReadyGate /> (see _layout.tsx) until sync + profile resolve, so
   // users never see a blank/starry backdrop between splash and the real
   // screen.
+  if (isAuthLoading || isIntroLoading) {
+    return null;
+  }
+
+  // Pre-auth routing: first-time visitors see pitch, returning visitors go
+  // straight to auth. introSeen is device-scoped (FR-029/FR-030).
+  if (!isAuthenticated) {
+    if (!introSeen) return <Redirect href="/pitch" />;
+    return <Redirect href="/auth" />;
+  }
+
   if (initialSyncState === "in-progress" || isProfileLoading) {
     return null;
   }

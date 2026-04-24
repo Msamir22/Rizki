@@ -27,6 +27,8 @@ const ICON_CONTAINER_SIZE = 32;
 interface AccountsSectionProps {
   accounts: Account[];
   isLoading: boolean;
+  /** Optional ref to the cash-account card for tooltip anchoring. */
+  readonly cashAccountRef?: React.RefObject<View>;
 }
 
 interface AccountCardData {
@@ -133,6 +135,7 @@ function AccountCard({ data, width }: AccountCardProps): React.JSX.Element {
 function AccountsSectionComponent({
   accounts,
   isLoading,
+  cashAccountRef,
 }: AccountsSectionProps): React.JSX.Element {
   const { t } = useTranslation("accounts");
   const { t: tc } = useTranslation("common");
@@ -203,6 +206,14 @@ function AccountsSectionComponent({
           {cardData.map((card) => {
             const count = cardData.length;
             const width = (SCREEN_WIDTH - 40 - CARD_GAP * (count - 1)) / count;
+
+            if (card.type === "CASH" && cashAccountRef) {
+              return (
+                <View key={card.id} ref={cashAccountRef} collapsable={false}>
+                  <AccountCard data={card} width={width} />
+                </View>
+              );
+            }
 
             return <AccountCard key={card.id} data={card} width={width} />;
           })}

@@ -16,6 +16,7 @@ import {
   type OnboardingStep,
 } from "@/hooks/useOnboardingGuide";
 import { logger } from "@/utils/logger";
+import { MicButtonTooltip } from "@/components/dashboard/MicButtonTooltip";
 
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -128,6 +129,10 @@ function OnboardingGuideCardComponent(): React.ReactElement | null {
     isLoading,
     isAllComplete,
     dismiss,
+    onVoiceStepAction,
+    isMicTooltipVisible,
+    onMicTooltipTryItNow,
+    onMicTooltipClose,
   } = useOnboardingGuide();
 
   // Find the first incomplete step (active step)
@@ -139,19 +144,22 @@ function OnboardingGuideCardComponent(): React.ReactElement | null {
   const activeStep = activeStepIndex >= 0 ? steps[activeStepIndex] : undefined;
 
   const handleStepPress = useCallback(
-    (route?: string): void => {
-      if (route) {
-        router.push(route as never);
+    (step: OnboardingStep): void => {
+      if (step.key === "voice_transaction") {
+        onVoiceStepAction();
+        return;
+      }
+      if (step.route) {
+        router.push(step.route as never);
       }
     },
-    [router]
+    [router, onVoiceStepAction]
   );
 
   const handleNextStepPress = useCallback((): void => {
-    if (activeStep?.route) {
-      router.push(activeStep.route as never);
-    }
-  }, [activeStep, router]);
+    if (!activeStep) return;
+    handleStepPress(activeStep);
+  }, [activeStep, handleStepPress]);
 
   const handleDismiss = useCallback((): void => {
     dismiss().catch((error: unknown) => {
@@ -256,7 +264,7 @@ function OnboardingGuideCardComponent(): React.ReactElement | null {
                 isActive={index === activeStepIndex}
                 onPress={
                   index === activeStepIndex
-                    ? () => handleStepPress(step.route)
+                    ? () => handleStepPress(step)
                     : undefined
                 }
               />
@@ -273,6 +281,13 @@ function OnboardingGuideCardComponent(): React.ReactElement | null {
           </View>
         </View>
       )}
+
+      {/* Mic tooltip */}
+      <MicButtonTooltip
+        visible={isMicTooltipVisible}
+        onTryItNow={onMicTooltipTryItNow}
+        onClose={onMicTooltipClose}
+      />
     </View>
   );
 }

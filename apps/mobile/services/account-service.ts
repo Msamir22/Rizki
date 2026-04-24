@@ -46,6 +46,48 @@ export const CURRENCY_UNKNOWN_ERROR = "CURRENCY_UNKNOWN";
 // ---------------------------------------------------------------------------
 
 /**
+ * Check-and-create a Cash account inside an ALREADY-OPEN writer.
+ *
+ * This is the non-writer helper that `ensureCashAccount` and
+ * `confirmCurrencyAndOnboard` share. Callers MUST be inside a
+ * `database.write()` block — this function does NOT open its own.
+ *
+ * @returns The account ID (existing or newly created).
+ */
+export async function createCashAccountWithinWriter(
+  userId: string,
+  currency: CurrencyType,
+  accountsCollection: ReturnType<typeof database.get<Account>>,
+  name?: string
+): Promise<{ readonly accountId: string; readonly created: boolean }> {
+  const normalizedUserId = userId.trim();
+
+  const existing = await accountsCollection
+    .query(
+      Q.where("type", CASH_ACCOUNT_TYPE),
+      Q.where("user_id", normalizedUserId),
+      Q.where("currency", currency),
+      Q.where("deleted", Q.notEq(true)),
+      Q.sortBy("created_at", Q.asc)
+    )
+    .fetch();
+
+  if (existing.length > 0) {
+    return { accountId: existing[0].id, created: false };
+  }
+
+  const record = await accountsCollection.create((acc) => {
+    acc.userId = normalizedUserId;
+    acc.name = name?.trim() || CASH_ACCOUNT_NAME;
+    acc.type = CASH_ACCOUNT_TYPE;
+    acc.currency = currency;
+    acc.balance = 0;
+    acc.deleted = false;
+  });
+  return { accountId: record.id, created: true };
+}
+
+/**
  * Ensure a Cash account exists for the given user in the specified currency.
  *
  * Idempotent: if a CASH-type account in the same currency already exists,
@@ -85,35 +127,16 @@ export async function ensureCashAccount(
     let accountId: string | null = null;
     let created = false;
 
-    // Atomic check-and-create inside a single write block to prevent
-    // TOCTOU races when called concurrently (e.g., index.tsx + onboarding.tsx).
     await database.write(async () => {
       const accountsCollection = database.get<Account>("accounts");
-      const existing = await accountsCollection
-        .query(
-          Q.where("type", CASH_ACCOUNT_TYPE),
-          Q.where("user_id", normalizedUserId),
-          Q.where("currency", resolvedCurrency),
-          Q.where("deleted", Q.notEq(true)),
-          Q.sortBy("created_at", Q.asc)
-        )
-        .fetch();
-
-      if (existing.length > 0) {
-        accountId = existing[0].id;
-        return;
-      }
-
-      const record = await accountsCollection.create((acc) => {
-        acc.userId = normalizedUserId;
-        acc.name = name?.trim() || CASH_ACCOUNT_NAME;
-        acc.type = CASH_ACCOUNT_TYPE;
-        acc.currency = resolvedCurrency;
-        acc.balance = 0;
-        acc.deleted = false;
-      });
-      accountId = record.id;
-      created = true;
+      const result = await createCashAccountWithinWriter(
+        normalizedUserId,
+        resolvedCurrency,
+        accountsCollection,
+        name
+      );
+      accountId = result.accountId;
+      created = result.created;
     });
 
     return { created, accountId };

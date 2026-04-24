@@ -59,12 +59,51 @@ const REQUIRED_SCALAR_KEYS: Record<string, readonly string[]> = {
     "error",
     "language_change_error_title",
     "language_change_failed",
+    // feature 026 — onboarding guide card
+    "onboarding_step_bank_account",
+    "onboarding_step_spending_budget",
+    "new_badge",
+    "setup_guide",
+    "go",
+    "next",
+    "dismiss",
   ],
   settings: [
     "title",
     "language",
     "language_change_error_title",
     "language_change_failed",
+  ],
+  onboarding: [
+    // Pitch chrome
+    "pitch_skip",
+    "pitch_get_started",
+    // Currency step
+    "currency_step_title",
+    "currency_step_subtitle",
+    "currency_step_confirm",
+    "currency_step_signout",
+    "currency_step_error_generic",
+    // Setup guide step labels (voice + SMS only live here; bank/budget live in common)
+    "onboarding_step_voice_transaction",
+    "onboarding_step_auto_track_bank_sms",
+    // First-run tooltips
+    "cash_account_tooltip_title",
+    "cash_account_tooltip_body",
+    "cash_account_tooltip_got_it",
+    "mic_button_tooltip_title",
+    "mic_button_tooltip_body",
+    "mic_button_tooltip_try_it_now",
+  ],
+  auth: [
+    "welcome_title",
+    "welcome_tagline",
+    "pill_voice",
+    "pill_bank_sms",
+    "pill_live_rates",
+    "pill_gold_silver",
+    "trust_encrypted",
+    "trust_private",
   ],
 };
 
