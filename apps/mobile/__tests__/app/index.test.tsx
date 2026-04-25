@@ -133,13 +133,21 @@ function setState(opts: {
   syncState: "in-progress" | "success" | "failed" | "timeout";
   isProfileLoading?: boolean;
   onboardingCompleted?: boolean;
+  /**
+   * When `true`, `useProfile` returns `{ profile: null, isLoading: false }`
+   * — the race-condition scenario where the observation has emitted at
+   * least once but no row has been pulled into local DB yet.
+   */
+  profileNull?: boolean;
 }): void {
   mockUseSync.mockReturnValue({
     initialSyncState: opts.syncState,
     retryInitialSync: jest.fn().mockResolvedValue(opts.syncState),
   });
   mockUseProfile.mockReturnValue({
-    profile: { onboardingCompleted: opts.onboardingCompleted ?? false },
+    profile: opts.profileNull
+      ? null
+      : { onboardingCompleted: opts.onboardingCompleted ?? false },
     isLoading: opts.isProfileLoading ?? false,
   });
 }
@@ -221,6 +229,42 @@ describe("index.tsx routing gate", () => {
     });
     const renderer = renderGate();
     expect(findRedirectHref(renderer)).toBe("/(tabs)");
+  });
+
+  // Race-condition guards — `useProfile.isLoading` flips false on the FIRST
+  // observation emission, even if that emission is empty (no profile row in
+  // local DB yet). The gate MUST NOT route to /onboarding while sync is
+  // settling, otherwise an already-onboarded user gets force-redirected to
+  // the Currency step on cold launch (user-report 2026-04-24).
+  it("does NOT route to /onboarding when sync succeeded but profile observation is still null", () => {
+    setState({ syncState: "success", profileNull: true });
+    const renderer = renderGate();
+    // Should render null (loading splash held by AppReadyGate), not redirect
+    // to /onboarding.
+    expect(renderer.toJSON()).toBeNull();
+    expect(findRedirectHref(renderer)).toBeUndefined();
+  });
+
+  it("does NOT route to /onboarding when sync is in-progress and profile is null", () => {
+    setState({ syncState: "in-progress", profileNull: true });
+    const renderer = renderGate();
+    expect(renderer.toJSON()).toBeNull();
+    expect(findRedirectHref(renderer)).toBeUndefined();
+  });
+
+  it("falls back to retry screen when sync FAILED AND the profile is still null (escape hatch from the race-guard wait)", () => {
+    setState({ syncState: "failed", profileNull: true });
+    const renderer = renderGate();
+    const hits = renderer.root.findAllByProps({ testID: "retry-screen" });
+    expect(hits.length).toBeGreaterThan(0);
+    expect(findRedirectHref(renderer)).toBeUndefined();
+  });
+
+  it("falls back to retry screen when sync TIMED OUT AND the profile is still null", () => {
+    setState({ syncState: "timeout", profileNull: true });
+    const renderer = renderGate();
+    const hits = renderer.root.findAllByProps({ testID: "retry-screen" });
+    expect(hits.length).toBeGreaterThan(0);
   });
 
   it("wires the retry screen's Sign out callback to performLogout (guards against the gate dropping the handler)", () => {
