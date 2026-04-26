@@ -6,6 +6,7 @@ import {
   MicButtonRefProvider,
   useMicButtonRef,
 } from "@/context/MicButtonRefContext";
+import { MicTooltipProvider } from "@/context/MicTooltipContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useCategories } from "@/hooks/useCategories";
@@ -23,7 +24,9 @@ import { View } from "react-native";
 export default function TabLayout(): React.ReactElement {
   return (
     <MicButtonRefProvider>
-      <TabLayoutInner />
+      <MicTooltipProvider>
+        <TabLayoutInner />
+      </MicTooltipProvider>
     </MicButtonRefProvider>
   );
 }

@@ -94,7 +94,9 @@ export function PitchCarousel(): React.ReactElement {
   );
 
   return (
-    <View className="flex-1 bg-white dark:bg-slate-900">
+    // Root inherits the system color scheme via the `bg-background` token
+    // pair so the slides aren't locked to one mode pre-auth.
+    <View className="flex-1 bg-background dark:bg-background-dark">
       <Carousel
         ref={carouselRef}
         width={screenWidth}
@@ -106,7 +108,6 @@ export function PitchCarousel(): React.ReactElement {
           const SlideComponent = item.component;
           return (
             <PitchSlide
-              eyebrow={t(`pitch_slide_${item.key}_eyebrow`)}
               headline={t(`pitch_slide_${item.key}_headline`)}
               subhead={t(`pitch_slide_${item.key}_subhead`)}
               isLast={index === totalSlides - 1}
@@ -123,9 +124,10 @@ export function PitchCarousel(): React.ReactElement {
         }}
       />
 
-      {/* Pagination dots — sit just above the CTA row that PitchSlide renders.
-          The PitchSlide CTA reserves `mb-8` (32px) + ~56px button height, so
-          we offset the dots by ~104px from the bottom to clear it. */}
+      {/* Pagination dots — positioned above the CTA. PitchSlide renders the
+          CTA with `mb-8` (32px) bottom inset + ~56px button height, so the
+          dots sit at `bottom: 32 + 56 + 16` ≈ 104px to clear the button
+          and add a comfortable 16px gap. */}
       <View
         pointerEvents="none"
         className="absolute left-0 right-0 flex-row items-center justify-center gap-2"

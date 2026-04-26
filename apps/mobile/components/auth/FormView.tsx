@@ -41,6 +41,14 @@ interface ValuePill {
     | "message-text"
     | "trending-up"
     | "diamond-stone";
+  /**
+   * Icon set sourced per icon. `trending-up` is FontAwesome5 PRO ONLY in
+   * v5 — the free-tier `FontAwesome5Free-Regular` font shipped with
+   * `@expo/vector-icons` does not contain the glyph, which logged a noisy
+   * "not a valid icon name" warning on the auth screen (user-report
+   * 2026-04-26). Swapped to `MaterialCommunityIcons.trending-up`, which
+   * exists in the free tier.
+   */
   readonly iconSet: "FontAwesome5" | "MaterialCommunityIcons";
 }
 
@@ -75,7 +83,7 @@ const VALUE_PILLS: readonly ValuePill[] = [
   {
     translationKey: "pill_live_rates",
     icon: "trending-up",
-    iconSet: "FontAwesome5",
+    iconSet: "MaterialCommunityIcons",
   },
   {
     translationKey: "pill_gold_silver",

@@ -18,7 +18,6 @@ native speaker during implementation.
 
 | Key                                       | English                                                                                                                  | Arabic (draft)                                                                                   |
 | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
-| `pitch_slide_voice_eyebrow`               | `01 · VOICE`                                                                                                             | `٠١ · الصوت`                                                                                     |
 | `pitch_slide_voice_headline`              | `Track with your voice.`                                                                                                 | `تتبع مصاريفك بصوتك.`                                                                            |
 | `pitch_slide_voice_subhead`               | `Talk naturally — like you would to a friend. Rizqi listens, parses, and saves it for you.`                              | `تكلم كأنك بتتكلم مع صاحبك. رزقي يسمع، ويحفظها لك.`                                              |
 | `pitch_slide_voice_transcript`            | `Just paid 200 pounds for coffee with Ahmed`                                                                             | `دفعت لسه ٢٠٠ جنيه قهوة مع أحمد`                                                                 |
@@ -26,15 +25,13 @@ native speaker during implementation.
 | `pitch_slide_voice_status_just_now`       | `Just now`                                                                                                               | `الآن`                                                                                           |
 | `pitch_slide_voice_category_food`         | `Food & Drinks`                                                                                                          | `أكل وشرب`                                                                                       |
 | `pitch_slide_voice_account`               | `Main CIB Account`                                                                                                       | `حسابي الأساسي في CIB`                                                                           |
-| `pitch_slide_sms_eyebrow`                 | `02 · SMS`                                                                                                               | `٠٢ · SMS`                                                                                       |
 | `pitch_slide_sms_headline`                | `Your bank texts. We listen.`                                                                                            | `رسائل بنكك، رزقي سامعها.`                                                                       |
 | `pitch_slide_sms_subhead`                 | `Bank and wallet SMS get captured automatically — no copy-paste, no manual entry.`                                       | `رسائل البنك والمحفظة بتتسجل تلقائيًا — من غير نسخ ولا كتابة.`                                   |
-| `pitch_slide_sms_bank_label`              | `📩 CIB Bank · 2 min ago`                                                                                                | `📩 بنك CIB · من دقيقتين`                                                                        |
+| `pitch_slide_sms_bank_label`              | `CIB Bank · 2 min ago`                                                                                                   | `بنك CIB · من دقيقتين`                                                                           |
 | `pitch_slide_sms_bank_body`               | `Purchase of EGP 485 at Seoudi Market on card ****1234`                                                                  | `مشتريات بمبلغ ٤٨٥ جنيه من Seoudi Market بكارت ****1234`                                         |
 | `pitch_slide_sms_detected`                | `detected`                                                                                                               | `تم اكتشافها`                                                                                    |
 | `pitch_slide_sms_category_groceries`      | `Groceries`                                                                                                              | `بقالة`                                                                                          |
 | `pitch_slide_sms_status_imported`         | `Auto-imported`                                                                                                          | `مستوردة تلقائيًا`                                                                               |
-| `pitch_slide_offline_eyebrow`             | `02 · OFFLINE`                                                                                                           | `٠٢ · بدون انترنت`                                                                               |
 | `pitch_slide_offline_headline`            | `Record now. Sync later.`                                                                                                | `سجّل دلوقتي. المزامنة بعدين.`                                                                   |
 | `pitch_slide_offline_subhead`             | `Every tap is instant — on a plane, in a tunnel, anywhere. Rizqi runs on your device and syncs when you're back online.` | `كل ضغطة لحظية — في الطيارة، في النفق، في أي مكان. رزقي شغال على جهازك ويزامن لما ترجع أونلاين.` |
 | `pitch_slide_offline_status_offline`      | `Offline mode`                                                                                                           | `بدون انترنت`                                                                                    |
@@ -42,7 +39,6 @@ native speaker during implementation.
 | `pitch_slide_offline_recently_added`      | `RECENTLY ADDED`                                                                                                         | `مضافة حديثًا`                                                                                   |
 | `pitch_slide_offline_all_saved`           | `All saved instantly`                                                                                                    | `كلها محفوظة لحظيًا`                                                                             |
 | `pitch_slide_offline_pending`             | `{{count}} pending`                                                                                                      | `{{count}} في الانتظار`                                                                          |
-| `pitch_slide_live_market_eyebrow`         | `03 · LIVE MARKET`                                                                                                       | `٠٣ · السوق المباشر`                                                                             |
 | `pitch_slide_live_market_headline`        | `Live rates. Real gold.`                                                                                                 | `أسعار مباشرة. ذهب حقيقي.`                                                                       |
 | `pitch_slide_live_market_subhead`         | `USD, EUR, gold, silver — priced this minute, not yesterday. Your net worth always tells the truth.`                     | `الدولار، اليورو، الذهب، الفضة — بأسعار اللحظة. رصيدك الحقيقي دايمًا صادق.`                      |
 | `pitch_slide_live_market_net_worth_label` | `NET WORTH`                                                                                                              | `صافي الثروة`                                                                                    |
@@ -115,10 +111,10 @@ native speaker during implementation.
 | ---------------------- | ------------------------------------ | ---------------------------- |
 | `welcome_title`        | `Welcome to Rizqi`                   | `أهلًا بك في رزقي`           |
 | `welcome_tagline`      | `Everything tracked. Nothing typed.` | `كل حاجة متتبعة. ولا كتابة.` |
-| `pill_voice`           | `🎙 Voice`                           | `🎙 صوت`                     |
-| `pill_bank_sms`        | `📩 Bank SMS`                        | `📩 رسائل البنك`             |
-| `pill_live_rates`      | `📈 Live rates`                      | `📈 أسعار مباشرة`            |
-| `pill_gold_silver`     | `🥇 Gold & silver`                   | `🥇 ذهب وفضة`                |
+| `pill_voice`           | `Voice`                              | `صوت`                        |
+| `pill_bank_sms`        | `Bank SMS`                           | `رسائل البنك`                |
+| `pill_live_rates`      | `Live rates`                         | `أسعار مباشرة`               |
+| `pill_gold_silver`     | `Gold & silver`                      | `ذهب وفضة`                   |
 | `continue_with_google` | `Continue with Google`               | `المتابعة باستخدام جوجل`     |
 | `or`                   | `— or —`                             | `— أو —`                     |
 | `email_label`          | `Email`                              | `البريد الإلكتروني`          |
@@ -155,8 +151,8 @@ Each new key above MUST appear in the schema validator. Pseudo-structure:
 export interface OnboardingSchema {
   // ...existing keys...
 
-  // Pitch slides (added)
-  pitch_slide_voice_eyebrow: string;
+  // Pitch slides (added) — eyebrow keys removed 2026-04-26 per design
+  // simplification (no numbered "01 · VOICE" eyebrow on slides anymore).
   pitch_slide_voice_headline: string;
   // ... (all new keys above)
 
@@ -191,11 +187,9 @@ any key is missing from either locale. This is the safety net.
 
 - All pitch slide layouts use NativeWind `start-*` / `end-*` logical properties
   (not `left-*` / `right-*`).
-- Eyebrow labels like `01 · VOICE` contain the `·` separator character — renders
-  correctly in RTL.
-- Arabic numerals (١، ٢، ٣) can be used in eyebrow labels for localized feel; or
-  keep Latin 01/02/03 for consistency — choose and document in design phase.
-  Proposed: use Latin numerals in Arabic eyebrows for consistency with other
-  fintech apps in the MENA market.
-- Chip labels with emojis: emoji position handled by RN's built-in bidi
-  algorithm. Tested emojis in both locales during QA.
+- The numbered eyebrow labels (`01 · VOICE`, etc.) were removed in the
+  2026-04-26 design pass; pitch slides now lead directly with the headline.
+- Auth-screen value-prop pills are rendered as `<Icon> + <label>` pairs in code;
+  the i18n strings carry **only** the localized noun (no leading emoji), and the
+  glyph is sourced from `@expo/vector-icons` so the pill renders consistently in
+  both LTR and RTL without depending on the platform emoji font.

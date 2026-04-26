@@ -2,11 +2,16 @@
  * Unit tests for MicButtonTooltip (T068).
  *
  * Validates:
- *  - visibility is driven by the `visible` prop AND presence of micRef
- *  - "Try it now" fires `onTryItNow`, NOT `onClose`
- *  - "X" close fires `onClose`, NOT `onTryItNow`
- *  - Android back handler is wired via `useDismissOnBack(visible, onClose)` —
+ *  - renders null when not visible OR when micRef is missing
+ *  - "Try it now" wires through to context's `onTryItNow`
+ *  - "X" close wires through to context's `onDismiss`
+ *  - Android back handler uses `useDismissOnBack(visible, onDismiss)` —
  *    i.e. back = X semantics (FR-039), never "Try it now"
+ *
+ * State + handlers come from `MicTooltipContext`. Visibility prop / handlers
+ * are no longer passed — see MicTooltipContext.tsx for the migration
+ * rationale (overlay needs to render at the screen root to avoid being
+ * clipped by `OnboardingGuideCard`'s `overflow-hidden`).
  */
 
 import React from "react";
@@ -36,6 +41,27 @@ jest.mock("@/context/MicButtonRefContext", () => ({
   useMicButtonRef: (): React.RefObject<View> | null => mockRefState.current,
 }));
 
+interface MockTooltipState {
+  isVisible: boolean;
+  voiceTooltipSeen: boolean;
+  onVoiceStepAction: () => void;
+  onTryItNow: () => void;
+  onDismiss: () => void;
+}
+const mockTooltipState: { current: MockTooltipState } = {
+  current: {
+    isVisible: false,
+    voiceTooltipSeen: false,
+    onVoiceStepAction: jest.fn(),
+    onTryItNow: jest.fn(),
+    onDismiss: jest.fn(),
+  },
+};
+
+jest.mock("@/context/MicTooltipContext", () => ({
+  useMicTooltip: (): MockTooltipState => mockTooltipState.current,
+}));
+
 const mockUseDismissOnBack = jest.fn<void, [boolean, () => void]>();
 jest.mock("@/hooks/useDismissOnBack", () => ({
   useDismissOnBack: (visible: boolean, onDismiss: () => void): void =>
@@ -63,42 +89,40 @@ describe("MicButtonTooltip", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockRefState.current = mockMicRef;
+    mockTooltipState.current = {
+      isVisible: false,
+      voiceTooltipSeen: false,
+      onVoiceStepAction: jest.fn(),
+      onTryItNow: jest.fn(),
+      onDismiss: jest.fn(),
+    };
   });
 
-  it("renders null when visible is false", () => {
-    const r = RTR.create(
-      React.createElement(MicButtonTooltip, {
-        visible: false,
-        onTryItNow: jest.fn(),
-        onClose: jest.fn(),
-      })
-    );
+  it("renders null when context.isVisible is false", () => {
+    mockTooltipState.current.isVisible = false;
+    const r = RTR.create(React.createElement(MicButtonTooltip));
     expect(r.toJSON()).toBeNull();
     expect(mockAnchoredTooltip).not.toHaveBeenCalled();
   });
 
   it("renders null when micRef is missing (tab bar not mounted)", () => {
     mockRefState.current = null;
-    const r = RTR.create(
-      React.createElement(MicButtonTooltip, {
-        visible: true,
-        onTryItNow: jest.fn(),
-        onClose: jest.fn(),
-      })
-    );
+    mockTooltipState.current.isVisible = true;
+    const r = RTR.create(React.createElement(MicButtonTooltip));
     expect(r.toJSON()).toBeNull();
   });
 
-  it("renders AnchoredTooltip with both primary and close callbacks when visible", () => {
+  it("forwards context handlers to AnchoredTooltip when visible", () => {
     const onTryItNow = jest.fn();
-    const onClose = jest.fn();
-    RTR.create(
-      React.createElement(MicButtonTooltip, {
-        visible: true,
-        onTryItNow,
-        onClose,
-      })
-    );
+    const onDismiss = jest.fn();
+    mockTooltipState.current = {
+      isVisible: true,
+      voiceTooltipSeen: false,
+      onVoiceStepAction: jest.fn(),
+      onTryItNow,
+      onDismiss,
+    };
+    RTR.create(React.createElement(MicButtonTooltip));
     expect(mockAnchoredTooltip).toHaveBeenCalled();
     const props = mockAnchoredTooltip.mock.calls[0][0];
     expect(props.visible).toBe(true);
@@ -106,21 +130,22 @@ describe("MicButtonTooltip", () => {
     expect(props.body).toBe("mic_button_tooltip_body");
     expect(props.primaryLabel).toBe("mic_button_tooltip_try_it_now");
     expect(props.onPrimaryPress).toBe(onTryItNow);
-    expect(props.onClose).toBe(onClose);
+    expect(props.onClose).toBe(onDismiss);
   });
 
-  it("wires hardware back to onClose (X semantics), not onTryItNow", () => {
+  it("wires hardware back to onDismiss (X semantics), not onTryItNow", () => {
     const onTryItNow = jest.fn();
-    const onClose = jest.fn();
-    RTR.create(
-      React.createElement(MicButtonTooltip, {
-        visible: true,
-        onTryItNow,
-        onClose,
-      })
-    );
-    expect(mockUseDismissOnBack).toHaveBeenCalledWith(true, onClose);
-    // Crucially NOT called with onTryItNow
+    const onDismiss = jest.fn();
+    mockTooltipState.current = {
+      isVisible: true,
+      voiceTooltipSeen: false,
+      onVoiceStepAction: jest.fn(),
+      onTryItNow,
+      onDismiss,
+    };
+    RTR.create(React.createElement(MicButtonTooltip));
+    expect(mockUseDismissOnBack).toHaveBeenCalledWith(true, onDismiss);
+    // Crucially NOT called with onTryItNow.
     expect(mockUseDismissOnBack).not.toHaveBeenCalledWith(true, onTryItNow);
   });
 });

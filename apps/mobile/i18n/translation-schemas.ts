@@ -81,7 +81,8 @@ const REQUIRED_SCALAR_KEYS: Record<string, readonly string[]> = {
     "pitch_get_started",
     "pitch_back",
     // Pitch slide 1 — Voice
-    "pitch_slide_voice_eyebrow",
+    // (eyebrow key removed 2026-04-26 per user direction — slides no longer
+    //  show the "01 · VOICE" / "02 · SMS" / "03 · LIVE MARKET" pre-title.)
     "pitch_slide_voice_headline",
     "pitch_slide_voice_subhead",
     "pitch_slide_voice_listening",
@@ -91,7 +92,6 @@ const REQUIRED_SCALAR_KEYS: Record<string, readonly string[]> = {
     "pitch_slide_voice_category_food",
     "pitch_slide_voice_account",
     // Pitch slide 2A — SMS (Android)
-    "pitch_slide_sms_eyebrow",
     "pitch_slide_sms_headline",
     "pitch_slide_sms_subhead",
     "pitch_slide_sms_bank_label",
@@ -100,7 +100,6 @@ const REQUIRED_SCALAR_KEYS: Record<string, readonly string[]> = {
     "pitch_slide_sms_category_groceries",
     "pitch_slide_sms_status_imported",
     // Pitch slide 2B — Offline (iOS)
-    "pitch_slide_offline_eyebrow",
     "pitch_slide_offline_headline",
     "pitch_slide_offline_subhead",
     "pitch_slide_offline_status_offline",
@@ -109,7 +108,6 @@ const REQUIRED_SCALAR_KEYS: Record<string, readonly string[]> = {
     "pitch_slide_offline_all_saved",
     "pitch_slide_offline_pending",
     // Pitch slide 3 — Live market
-    "pitch_slide_live_market_eyebrow",
     "pitch_slide_live_market_headline",
     "pitch_slide_live_market_subhead",
     "pitch_slide_live_market_net_worth_label",

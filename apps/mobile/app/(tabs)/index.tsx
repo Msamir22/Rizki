@@ -1,6 +1,7 @@
 import { CurrencyPicker } from "@/components/currency/CurrencyPicker";
 import { AccountsSection } from "@/components/dashboard/AccountsSection";
 import { CashAccountTooltip } from "@/components/dashboard/CashAccountTooltip";
+import { MicButtonTooltip } from "@/components/dashboard/MicButtonTooltip";
 import { LiveRates } from "@/components/dashboard/LiveRates";
 import { OnboardingGuideCard } from "@/components/dashboard/OnboardingGuideCard";
 import { DashboardSkeleton } from "@/components/dashboard/skeletons/DashboardSkeleton";
@@ -265,6 +266,11 @@ export default function DashboardScreen(): React.JSX.Element {
         anchorRef={cashAccountRef}
         isSmsPromptVisible={shouldShowPrompt}
       />
+      {/* Mic-button first-run tooltip — rendered here (not inside the
+          OnboardingGuideCard) so its full-screen overlay isn't clipped by
+          the card's `overflow-hidden`. State + handlers come from
+          `MicTooltipContext`. */}
+      <MicButtonTooltip />
     </StarryBackground>
   );
 }

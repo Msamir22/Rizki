@@ -16,7 +16,6 @@ import {
   type OnboardingStep,
 } from "@/hooks/useOnboardingGuide";
 import { logger } from "@/utils/logger";
-import { MicButtonTooltip } from "@/components/dashboard/MicButtonTooltip";
 
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -130,9 +129,6 @@ function OnboardingGuideCardComponent(): React.ReactElement | null {
     isAllComplete,
     dismiss,
     onVoiceStepAction,
-    isMicTooltipVisible,
-    onMicTooltipTryItNow,
-    onMicTooltipClose,
   } = useOnboardingGuide();
 
   // Find the first incomplete step (active step)
@@ -282,12 +278,12 @@ function OnboardingGuideCardComponent(): React.ReactElement | null {
         </View>
       )}
 
-      {/* Mic tooltip */}
-      <MicButtonTooltip
-        visible={isMicTooltipVisible}
-        onTryItNow={onMicTooltipTryItNow}
-        onClose={onMicTooltipClose}
-      />
+      {/* Mic tooltip is rendered at the dashboard root (`app/(tabs)/index.tsx`)
+          because the AnchoredTooltip overlay uses `absoluteFillObject`,
+          which would otherwise be clipped by the `overflow-hidden` on this
+          card and positioned in this card's local coordinate frame
+          instead of window-absolute. State is shared via
+          `MicTooltipContext`. */}
     </View>
   );
 }

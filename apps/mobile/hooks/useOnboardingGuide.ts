@@ -13,11 +13,9 @@
  *
  * iOS omits the SMS step (3 steps total).
  *
- * The mic tooltip state machine is embedded here:
- * - First tap on voice step action → show mic tooltip
- * - Subsequent taps → open voice entry directly
- * - "Try it now" → dismiss tooltip + open voice
- * - X / hardware back → dismiss tooltip only (voice_tooltip_seen = true)
+ * The mic-tooltip state machine lives in `@/context/MicTooltipContext` so
+ * the overlay can render at the dashboard root (full-screen positioning).
+ * This hook re-exports the context values so callers see a single API.
  *
  * @module useOnboardingGuide
  */
@@ -27,12 +25,8 @@ import { Account, Budget, Profile, Transaction, database } from "@rizqi/db";
 import { Q } from "@nozbe/watermelondb";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Platform } from "react-native";
-import { useOnboardingFlags } from "@/hooks/useOnboardingFlags";
-import {
-  setOnboardingFlag,
-  setSetupGuideCompleted as persistSetupGuideCompleted,
-} from "@/services/profile-service";
-import { openVoiceEntry } from "@/services/voice-entry-service";
+import { useMicTooltip } from "@/context/MicTooltipContext";
+import { setSetupGuideCompleted as persistSetupGuideCompleted } from "@/services/profile-service";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -85,14 +79,17 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
   const [budgetLoaded, setBudgetLoaded] = useState(false);
   const [smsLoaded, setSmsLoaded] = useState(Platform.OS !== "android");
 
-  // Mic tooltip state.
-  // `voiceTooltipSeen` is read from `profile.onboarding_flags` so it survives
-  // app restarts (FR-024a: "Any dismissal counts as seen forever"). A local
-  // `isMicTooltipVisible` state handles the transient visible/hidden toggle
-  // during the current session.
-  const [isMicTooltipVisible, setIsMicTooltipVisible] = useState(false);
-  const flags = useOnboardingFlags();
-  const voiceTooltipSeen = flags.voice_tooltip_seen === true;
+  // Mic tooltip state lives in `MicTooltipContext` (mounted at
+  // `(tabs)/_layout.tsx`) so the tooltip overlay can render at the
+  // dashboard root and not get clipped by `OnboardingGuideCard`'s
+  // `overflow-hidden`. We re-export the context values from this hook to
+  // keep `OnboardingGuideCard`'s API surface stable.
+  const {
+    isVisible: isMicTooltipVisible,
+    onVoiceStepAction,
+    onTryItNow: onMicTooltipTryItNow,
+    onDismiss: onMicTooltipClose,
+  } = useMicTooltip();
 
   useEffect(() => {
     if (
@@ -222,7 +219,11 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
         key: "bank_account",
         labelKey: "onboarding_step_bank_account",
         isComplete: hasBankAccount,
-        route: "/add-account",
+        // Deep-link to add-account with `type=BANK` pre-selected so the
+        // user lands on the correct radio option (user-reported 2026-04-26:
+        // tapping "Add bank account" landed on the form with CASH selected,
+        // forcing an extra tap).
+        route: "/add-account?type=BANK",
       },
       {
         key: "voice_transaction",
@@ -284,57 +285,8 @@ export function useOnboardingGuide(): UseOnboardingGuideResult {
     await persistSetupGuideCompleted(true);
   }, [profile]);
 
-  // ── Mic tooltip state machine ──
-
-  const onVoiceStepAction = useCallback((): void => {
-    if (voiceTooltipSeen) {
-      openVoiceEntry();
-    } else {
-      setIsMicTooltipVisible(true);
-    }
-  }, [voiceTooltipSeen]);
-
-  /**
-   * Persist the voice-tooltip-seen flag, then hide the tooltip on success.
-   *
-   * Contract: local "is tooltip visible" state is flipped only AFTER the
-   * write resolves. If the write fails we keep the tooltip visible and log
-   * the failure — otherwise local state says "seen" while the DB flag stays
-   * false, and the next app launch would re-show the tooltip in violation
-   * of FR-024a ("any dismissal counts as seen forever").
-   *
-   * `afterSuccess` is invoked only on a successful write (e.g. "Try it now"
-   * uses it to open the voice flow; X uses it to just hide).
-   */
-  const markVoiceTooltipSeen = useCallback(
-    async (afterSuccess?: () => void): Promise<void> => {
-      try {
-        await setOnboardingFlag("voice_tooltip_seen", true);
-        setIsMicTooltipVisible(false);
-        afterSuccess?.();
-      } catch (error: unknown) {
-        logger.warn(
-          "onboarding.voiceTooltip.setFlag.failed",
-          error instanceof Error ? { message: error.message } : { error }
-        );
-        // Keep the tooltip visible so the user can retry and the state
-        // machine never drifts from the persisted flag.
-      }
-    },
-    []
-  );
-
-  const onMicTooltipTryItNow = useCallback((): void => {
-    // Persist flag first; open voice only after the flag actually commits.
-    void markVoiceTooltipSeen(openVoiceEntry);
-  }, [markVoiceTooltipSeen]);
-
-  const onMicTooltipClose = useCallback((): void => {
-    // Hide via the same persisted-flag path — don't optimistically flip local
-    // state and drop the write. If the write fails, the tooltip remains
-    // visible so the user can retry (see `markVoiceTooltipSeen`).
-    void markVoiceTooltipSeen();
-  }, [markVoiceTooltipSeen]);
+  // Mic-tooltip state machine moved to `MicTooltipContext` — see destructure
+  // at the top of this hook. Keeping the same return shape for callers.
 
   return {
     steps,

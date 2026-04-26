@@ -345,15 +345,16 @@ interface OnboardingTranslations {
   readonly skip: string;
 
   // Pre-auth pitch slides
-  readonly pitch_slide_voice_eyebrow: string;
+  // (eyebrow keys removed 2026-04-26 per user direction — slides no longer
+  //  show the "01 · VOICE" / "02 · SMS" / "03 · LIVE MARKET" pre-title.)
   readonly pitch_slide_voice_headline: string;
   readonly pitch_slide_voice_subhead: string;
+  readonly pitch_slide_voice_listening: string;
   readonly pitch_slide_voice_transcript: string;
   readonly pitch_slide_voice_status_saved: string;
   readonly pitch_slide_voice_status_just_now: string;
   readonly pitch_slide_voice_category_food: string;
   readonly pitch_slide_voice_account: string;
-  readonly pitch_slide_sms_eyebrow: string;
   readonly pitch_slide_sms_headline: string;
   readonly pitch_slide_sms_subhead: string;
   readonly pitch_slide_sms_bank_label: string;
@@ -361,7 +362,6 @@ interface OnboardingTranslations {
   readonly pitch_slide_sms_detected: string;
   readonly pitch_slide_sms_category_groceries: string;
   readonly pitch_slide_sms_status_imported: string;
-  readonly pitch_slide_offline_eyebrow: string;
   readonly pitch_slide_offline_headline: string;
   readonly pitch_slide_offline_subhead: string;
   readonly pitch_slide_offline_status_offline: string;
@@ -369,7 +369,6 @@ interface OnboardingTranslations {
   readonly pitch_slide_offline_recently_added: string;
   readonly pitch_slide_offline_all_saved: string;
   readonly pitch_slide_offline_pending: string;
-  readonly pitch_slide_live_market_eyebrow: string;
   readonly pitch_slide_live_market_headline: string;
   readonly pitch_slide_live_market_subhead: string;
   readonly pitch_slide_live_market_net_worth_label: string;

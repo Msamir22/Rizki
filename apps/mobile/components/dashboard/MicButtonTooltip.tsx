@@ -5,22 +5,25 @@ import { FontAwesome5 } from "@expo/vector-icons";
 import { AnchoredTooltip } from "@/components/ui/AnchoredTooltip";
 import { palette } from "@/constants/colors";
 import { useMicButtonRef } from "@/context/MicButtonRefContext";
+import { useMicTooltip } from "@/context/MicTooltipContext";
 import { useDismissOnBack } from "@/hooks/useDismissOnBack";
 
-interface MicButtonTooltipProps {
-  readonly visible: boolean;
-  readonly onTryItNow: () => void;
-  readonly onClose: () => void;
-}
-
-export function MicButtonTooltip({
-  visible,
-  onTryItNow,
-  onClose,
-}: MicButtonTooltipProps): React.ReactElement | null {
+/**
+ * MicButtonTooltip is now self-contained — it reads its visibility and
+ * action handlers from `MicTooltipContext`. It MUST be rendered at the
+ * dashboard root (sibling of `CashAccountTooltip`) so the
+ * `AnchoredTooltip` overlay covers the whole screen and isn't clipped by
+ * `OnboardingGuideCard`'s `overflow-hidden`.
+ */
+export function MicButtonTooltip(): React.ReactElement | null {
   const { t } = useTranslation("onboarding");
   const { t: tCommon } = useTranslation("common");
   const micRef = useMicButtonRef();
+  const {
+    isVisible: visible,
+    onTryItNow,
+    onDismiss: onClose,
+  } = useMicTooltip();
 
   // Android hardware-back while visible → same path as X close (FR-039),
   // NOT "Try it now" — does not open the voice flow.

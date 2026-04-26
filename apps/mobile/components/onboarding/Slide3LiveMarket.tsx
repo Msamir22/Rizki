@@ -2,18 +2,21 @@ import React from "react";
 import { View, Text } from "react-native";
 import { useTranslation } from "react-i18next";
 import { Ionicons } from "@expo/vector-icons";
+import Svg, { Path } from "react-native-svg";
 import { palette } from "@/constants/colors";
 import { PitchMockCard } from "./PitchMockCard";
 
 /**
  * Mock card for the Live Market pitch slide.
  *
- * Mirrors `specs/026-onboarding-restructure/mockups/03-slide-live-market.png`:
+ * Mirrors `specs/026-onboarding-restructure/mockups/03-slide-live-market.png`
+ * after the 2026-04-26 user-feedback round:
  *  - "NET WORTH" eyebrow.
  *  - Big "EGP 342,180" amount + green "+2.1% ↑" pill on the right.
- *  - Line-chart silhouette (simplified bar approximation — RN-friendly stand-in).
+ *  - Smooth line-chart silhouette (replaces the previous bar-chart
+ *    approximation, which the user flagged as not matching the mockup).
  *  - 3 asset rows: bullet + label + value with directional arrow.
- *  - Footer caption: "live · updated 2 min ago".
+ *  - Footer caption: pulsing-green "live" dot + "updated 2 min ago".
  *
  * Numeric / currency / change values are mock illustrations and are NOT
  * translated — see `// i18n-ignore` comments.
@@ -70,19 +73,45 @@ const CHANGE_ICON: Record<
   flat: "remove",
 };
 
-/** Tiny inline "chart" — 6 sparkline bars with rising-trend heights. */
-function ChartSparkline(): React.ReactElement {
-  const heights = [12, 18, 14, 22, 28, 34];
+/**
+ * Sparkline line chart — a smooth rising trend rendered with a single
+ * cubic-bezier path inside an SVG. Replaces the prior bar-chart
+ * approximation that didn't match the mockup.
+ *
+ * The path is hand-tuned to climb roughly left-to-right with a small dip,
+ * matching the visual shape of `03-slide-live-market.png`.
+ */
+function ChartLine(): React.ReactElement {
+  const width = 220;
+  const height = 44;
+  const stroke = palette.nileGreen[500];
+
   return (
-    <View className="flex-row items-end" style={{ gap: 4, height: 36 }}>
-      {heights.map((h, i) => (
-        <View
-          key={i}
-          className="w-2 rounded-sm bg-nileGreen-500/70"
-          style={{ height: h }}
-        />
-      ))}
-    </View>
+    <Svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`}>
+      <Path
+        d="M0,32 C20,28 36,30 56,22 C76,14 96,18 116,16 C136,14 156,10 176,8 C196,6 208,4 220,2"
+        stroke={stroke}
+        strokeWidth={2.5}
+        fill="none"
+        strokeLinecap="round"
+      />
+    </Svg>
+  );
+}
+
+/**
+ * Pulsing green dot used as a "live" indicator. The dot is static (no
+ * animation) for now — adding a Reanimated pulse is fine but unnecessary
+ * for the visual fidelity the mockup shows.
+ */
+function LiveDot(): React.ReactElement {
+  return (
+    <View
+      className="h-1.5 w-1.5 rounded-full bg-nileGreen-500"
+      // Use accessibilityRole="image" to flag the dot as decorative for
+      // screen readers; the "live · updated …" text carries the meaning.
+      accessibilityRole="image"
+    />
   );
 }
 
@@ -103,7 +132,7 @@ export function Slide3LiveMarket(): React.ReactElement {
         </Text>
         <View
           className="flex-row items-center rounded-full bg-nileGreen-500/15 px-2 py-0.5"
-          style={{ gap: 2 }}
+          style={{ columnGap: 2 }}
         >
           <Text className="text-[10px] font-semibold text-nileGreen-700 dark:text-nileGreen-300">
             {/* i18n-ignore: mock percentage display. */}
@@ -113,13 +142,13 @@ export function Slide3LiveMarket(): React.ReactElement {
         </View>
       </View>
 
-      {/* Sparkline chart */}
+      {/* Sparkline line chart */}
       <View className="mt-3">
-        <ChartSparkline />
+        <ChartLine />
       </View>
 
       {/* Asset rows */}
-      <View className="mt-3" style={{ gap: 8 }}>
+      <View className="mt-3" style={{ rowGap: 8 }}>
         {MARKET_ROWS.map((row) => (
           <View key={row.key} className="flex-row items-center">
             <View
@@ -129,7 +158,7 @@ export function Slide3LiveMarket(): React.ReactElement {
             <Text className="ms-2 flex-1 text-sm text-slate-700 dark:text-slate-200">
               {t(row.labelKey)}
             </Text>
-            <View className="flex-row items-center" style={{ gap: 4 }}>
+            <View className="flex-row items-center" style={{ columnGap: 4 }}>
               <Text className={`text-sm font-semibold ${TONE_CLASS[row.tone]}`}>
                 {/* i18n-ignore: numeric mock value with currency-per-unit suffix. */}
                 {row.value}
@@ -150,10 +179,13 @@ export function Slide3LiveMarket(): React.ReactElement {
         ))}
       </View>
 
-      {/* Live caption */}
-      <Text className="mt-3 text-[10px] text-slate-400 dark:text-slate-500">
-        {t("pitch_slide_live_market_live_caption", { minutes: 2 })}
-      </Text>
+      {/* Live caption — green dot + "live · updated N min ago" */}
+      <View className="mt-3 flex-row items-center" style={{ columnGap: 6 }}>
+        <LiveDot />
+        <Text className="text-[10px] text-slate-400 dark:text-slate-500">
+          {t("pitch_slide_live_market_live_caption", { minutes: 2 })}
+        </Text>
+      </View>
     </PitchMockCard>
   );
 }
