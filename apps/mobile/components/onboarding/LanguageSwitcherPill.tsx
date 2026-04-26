@@ -238,6 +238,27 @@ export function LanguageSwitcherPill(): React.ReactElement {
     ? pillRect.y + pillRect.height + POPOVER_MARGIN_TOP
     : 0;
 
+  // RTL handling for the popover position.
+  //
+  // `popoverLeft` is computed in WINDOW coordinates (LTR-space, returned
+  // by `measureInWindow`). But RN's `I18nManager.swapLeftAndRightInRTL`
+  // defaults to `true` on Android (and iOS), which auto-swaps `left` and
+  // `right` style values at render time when the layout direction is RTL.
+  //
+  // So writing `left: popoverLeft` in RTL gets converted to
+  // `right: popoverLeft` (popover's right edge `popoverLeft` pixels from
+  // the parent's RIGHT edge). With pill on the right side of the screen
+  // in Arabic, that ends up putting the popover on the LEFT side — same
+  // visual position the popover had in English, far from the pill.
+  // (User-reported regression 2026-04-26.)
+  //
+  // Fix: in RTL, write the position using the `right` property. The
+  // auto-swap converts it back to `left: popoverLeft` at render time, so
+  // the popover lands at the same window-coord x where we computed it.
+  const popoverPositionStyle = I18nManager.isRTL
+    ? { right: popoverLeft, top: popoverTop }
+    : { left: popoverLeft, top: popoverTop };
+
   return (
     <>
       <Pressable
@@ -304,7 +325,7 @@ export function LanguageSwitcherPill(): React.ReactElement {
             <View
               style={[
                 isDark ? styles.popoverDark : styles.popoverLight,
-                { left: popoverLeft, top: popoverTop },
+                popoverPositionStyle,
               ]}
               onStartShouldSetResponder={() => true}
             >
