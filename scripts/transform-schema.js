@@ -72,7 +72,7 @@ const READONLY_FIELDS = ["created_at"];
 
 // JSON fields - these get a "Raw" suffix and require manual getters in extended models
 // The getter should parse the JSON string into the proper TypeScript interface
-const JSON_FIELDS = ["notification_settings"];
+const JSON_FIELDS = ["notification_settings", "onboarding_flags"];
 
 // =============================================================================
 // VERSION RESOLUTION
@@ -350,6 +350,11 @@ export interface NotificationSettings {
   recurring_reminders: boolean;
   budget_alerts: boolean;
   low_balance_warnings: boolean;
+}
+
+export interface OnboardingFlags {
+  readonly cash_account_tooltip_dismissed?: boolean;
+  readonly voice_tooltip_seen?: boolean;
 }
 `;
 }

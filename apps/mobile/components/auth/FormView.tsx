@@ -1,19 +1,24 @@
 /**
- * FormView — Default Auth Screen Form
+ * FormView -- Default Auth Screen Form
  *
- * Renders the trust messaging header and authentication controls
- * (social login + email/password form) on the auth screen.
+ * Renders the welcome messaging, value-prop pill grid, and authentication
+ * controls (social login + email/password form) on the auth screen.
  *
  * Architecture & Design Rationale:
  * - Pattern: Presentational Component
- * - Why: Extracted from auth.tsx to enforce SRP — auth.tsx orchestrates
+ * - Why: Extracted from auth.tsx to enforce SRP -- auth.tsx orchestrates
  *   screen state, this component handles the form layout and trust UI.
  *
  * @module FormView
  */
 
+import {
+  FontAwesome5,
+  Ionicons,
+  MaterialCommunityIcons,
+} from "@expo/vector-icons";
 import { palette } from "@/constants/colors";
-import { MaterialCommunityIcons, Ionicons } from "@expo/vector-icons";
+import { LanguageSwitcherPill } from "@/components/onboarding/LanguageSwitcherPill";
 import React from "react";
 import { Text, TouchableOpacity, View } from "react-native";
 import { useTranslation } from "react-i18next";
@@ -29,9 +34,22 @@ import type { OAuthProvider } from "@/services/supabase";
 // Types
 // =============================================================================
 
-interface TrustBadge {
-  readonly icon: keyof typeof MaterialCommunityIcons.glyphMap;
+interface ValuePill {
   readonly translationKey: string;
+  readonly icon:
+    | "microphone"
+    | "message-text"
+    | "trending-up"
+    | "diamond-stone";
+  /**
+   * Icon set sourced per icon. `trending-up` is FontAwesome5 PRO ONLY in
+   * v5 — the free-tier `FontAwesome5Free-Regular` font shipped with
+   * `@expo/vector-icons` does not contain the glyph, which logged a noisy
+   * "not a valid icon name" warning on the auth screen (user-report
+   * 2026-04-26). Swapped to `MaterialCommunityIcons.trending-up`, which
+   * exists in the free tier.
+   */
+  readonly iconSet: "FontAwesome5" | "MaterialCommunityIcons";
 }
 
 export interface FormViewProps {
@@ -55,11 +73,53 @@ export interface FormViewProps {
 // Constants
 // =============================================================================
 
-const TRUST_BADGES: readonly TrustBadge[] = [
-  { icon: "lock-outline", translationKey: "trust_encrypted" },
-  { icon: "cloud-check-outline", translationKey: "trust_backed_up" },
-  { icon: "shield-check-outline", translationKey: "trust_private" },
+const VALUE_PILLS: readonly ValuePill[] = [
+  { translationKey: "pill_voice", icon: "microphone", iconSet: "FontAwesome5" },
+  {
+    translationKey: "pill_bank_sms",
+    icon: "message-text",
+    iconSet: "MaterialCommunityIcons",
+  },
+  {
+    translationKey: "pill_live_rates",
+    icon: "trending-up",
+    iconSet: "MaterialCommunityIcons",
+  },
+  {
+    translationKey: "pill_gold_silver",
+    icon: "diamond-stone",
+    iconSet: "MaterialCommunityIcons",
+  },
 ];
+
+// =============================================================================
+// Sub-components
+// =============================================================================
+
+interface PillIconProps {
+  readonly pill: ValuePill;
+  readonly size: number;
+  readonly color: string;
+}
+
+function PillIcon({ pill, size, color }: PillIconProps): React.JSX.Element {
+  if (pill.iconSet === "FontAwesome5") {
+    return (
+      <FontAwesome5
+        name={pill.icon as keyof typeof FontAwesome5.glyphMap}
+        size={size}
+        color={color}
+      />
+    );
+  }
+  return (
+    <MaterialCommunityIcons
+      name={pill.icon as keyof typeof MaterialCommunityIcons.glyphMap}
+      size={size}
+      color={color}
+    />
+  );
+}
 
 // =============================================================================
 // Component
@@ -78,52 +138,59 @@ export function FormView({
   onRetry,
 }: FormViewProps): React.JSX.Element {
   const { t } = useTranslation("auth");
+
+  const pillIconColor = isDark
+    ? palette.nileGreen[400]
+    : palette.nileGreen[600];
+  const trustIconColor = isDark ? palette.slate[400] : palette.slate[500];
+
   return (
     <>
-      {/* Top Section: Trust messaging */}
-      <View className="items-center gap-6 mt-8">
-        {/* Shield Icon */}
-        <View className="w-20 h-20 rounded-full bg-nileGreen-500/15 items-center justify-center">
-          <MaterialCommunityIcons
-            name="shield-lock-outline"
-            size={44}
-            color={isDark ? palette.nileGreen[400] : palette.nileGreen[600]}
-          />
-        </View>
+      {/* Language Switcher — top-start corner per mockup
+          `specs/026-onboarding-restructure/mockups/04-auth-light.png`.
+          `self-start` aligns to the leading edge (left in LTR / right in
+          RTL); the previous `self-end` was a regression that placed it on
+          the trailing edge. */}
+      <View className="self-start mb-4">
+        <LanguageSwitcherPill />
+      </View>
 
-        {/* Title */}
+      {/* Welcome Section */}
+      <View className="items-center gap-2 mb-6">
         <Text className="text-[28px] font-bold text-center text-text-primary dark:text-text-primary-dark">
           {t("welcome_title")}
         </Text>
-
-        {/* Subtitle */}
         <Text className="text-base text-center text-text-secondary dark:text-text-secondary-dark max-w-[320px] leading-6">
-          {t("welcome_subtitle")}
+          {t("welcome_tagline")}
         </Text>
-
-        {/* Trust Badges */}
-        <View className="flex-row justify-center gap-6 mt-2">
-          {TRUST_BADGES.map((badge) => (
-            <View key={badge.translationKey} className="items-center gap-2">
-              <View className="w-12 h-12 rounded-xl bg-nileGreen-500/10 items-center justify-center">
-                <MaterialCommunityIcons
-                  name={badge.icon}
-                  size={24}
-                  color={
-                    isDark ? palette.nileGreen[400] : palette.nileGreen[600]
-                  }
-                />
-              </View>
-              <Text className="text-xs font-medium text-text-secondary dark:text-text-secondary-dark">
-                {t(badge.translationKey)}
-              </Text>
-            </View>
-          ))}
-        </View>
       </View>
 
-      {/* Bottom Section: Auth Controls */}
-      <View className="gap-4 mt-8">
+      {/* 2×2 Value-Prop Pill Grid (per mockup 04-auth-light.png).
+          Explicit two-row layout with `flex-1` per pill so the grid is always
+          2-up regardless of phone width. The previous `flex-wrap` approach
+          allowed 3 of the 4 pills to fit on a single row at common widths
+          (~360-400dp), producing a 3+1 layout that did not match the mockup. */}
+      <View className="gap-2.5 mb-8">
+        {[0, 2].map((rowStart) => (
+          <View key={rowStart} className="flex-row" style={{ gap: 10 }}>
+            {VALUE_PILLS.slice(rowStart, rowStart + 2).map((pill) => (
+              <View
+                key={pill.translationKey}
+                className="flex-1 flex-row items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 px-3.5 py-2"
+                style={{ gap: 6 }}
+              >
+                <PillIcon pill={pill} size={14} color={pillIconColor} />
+                <Text className="text-xs font-medium text-text-secondary dark:text-text-secondary-dark">
+                  {t(pill.translationKey)}
+                </Text>
+              </View>
+            ))}
+          </View>
+        ))}
+      </View>
+
+      {/* Auth Controls */}
+      <View className="gap-4">
         {/* Network Error Banner */}
         {networkError ? (
           <View className="bg-red-500/10 border border-red-400/30 rounded-2xl p-4 flex-row items-center gap-3">
@@ -154,7 +221,7 @@ export function FormView({
         {/* Google OAuth */}
         <SocialLoginButtons loadingProvider={oauthLoading} onPress={onOAuth} />
 
-        {/* Email/Password Form */}
+        {/* Email/Password Form (includes its own "or" divider) */}
         <EmailPasswordForm
           onSubmit={onEmailSubmit}
           onForgotPassword={onForgotPassword}
@@ -162,6 +229,30 @@ export function FormView({
           errorMessage={emailError}
           onClearError={onClearError}
         />
+      </View>
+
+      {/* Trust Microbar Footer */}
+      <View className="flex-row justify-center items-center gap-5 mt-6 pt-4 border-t border-slate-200 dark:border-slate-700">
+        <View className="flex-row items-center" style={{ gap: 4 }}>
+          <MaterialCommunityIcons
+            name="lock-outline"
+            size={14}
+            color={trustIconColor}
+          />
+          <Text className="text-xs text-text-muted dark:text-text-muted-dark">
+            {t("trust_encrypted")}
+          </Text>
+        </View>
+        <View className="flex-row items-center" style={{ gap: 4 }}>
+          <MaterialCommunityIcons
+            name="shield-check-outline"
+            size={14}
+            color={trustIconColor}
+          />
+          <Text className="text-xs text-text-muted dark:text-text-muted-dark">
+            {t("trust_private")}
+          </Text>
+        </View>
       </View>
     </>
   );

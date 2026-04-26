@@ -63,7 +63,7 @@ type ScreenState = "form" | "verificationPending" | "resetSent";
 export default function AuthScreen(): React.JSX.Element {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { isDark, theme } = useTheme();
+  const { isDark } = useTheme();
   const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const { showToast } = useToast();
   const { t } = useTranslation("auth");
@@ -215,16 +215,22 @@ export default function AuthScreen(): React.JSX.Element {
   // \u2500\u2500\u2500 Render \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 
   return (
-    <View className="flex-1">
-      {/* Background Gradient */}
-      <LinearGradient
-        colors={
-          isDark
-            ? [theme.background, palette.nileGreen[900]]
-            : [palette.nileGreen[50], "#FFFFFF"]
-        }
-        style={StyleSheet.absoluteFill}
-      />
+    // Background uses the same `bg-background dark:bg-background-dark`
+    // tokens used by every other authenticated screen (dashboard,
+    // add-account, edit-account, etc). Pre-2026-04-26 the auth screen
+    // rendered a custom green-tinted LinearGradient in dark mode which
+    // looked off compared to the rest of the app — user direction:
+    // standardize to the solid app-wide dark background. The light-mode
+    // gradient is kept since it was working there, but moved to a
+    // tokenized class so the auth screen also follows the system theme
+    // when users have a system-level dark/light preference.
+    <View className="flex-1 bg-background dark:bg-background-dark">
+      {!isDark && (
+        <LinearGradient
+          colors={[palette.nileGreen[50], "#FFFFFF"]}
+          style={StyleSheet.absoluteFill}
+        />
+      )}
 
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
