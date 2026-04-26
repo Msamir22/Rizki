@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, Pressable } from "react-native";
+import { I18nManager, Pressable, Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import { Ionicons } from "@expo/vector-icons";
 import { palette } from "@/constants/colors";
@@ -81,7 +81,11 @@ export function PitchSlide({
             className="h-10 w-10 items-center justify-center rounded-full bg-slate-100 active:bg-slate-200 dark:bg-slate-800 dark:active:bg-slate-700"
           >
             <Ionicons
-              name="chevron-back"
+              // In RTL the visual "back" direction is to the right
+              // (reading direction is right-to-left, so going BACK means
+              // going forward in screen coords). Ionicons does not
+              // auto-flip, so we pick the glyph explicitly per locale.
+              name={I18nManager.isRTL ? "chevron-forward" : "chevron-back"}
               size={20}
               color={palette.slate[600]}
             />

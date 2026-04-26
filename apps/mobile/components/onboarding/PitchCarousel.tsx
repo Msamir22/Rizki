@@ -1,5 +1,11 @@
-import React, { useCallback, useRef, useState } from "react";
-import { BackHandler, Platform, View, useWindowDimensions } from "react-native";
+import React, { useCallback, useMemo, useRef, useState } from "react";
+import {
+  BackHandler,
+  I18nManager,
+  Platform,
+  View,
+  useWindowDimensions,
+} from "react-native";
 import { useTranslation } from "react-i18next";
 import { useFocusEffect, useRouter } from "expo-router";
 import Carousel, {
@@ -31,9 +37,43 @@ export function PitchCarousel(): React.ReactElement {
   const { t } = useTranslation("onboarding");
   const router = useRouter();
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
-  const [currentSlide, setCurrentSlide] = useState(0);
   const carouselRef = useRef<ICarouselInstance>(null);
   const totalSlides = SLIDES.length;
+
+  // RTL handling. `react-native-reanimated-carousel` v4 has no built-in
+  // RTL flip — its pan gesture always treats "drag left → next index" as
+  // forward. In Arabic (RTL) the user expects to drag RIGHT to advance.
+  //
+  // Workaround: feed the carousel a REVERSED data array in RTL so that
+  // its internal "drag right → lower index" matches the narrative
+  // direction. The component-side state below tracks the **narrative**
+  // index (0 = first slide, N-1 = last slide) and translates to/from the
+  // carousel-internal index whenever we read or write the carousel.
+  const isRTL = I18nManager.isRTL;
+  const carouselData = useMemo(
+    () => (isRTL ? [...SLIDES].reverse() : [...SLIDES]),
+    [isRTL]
+  );
+
+  /**
+   * Convert between narrative position (always 0 → N-1, "first slide" →
+   * "last slide") and the carousel's internal index. In LTR the two are
+   * the same. In RTL they're mirrored because the data array was reversed.
+   */
+  const narrativeToCarousel = useCallback(
+    (narrative: number): number =>
+      isRTL ? totalSlides - 1 - narrative : narrative,
+    [isRTL, totalSlides]
+  );
+  const carouselToNarrative = useCallback(
+    (carousel: number): number =>
+      isRTL ? totalSlides - 1 - carousel : carousel,
+    [isRTL, totalSlides]
+  );
+
+  /** Tracks NARRATIVE position. Pagination dots + isLast/hasPrevious all
+   *  derive from this so they stay correct regardless of locale. */
+  const [currentSlide, setCurrentSlide] = useState(0);
 
   /**
    * Skip / Get-Started handler — used by the top-right Skip on slides 1–2 and
@@ -54,10 +94,21 @@ export function PitchCarousel(): React.ReactElement {
     router.push("/auth");
   }, [router]);
 
-  const goToSlide = useCallback((index: number): void => {
-    carouselRef.current?.scrollTo({ index, animated: true });
-    setCurrentSlide(index);
-  }, []);
+  /**
+   * `narrativeIndex` is the user-facing slide number (0..N-1). Internally
+   * we translate it to the carousel's index (mirrored in RTL) and tell
+   * the carousel to scroll there.
+   */
+  const goToSlide = useCallback(
+    (narrativeIndex: number): void => {
+      carouselRef.current?.scrollTo({
+        index: narrativeToCarousel(narrativeIndex),
+        animated: true,
+      });
+      setCurrentSlide(narrativeIndex);
+    },
+    [narrativeToCarousel]
+  );
 
   /**
    * Per-slide advance handler:
@@ -101,25 +152,27 @@ export function PitchCarousel(): React.ReactElement {
         ref={carouselRef}
         width={screenWidth}
         height={screenHeight}
-        data={[...SLIDES]}
-        defaultIndex={0}
-        // `react-native-reanimated-carousel` defaults to `loop={true}`,
-        // which wraps slide 1 ←→ slide 3 when the user swipes off either
-        // end (user-reported 2026-04-26: "sliding left from the first slide
-        // to the last one is not allowed"). Pre-auth pitch is a strictly
-        // sequential narrative — keep navigation one-way and let the
-        // explicit top-left back-arrow on slides 2-3 handle backtracking.
+        data={carouselData}
+        defaultIndex={narrativeToCarousel(0)}
+        // react-native-reanimated-carousel defaults to loop=true, which
+        // wraps slide 1 ←→ slide 3 when the user swipes off either end.
+        // Pre-auth pitch is a strictly sequential narrative — keep
+        // navigation one-way and let the explicit top-left back-arrow on
+        // slides 2-3 handle backtracking.
         loop={false}
-        onScrollEnd={(index: number): void => setCurrentSlide(index)}
-        renderItem={({ item, index }): React.ReactElement => {
+        onScrollEnd={(carouselIndex: number): void =>
+          setCurrentSlide(carouselToNarrative(carouselIndex))
+        }
+        renderItem={({ item, index: carouselIndex }): React.ReactElement => {
           const SlideComponent = item.component;
+          const narrativeIndex = carouselToNarrative(carouselIndex);
           return (
             <PitchSlide
               headline={t(`pitch_slide_${item.key}_headline`)}
               subhead={t(`pitch_slide_${item.key}_subhead`)}
-              isLast={index === totalSlides - 1}
-              hasPrevious={index > 0}
-              slideIndex={index}
+              isLast={narrativeIndex === totalSlides - 1}
+              hasPrevious={narrativeIndex > 0}
+              slideIndex={narrativeIndex}
               totalSlides={totalSlides}
               onSkip={() => {
                 void handleComplete();

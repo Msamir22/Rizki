@@ -12,19 +12,37 @@
  * that's already active simply closes the popover (no-op, no spurious
  * RTL reload).
  *
- * Architecture / Pattern: small disclosure popover. Renders an absolute-
- * positioned overlay pinned to the `Pressable` ref via `measureInWindow`,
- * mirroring the `AnchoredTooltip` pattern but trimmed to a list. Uses
- * StyleSheet for the overlay layer to dodge the NativeWind v4 modal
- * race-condition (`.claude/rules/android-modal-overlay-pattern.md`).
+ * ## Why a Modal (and not the absolute-overlay pattern from
+ * `.claude/rules/android-modal-overlay-pattern.md`)?
+ *
+ * The pill is a small inline component (top-bar of `PitchSlide`,
+ * `CurrencyStep`, etc). When we tried the absolute-overlay pattern, the
+ * `absoluteFillObject` filled the pill's IMMEDIATE parent (a `flex-row`
+ * top bar) — not the screen — so:
+ *   1. Tap-outside-to-close didn't fire when the user tapped below the
+ *      top bar (the backdrop wasn't there to receive it).
+ *   2. Window-absolute coords from `measureInWindow` were re-interpreted
+ *      as parent-local, so the popover landed in the wrong place.
+ *
+ * `<Modal transparent>` renders into a screen-spanning native window, so
+ * window-absolute coords map 1:1 and the backdrop genuinely covers the
+ * whole screen. The Android-collapse rule warns about NativeWind v4
+ * `bg-color/opacity` classes on `Pressable`/`TouchableOpacity` *inside*
+ * the Modal — we use `StyleSheet` for everything inside the Modal here,
+ * so the warning doesn't apply.
+ *
+ * No vertical gap between the pill and the popover (`POPOVER_MARGIN_TOP
+ * = 0`) so they read as a single unit per the 2026-04-26 user direction.
  */
 
 import React, { useCallback, useRef, useState } from "react";
 import {
+  I18nManager,
+  Modal,
   Pressable,
   StyleSheet,
   Text,
-  TouchableWithoutFeedback,
+  useWindowDimensions,
   View,
   type LayoutRectangle,
   type View as RNView,
@@ -54,20 +72,29 @@ const LOCALES: readonly LocaleOption[] = [
 
 const PILL_WIDTH_FALLBACK = 80;
 const POPOVER_WIDTH = 160;
-const POPOVER_MARGIN_TOP = 6;
+/** Visible gap between the pill and the popover. 0 makes the two read as
+ *  a single piece — the popover hangs flush off the bottom edge of the
+ *  pill, only the rounded corners + shadow distinguish them. */
+const POPOVER_MARGIN_TOP = 0;
+/** Minimum margin between the popover and either screen edge so it never
+ *  hugs the edge or runs off-screen on narrow phones / RTL. */
+const POPOVER_EDGE_MARGIN = 8;
 
 const styles = StyleSheet.create({
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 999,
+  // Modal backdrop — full-screen Pressable that closes on outside tap.
+  backdrop: {
+    flex: 1,
   },
-  // Transparent click-eater behind the popover. Tap = close.
-  backdrop: StyleSheet.absoluteFillObject,
   popoverLight: {
     position: "absolute",
     width: POPOVER_WIDTH,
     backgroundColor: palette.slate[25],
-    borderRadius: 12,
+    // Square the top corners so the popover visually butts up against
+    // the pill's bottom edge (one continuous shape).
+    borderTopLeftRadius: 4,
+    borderTopRightRadius: 4,
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12,
     borderWidth: 1,
     borderColor: palette.slate[200],
     paddingVertical: 4,
@@ -81,7 +108,10 @@ const styles = StyleSheet.create({
     position: "absolute",
     width: POPOVER_WIDTH,
     backgroundColor: palette.slate[800],
-    borderRadius: 12,
+    borderTopLeftRadius: 4,
+    borderTopRightRadius: 4,
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12,
     borderWidth: 1,
     borderColor: palette.slate[700],
     paddingVertical: 4,
@@ -100,8 +130,30 @@ const styles = StyleSheet.create({
   },
 });
 
+/**
+ * Compute the popover's horizontal position so it visually aligns with
+ * the pill AND stays on-screen.
+ *
+ * Default behavior: align the popover's leading edge with the pill's
+ * leading edge (LTR: left edges align, RTL: right edges align). If that
+ * would push the popover off-screen, clamp to the opposite alignment.
+ */
+function computePopoverLeft(
+  pill: LayoutRectangle,
+  screenWidth: number
+): number {
+  const isRTL = I18nManager.isRTL;
+  // Default — align leading edge.
+  const defaultLeft = isRTL ? pill.x + pill.width - POPOVER_WIDTH : pill.x;
+  // Clamp into [POPOVER_EDGE_MARGIN, screenWidth - POPOVER_WIDTH - POPOVER_EDGE_MARGIN].
+  const minLeft = POPOVER_EDGE_MARGIN;
+  const maxLeft = screenWidth - POPOVER_WIDTH - POPOVER_EDGE_MARGIN;
+  return Math.max(minLeft, Math.min(defaultLeft, maxLeft));
+}
+
 export function LanguageSwitcherPill(): React.ReactElement {
   const { i18n } = useTranslation();
+  const { t: tCommon } = useTranslation("common");
   const { isDark } = useTheme();
   const { setOverride } = useIntroLocaleOverride();
   // Used to decide whether the language change must ALSO be persisted to
@@ -116,14 +168,15 @@ export function LanguageSwitcherPill(): React.ReactElement {
   const [pillRect, setPillRect] = useState<LayoutRectangle | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [isChanging, setIsChanging] = useState(false);
+  const { width: screenWidth } = useWindowDimensions();
 
   const currentLang: SupportedLocale = i18n.language === "ar" ? "ar" : "en";
 
   /**
-   * Open the popover after measuring the pill's screen position. We measure
-   * on press rather than on layout because measureInWindow can return 0×0
-   * during the initial render in a Stack screen (the same race that
-   * `AnchoredTooltip` works around — see its `requestAnimationFrame` retry).
+   * Open the popover after measuring the pill's screen position. We
+   * measure on press (rather than `onLayout`) because `measureInWindow`
+   * can return 0×0 during the initial render in a Stack screen — the
+   * same race that `AnchoredTooltip` works around.
    */
   const handlePress = useCallback((): void => {
     if (isChanging) return;
@@ -178,7 +231,9 @@ export function LanguageSwitcherPill(): React.ReactElement {
     [currentLang, setOverride, handleClose, isAuthenticated]
   );
 
-  const popoverLeft = pillRect?.x ?? 0;
+  const popoverLeft = pillRect ? computePopoverLeft(pillRect, screenWidth) : 0;
+  // No gap — the popover's top edge sits flush against the pill's bottom
+  // edge so the two read as a single piece (user direction 2026-04-26).
   const popoverTop = pillRect
     ? pillRect.y + pillRect.height + POPOVER_MARGIN_TOP
     : 0;
@@ -213,61 +268,82 @@ export function LanguageSwitcherPill(): React.ReactElement {
         />
       </Pressable>
 
-      {isOpen && pillRect && (
-        <View style={styles.overlay}>
-          {/* Backdrop — tap anywhere outside the popover to dismiss. */}
-          <TouchableWithoutFeedback onPress={handleClose}>
-            <View style={styles.backdrop} />
-          </TouchableWithoutFeedback>
-
-          {/* Popover */}
-          <View
-            style={[
-              isDark ? styles.popoverDark : styles.popoverLight,
-              { left: popoverLeft, top: popoverTop },
-            ]}
-          >
-            {LOCALES.map((option, idx) => {
-              const isActive = option.code === currentLang;
-              const isFirst = idx === 0;
-              return (
-                <Pressable
-                  key={option.code}
-                  onPress={() => handleSelect(option.code)}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: isActive }}
-                  style={[
-                    styles.optionRow,
-                    !isFirst && {
-                      borderTopWidth: StyleSheet.hairlineWidth,
-                      borderTopColor: isDark
-                        ? palette.slate[700]
-                        : palette.slate[200],
-                    },
-                  ]}
-                >
-                  <Text
-                    style={{
-                      color: isDark ? palette.slate[200] : palette.slate[800],
-                      fontSize: 14,
-                      fontWeight: isActive ? "600" : "400",
-                    }}
+      {/* Popover Modal:
+          - transparent: overlay the current screen without dimming.
+          - animationType=none: instant open/close, a fade reads as sluggish.
+          - onRequestClose: handles the Android hardware back button.
+          - statusBarTranslucent: aligns the Modal coordinate space with
+            measureInWindow so the popover lands at the right Y. */}
+      <Modal
+        visible={isOpen && pillRect !== null}
+        transparent
+        animationType="none"
+        onRequestClose={handleClose}
+        statusBarTranslucent
+      >
+        {/* Full-screen tap-target backdrop. Pressable with a StyleSheet
+            style is the safe pattern inside Modal per the
+            android-modal-overlay-pattern rule — we avoid bg-color/opacity
+            classes here. */}
+        <Pressable
+          style={styles.backdrop}
+          onPress={handleClose}
+          accessibilityRole="button"
+          accessibilityLabel={tCommon("close")}
+        >
+          {/* Popover. onStartShouldSetResponder claims the touch so taps
+              INSIDE the popover do not bubble up to the backdrop onPress
+              (which would close the popover before the row onPress fires). */}
+          {pillRect && (
+            <View
+              style={[
+                isDark ? styles.popoverDark : styles.popoverLight,
+                { left: popoverLeft, top: popoverTop },
+              ]}
+              onStartShouldSetResponder={() => true}
+            >
+              {LOCALES.map((option, idx) => {
+                const isActive = option.code === currentLang;
+                const isFirst = idx === 0;
+                return (
+                  <Pressable
+                    key={option.code}
+                    onPress={() => handleSelect(option.code)}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: isActive }}
+                    style={[
+                      styles.optionRow,
+                      !isFirst && {
+                        borderTopWidth: StyleSheet.hairlineWidth,
+                        borderTopColor: isDark
+                          ? palette.slate[700]
+                          : palette.slate[200],
+                      },
+                    ]}
                   >
-                    {option.nativeLabel}
-                  </Text>
-                  {isActive && (
-                    <Ionicons
-                      name="checkmark"
-                      size={16}
-                      color={palette.nileGreen[500]}
-                    />
-                  )}
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
-      )}
+                    <Text
+                      style={{
+                        color: isDark ? palette.slate[200] : palette.slate[800],
+                        fontSize: 14,
+                        fontWeight: isActive ? "600" : "400",
+                      }}
+                    >
+                      {option.nativeLabel}
+                    </Text>
+                    {isActive && (
+                      <Ionicons
+                        name="checkmark"
+                        size={16}
+                        color={palette.nileGreen[500]}
+                      />
+                    )}
+                  </Pressable>
+                );
+              })}
+            </View>
+          )}
+        </Pressable>
+      </Modal>
     </>
   );
 }
