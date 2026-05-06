@@ -7,7 +7,7 @@
  * - Android: EncryptedSharedPreferences - survives app restarts but NOT manual data clear
  */
 
-import { SupabaseDatabase, type PreferredLanguageCode } from "@monyvi/db";
+import { SupabaseDatabase } from "@monyvi/db";
 import { createClient, AuthError } from "@supabase/supabase-js";
 import * as SecureStore from "expo-secure-store";
 import { AUTH_REDIRECT_URL } from "@/constants/auth-constants";
@@ -251,16 +251,6 @@ interface EmailAuthResult {
   readonly needsVerification?: boolean;
 }
 
-interface EmailSignUpOptions {
-  readonly preferredLanguage?: PreferredLanguageCode;
-}
-
-function isPreferredLanguageCode(
-  value: unknown
-): value is PreferredLanguageCode {
-  return value === "en" || value === "ar";
-}
-
 /**
  * Sign up a new user with email and password.
  *
@@ -274,29 +264,12 @@ function isPreferredLanguageCode(
  */
 export async function signUpWithEmail(
   email: string,
-  password: string,
-  options: EmailSignUpOptions = {}
+  password: string
 ): Promise<EmailAuthResult> {
-  const preferredLanguage = isPreferredLanguageCode(options.preferredLanguage)
-    ? options.preferredLanguage
-    : undefined;
-  const credentials =
-    preferredLanguage !== undefined
-      ? {
-          email,
-          password,
-          options: {
-            data: {
-              preferred_language: preferredLanguage,
-            },
-          },
-        }
-      : {
-          email,
-          password,
-        };
-
-  const { data, error } = await supabase.auth.signUp(credentials);
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+  });
 
   if (error) {
     return { success: false, error };
