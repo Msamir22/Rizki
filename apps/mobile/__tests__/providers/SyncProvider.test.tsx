@@ -40,7 +40,6 @@ const actSync = ((fn: () => void) => getRTR().act(fn)) as (
 
 const mockSyncDatabase = jest.fn();
 const mockCheckIsAuthenticated = jest.fn();
-const mockCompleteInterruptedLogout = jest.fn();
 const mockFetchProfileCount = jest.fn();
 const mockDbGet = jest.fn();
 const mockWhere = jest.fn((column: string, value: unknown) => ({
@@ -56,11 +55,6 @@ jest.mock("@/services/sync", () => ({
 jest.mock("@/services/supabase", () => ({
   isAuthenticated: (): Promise<boolean> =>
     mockCheckIsAuthenticated() as Promise<boolean>,
-}));
-
-jest.mock("@/services/logout-service", () => ({
-  completeInterruptedLogout: (...args: unknown[]): Promise<void> =>
-    mockCompleteInterruptedLogout(...args) as Promise<void>,
 }));
 
 jest.mock("@monyvi/db", () => ({
@@ -133,7 +127,6 @@ describe("SyncProvider initialSyncState", () => {
     jest.clearAllMocks();
     jest.useFakeTimers();
     mockCheckIsAuthenticated.mockResolvedValue(true);
-    mockCompleteInterruptedLogout.mockResolvedValue(undefined);
     mockFetchProfileCount.mockResolvedValue(0);
     mockDbGet.mockReturnValue({
       query: jest.fn(() => ({ fetchCount: mockFetchProfileCount })),
@@ -158,12 +151,10 @@ describe("SyncProvider initialSyncState", () => {
   async function flushInitialSync(): Promise<void> {
     // Advance just past the 20s race — enough to settle both resolve and
     // reject branches of Promise.race without triggering the 15-min interval.
-    await jest.advanceTimersByTimeAsync(20_500);
-    // Flush any remaining microtask continuations after the race settles
-    // (e.g. the `.catch` handler in runInitialSync that sets the final state).
-    for (let i = 0; i < 5; i++) {
-      await Promise.resolve();
-    }
+    await getRTR().act(async () => {
+      await jest.advanceTimersByTimeAsync(20_500);
+    });
+    await flushStartupMicrotasks();
   }
 
   async function flushStartupMicrotasks(): Promise<void> {
@@ -174,11 +165,28 @@ describe("SyncProvider initialSyncState", () => {
     });
   }
 
+  async function waitForInitialSyncState(
+    result: React.MutableRefObject<SyncContextSnapshot>,
+    expectedState: string
+  ): Promise<void> {
+    for (let attempt = 0; attempt < 20; attempt++) {
+      if (result.current?.initialSyncState === expectedState) {
+        return;
+      }
+
+      await flushStartupMicrotasks();
+    }
+
+    throw new Error(
+      `Expected initialSyncState "${expectedState}", received "${result.current?.initialSyncState}"`
+    );
+  }
+
   it('transitions to "success" when sync completes within timeout', async () => {
     mockSyncDatabase.mockResolvedValue(undefined);
     const { result } = renderAndCapture();
 
-    await flushInitialSync();
+    await waitForInitialSyncState(result, "success");
     actSync(() => {
       // No-op - just trigger a React update
     });
@@ -203,19 +211,11 @@ describe("SyncProvider initialSyncState", () => {
     expect(result.current.initialSyncState).toBe("success");
   });
 
-  // TODO(024): this test is order-dependent in fake-timer mode — passes
-  // alone, fails after the "success" case runs first because a tick of the
-  // 15-min setInterval leaks microtasks that prevent the failure handler
-  // from settling in time. Revisit with a dedicated test-utility that
-  // isolates SyncProvider's effect from its interval.
-  it.skip('transitions to "failed" when sync throws before timeout', async () => {
+  it('transitions to "failed" when sync throws before timeout', async () => {
     mockSyncDatabase.mockRejectedValue(new Error("Network error"));
     const { result } = renderAndCapture();
 
-    for (let i = 0; i < 10; i++) {
-      if (result.current?.initialSyncState === "failed") break;
-      await flushInitialSync();
-    }
+    await waitForInitialSyncState(result, "failed");
     actSync(() => {
       // No-op - just trigger a React update
     });
@@ -223,10 +223,7 @@ describe("SyncProvider initialSyncState", () => {
     expect(result.current.initialSyncState).toBe("failed");
   });
 
-  // TODO(024): Like the "failed" case above, this test is order-dependent
-  // in fake-timer mode. Revisit with a test-utility that isolates
-  // SyncProvider's initial-sync Promise.race from its 15-min setInterval.
-  it.skip('transitions to "timeout" when sync takes longer than 20 seconds', async () => {
+  it('transitions to "timeout" when sync takes longer than 20 seconds', async () => {
     mockSyncDatabase.mockReturnValue(new Promise(() => {}));
     const { result } = renderAndCapture();
 

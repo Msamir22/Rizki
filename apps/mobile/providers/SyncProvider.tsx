@@ -18,7 +18,6 @@ import {
 import { AppState, AppStateStatus } from "react-native";
 import { useAuth } from "../context/AuthContext";
 import { isAuthenticated as checkIsAuthenticated } from "../services/supabase";
-import { completeInterruptedLogout } from "../services/logout-service";
 import { syncDatabase } from "../services/sync";
 import { queryOwned } from "../services/user-data-access";
 import { logger } from "../utils/logger";
@@ -207,9 +206,6 @@ export function SyncProvider({ children }: SyncProviderProps): JSX.Element {
   // Initial sync on mount + data cleared detection
   useEffect(() => {
     const initialSync = async (): Promise<void> => {
-      // FR-012: Complete any interrupted logout from a force-close
-      await completeInterruptedLogout(database);
-
       // Check user is authenticated before syncing
       if (!isAuthenticated) {
         setupSyncInterval(true);

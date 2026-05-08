@@ -108,22 +108,10 @@ function getSupabaseMocks(): SupabaseMocks {
 }
 
 // =============================================================================
-// Mock: storage-keys
-// =============================================================================
-
-jest.mock("@/constants/storage-keys", () => ({
-  LOGOUT_IN_PROGRESS_KEY: "@monyvi/logout-in-progress",
-  CLEARABLE_USER_KEYS: ["@monyvi/first-use-date"],
-}));
-
-// =============================================================================
 // Import module under test (after mocks)
 // =============================================================================
 
-import {
-  performLogout,
-  completeInterruptedLogout,
-} from "@/services/logout-service";
+import { performLogout } from "@/services/logout-service";
 
 // =============================================================================
 // Helpers
@@ -172,10 +160,6 @@ describe("logout-service", () => {
     const syncMocks = getSyncMocks();
     const supaMocks = getSupabaseMocks();
 
-    asyncMocks.setItem.mockImplementation(() => {
-      callOrder.push("setFlag");
-      return Promise.resolve();
-    });
     netInfoMocks.fetch.mockImplementation(() => {
       callOrder.push("networkCheck");
       return Promise.resolve({ isConnected: true });
@@ -192,10 +176,9 @@ describe("logout-service", () => {
     const result = await performLogout(db);
 
     expect(result).toEqual({ success: true });
-    expect(callOrder).toEqual(["networkCheck", "sync", "setFlag", "signOut"]);
-    expect(asyncMocks.removeItem).toHaveBeenCalledWith(
-      "@monyvi/logout-in-progress"
-    );
+    expect(callOrder).toEqual(["networkCheck", "sync", "signOut"]);
+    expect(asyncMocks.setItem).not.toHaveBeenCalled();
+    expect(asyncMocks.removeItem).not.toHaveBeenCalled();
   });
 
   // =========================================================================
@@ -284,39 +267,7 @@ describe("logout-service", () => {
   });
 
   // =========================================================================
-  // Test 7: Force-close recovery (FR-012)
-  // =========================================================================
-  describe("completeInterruptedLogout", () => {
-    it("should complete reset when logout_in_progress flag is present", async () => {
-      const asyncMocks = getAsyncStorageMocks();
-      const syncMocks = getSyncMocks();
-      const supaMocks = getSupabaseMocks();
-
-      asyncMocks.getItem.mockResolvedValue("true");
-
-      await completeInterruptedLogout(db);
-
-      expect(syncMocks.resetSyncState).not.toHaveBeenCalled();
-      expect(asyncMocks.multiRemove).not.toHaveBeenCalled();
-      expect(supaMocks.signOut).toHaveBeenCalledTimes(1);
-      expect(asyncMocks.removeItem).toHaveBeenCalledWith(
-        "@monyvi/logout-in-progress"
-      );
-    });
-
-    it("should do nothing when logout_in_progress flag is absent", async () => {
-      const syncMocks = getSyncMocks();
-      const supaMocks = getSupabaseMocks();
-
-      await completeInterruptedLogout(db);
-
-      expect(syncMocks.resetSyncState).not.toHaveBeenCalled();
-      expect(supaMocks.signOut).not.toHaveBeenCalled();
-    });
-  });
-
-  // =========================================================================
-  // Test 8: Session cleanup failure is reported
+  // Test 7: Session cleanup failure is reported
   // =========================================================================
   it("should report unknown when session cleanup fails", async () => {
     const syncMocks = getSyncMocks();

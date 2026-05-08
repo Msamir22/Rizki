@@ -26,10 +26,3 @@ export const INTRO_SEEN_KEY = "@monyvi/intro-seen";
 
 /** Explicit language preference selected on any pre-auth surface (pitch, auth, or Currency step). Device-scoped — persists across sign-up/sign-out. */
 export const INTRO_LOCALE_OVERRIDE_KEY = "@monyvi/intro-locale-override";
-
-// =============================================================================
-// Logout Keys
-// =============================================================================
-
-/** Set to `"true"` before logout begins; removed after completion. Used for force-close recovery. */
-export const LOGOUT_IN_PROGRESS_KEY = "@monyvi/logout-in-progress";
