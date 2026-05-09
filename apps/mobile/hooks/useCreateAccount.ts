@@ -1,13 +1,14 @@
 import { useRouter } from "expo-router";
 import { useCallback, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useToast } from "../components/ui/Toast";
 import {
   CREATE_ACCOUNT_ERROR_CODES,
   createAccountForUser,
 } from "../services/account-service";
-import { getCurrentUserId } from "../services/supabase";
 import { logger } from "../utils/logger";
 import { AccountFormData } from "../validation/account-validation";
+import { useCurrentUser } from "./useCurrentUser";
 
 interface UseCreateAccountResult {
   createAccount: (data: AccountFormData) => Promise<void>;
@@ -24,6 +25,9 @@ export function useCreateAccount(): UseCreateAccountResult {
   const [error, setError] = useState<Error | null>(null);
   const { showToast } = useToast();
   const router = useRouter();
+  const { t } = useTranslation("accounts");
+  const { t: tCommon } = useTranslation("common");
+  const { userId } = useCurrentUser();
 
   /**
    * Performs the database write operation to create an account and optional bank details.
@@ -36,13 +40,11 @@ export function useCreateAccount(): UseCreateAccountResult {
       setError(null);
 
       try {
-        const userId = await getCurrentUserId();
-
         if (!userId) {
           showToast({
             type: "error",
-            title: "Session Error",
-            message: "You must be signed in to create an account",
+            title: t("toast_create_session_required_title"),
+            message: t("toast_create_session_required_message"),
           });
           return;
         }
@@ -56,8 +58,8 @@ export function useCreateAccount(): UseCreateAccountResult {
           ) {
             showToast({
               type: "warning",
-              title: "Account Already Exists",
-              message: "This account was already created.",
+              title: t("toast_create_duplicate_title"),
+              message: t("toast_create_duplicate_message"),
             });
             return;
           }
@@ -67,8 +69,8 @@ export function useCreateAccount(): UseCreateAccountResult {
 
         showToast({
           type: "success",
-          title: "Account Created 🎉",
-          message: `${data.name} has been added successfully`,
+          title: t("toast_create_success_title"),
+          message: t("toast_create_success_message", { name: data.name }),
         });
 
         if (router.canGoBack()) {
@@ -76,7 +78,7 @@ export function useCreateAccount(): UseCreateAccountResult {
           return;
         }
 
-        router.replace("/(tabs)/accounts");
+        router.replace("/(private)/(tabs)/accounts");
       } catch (err) {
         const error = err instanceof Error ? err : new Error("Unknown error");
         logger.error("createAccount_flow_failed", error);
@@ -84,15 +86,15 @@ export function useCreateAccount(): UseCreateAccountResult {
 
         showToast({
           type: "error",
-          title: "Creation Failed",
-          message: "Something went wrong. Please try again.",
+          title: t("toast_create_error_title"),
+          message: tCommon("error_generic"),
         });
       } finally {
         isSubmittingRef.current = false;
         setIsSubmitting(false);
       }
     },
-    [showToast, router]
+    [showToast, router, t, tCommon, userId]
   );
 
   return {

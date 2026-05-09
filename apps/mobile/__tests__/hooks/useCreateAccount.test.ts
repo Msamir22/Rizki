@@ -27,7 +27,8 @@ interface ReactTestRendererModule {
 const RTR: ReactTestRendererModule = require("react-test-renderer");
 
 const mockCreateAccountForUser = jest.fn();
-const mockGetCurrentUserId = jest.fn();
+let mockCurrentUserId: string | null = "user-1";
+let mockIsResolvingUser = false;
 const mockShowToast = jest.fn();
 const mockRouterBack = jest.fn();
 const mockRouterReplace = jest.fn();
@@ -43,9 +44,14 @@ jest.mock("../../services/account-service", () => ({
     mockCreateAccountForUser(...args) as Promise<unknown>,
 }));
 
-jest.mock("../../services/supabase", () => ({
-  getCurrentUserId: (): Promise<string | null> =>
-    mockGetCurrentUserId() as Promise<string | null>,
+jest.mock("../../hooks/useCurrentUser", () => ({
+  useCurrentUser: (): {
+    readonly userId: string | null;
+    readonly isResolvingUser: boolean;
+  } => ({
+    userId: mockCurrentUserId,
+    isResolvingUser: mockIsResolvingUser,
+  }),
 }));
 
 jest.mock("../../components/ui/Toast", () => ({
@@ -61,6 +67,19 @@ jest.mock("expo-router", () => ({
     back: mockRouterBack,
     replace: mockRouterReplace,
     canGoBack: mockRouterCanGoBack,
+  }),
+}));
+
+jest.mock("react-i18next", () => ({
+  useTranslation: (
+    namespace: "accounts" | "common"
+  ): { t: (key: string, options?: Record<string, unknown>) => string } => ({
+    t: (key: string, options?: Record<string, unknown>): string => {
+      const prefix = `${namespace}:${key}`;
+      return typeof options?.name === "string"
+        ? `${prefix}:${options.name}`
+        : prefix;
+    },
   }),
 }));
 
@@ -104,7 +123,8 @@ const accountFormData: AccountFormData = {
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockGetCurrentUserId.mockResolvedValue("user-1");
+  mockCurrentUserId = "user-1";
+  mockIsResolvingUser = false;
   mockCreateAccountForUser.mockResolvedValue({
     success: true,
     accountId: "account-1",
@@ -138,7 +158,6 @@ describe("useCreateAccount", () => {
 
     await Promise.resolve();
 
-    expect(mockGetCurrentUserId).toHaveBeenCalledTimes(1);
     expect(mockCreateAccountForUser).toHaveBeenCalledTimes(1);
 
     releaseCreate();
@@ -160,6 +179,42 @@ describe("useCreateAccount", () => {
     });
 
     expect(mockRouterBack).not.toHaveBeenCalled();
-    expect(mockRouterReplace).toHaveBeenCalledWith("/(tabs)/accounts");
+    expect(mockRouterReplace).toHaveBeenCalledWith(
+      "/(private)/(tabs)/accounts"
+    );
+  });
+
+  it("uses localized success toast text without emojis", async () => {
+    const { result } = renderHook();
+
+    await RTR.act(async () => {
+      await result.current.createAccount(accountFormData);
+    });
+
+    expect(mockShowToast).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "success",
+        title: "accounts:toast_create_success_title",
+        message: "accounts:toast_create_success_message:Cash",
+      })
+    );
+  });
+
+  it("uses localized session-required toast text", async () => {
+    mockCurrentUserId = null;
+    const { result } = renderHook();
+
+    await RTR.act(async () => {
+      await result.current.createAccount(accountFormData);
+    });
+
+    expect(mockShowToast).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "error",
+        title: "accounts:toast_create_session_required_title",
+        message: "accounts:toast_create_session_required_message",
+      })
+    );
+    expect(mockCreateAccountForUser).not.toHaveBeenCalled();
   });
 });

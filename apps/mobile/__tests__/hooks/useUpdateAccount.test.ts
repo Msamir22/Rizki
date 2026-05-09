@@ -37,7 +37,8 @@ const RTR: ReactTestRendererModule = require("react-test-renderer");
 // ---------------------------------------------------------------------------
 
 const mockUpdateAccountWithBalanceAdjustment = jest.fn();
-const mockGetCurrentUserId = jest.fn();
+let mockCurrentUserId: string | null = "user-1";
+let mockIsResolvingUser = false;
 const mockShowToast = jest.fn();
 const mockRouterBack = jest.fn();
 const mockHapticsNotification = jest.fn(() => Promise.resolve());
@@ -49,9 +50,14 @@ jest.mock("../../services/edit-account-service", () => ({
     mockUpdateAccountWithBalanceAdjustment(...args) as Promise<unknown>,
 }));
 
-jest.mock("../../services/supabase", () => ({
-  getCurrentUserId: (): Promise<string | null> =>
-    mockGetCurrentUserId() as Promise<string | null>,
+jest.mock("../../hooks/useCurrentUser", () => ({
+  useCurrentUser: (): {
+    readonly userId: string | null;
+    readonly isResolvingUser: boolean;
+  } => ({
+    userId: mockCurrentUserId,
+    isResolvingUser: mockIsResolvingUser,
+  }),
 }));
 
 jest.mock("../../components/ui/Toast", () => ({
@@ -65,6 +71,19 @@ jest.mock("expo-router", () => ({
 jest.mock("expo-haptics", () => ({
   notificationAsync: (): Promise<void> => mockHapticsNotification(),
   NotificationFeedbackType: { Success: "success", Error: "error" },
+}));
+
+jest.mock("react-i18next", () => ({
+  useTranslation: (
+    namespace: "accounts" | "common"
+  ): { t: (key: string, options?: Record<string, unknown>) => string } => ({
+    t: (key: string, options?: Record<string, unknown>): string => {
+      const prefix = `${namespace}:${key}`;
+      return typeof options?.name === "string"
+        ? `${prefix}:${options.name}`
+        : prefix;
+    },
+  }),
 }));
 
 // Import AFTER mocks
@@ -117,7 +136,8 @@ function renderHook(): {
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockGetCurrentUserId.mockResolvedValue("user-1");
+  mockCurrentUserId = "user-1";
+  mockIsResolvingUser = false;
 });
 
 describe("useUpdateAccount", () => {
@@ -142,9 +162,13 @@ describe("useUpdateAccount", () => {
         readonly [{ readonly title?: string }]
       >
     ).map(([arg]) => arg.title);
-    expect(titles).not.toContain("Account Updated ✅");
+    expect(titles).not.toContain("accounts:toast_update_success_title");
     expect(mockShowToast).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "error", title: "Update Failed" })
+      expect.objectContaining({
+        type: "error",
+        title: "accounts:toast_update_error_title",
+        message: "common:error_generic",
+      })
     );
     expect(mockRouterBack).not.toHaveBeenCalled();
   });
@@ -153,8 +177,6 @@ describe("useUpdateAccount", () => {
     mockUpdateAccountWithBalanceAdjustment.mockResolvedValueOnce({
       success: true,
     });
-    mockGetCurrentUserId.mockResolvedValueOnce("user-1");
-
     const { result } = renderHook();
 
     await RTR.act(async () => {
@@ -175,7 +197,7 @@ describe("useUpdateAccount", () => {
   });
 
   it("fails the whole update (no row mutation) when userId is missing and tracking is on", async () => {
-    mockGetCurrentUserId.mockResolvedValueOnce(null);
+    mockCurrentUserId = null;
 
     const { result } = renderHook();
 
@@ -191,7 +213,11 @@ describe("useUpdateAccount", () => {
     // ledger entry while still mutating the account.
     expect(mockUpdateAccountWithBalanceAdjustment).not.toHaveBeenCalled();
     expect(mockShowToast).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "error", title: "Session Error" })
+      expect.objectContaining({
+        type: "error",
+        title: "accounts:toast_update_session_required_title",
+        message: "accounts:toast_update_session_required_message",
+      })
     );
     expect(mockRouterBack).not.toHaveBeenCalled();
   });
@@ -213,8 +239,6 @@ describe("useUpdateAccount", () => {
       });
     });
 
-    // userId resolution must be skipped entirely — no auth call when
-    expect(mockGetCurrentUserId).toHaveBeenCalledTimes(1);
     expect(mockUpdateAccountWithBalanceAdjustment).toHaveBeenCalledWith(
       "acc-1",
       "user-1",
@@ -226,7 +250,11 @@ describe("useUpdateAccount", () => {
       null
     );
     expect(mockShowToast).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "success", title: "Account Updated ✅" })
+      expect.objectContaining({
+        type: "success",
+        title: "accounts:toast_update_success_title",
+        message: "accounts:toast_update_success_message:Renamed",
+      })
     );
     expect(mockRouterBack).toHaveBeenCalledTimes(1);
   });

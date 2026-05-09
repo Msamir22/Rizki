@@ -22,7 +22,7 @@ import { PageHeader } from "@/components/navigation/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/TextField";
 import { useToast } from "@/components/ui/Toast";
-import { ACCOUNT_TYPES, CURRENCIES } from "@/constants/accounts";
+import { CURRENCIES } from "@/constants/accounts";
 import { palette } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
 import { useKeyboardVisibility } from "@/hooks";
@@ -50,6 +50,14 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { EditAccountSkeleton } from "@/components/edit-account/EditAccountSkeleton";
+
+const PRIMARY_BUTTON_SHADOW_STYLE = {
+  shadowColor: "rgba(5, 150, 105, 0.2)",
+  shadowOffset: { width: 0, height: 8 },
+  shadowOpacity: 1,
+  shadowRadius: 12,
+  elevation: 8,
+} as const;
 
 // =============================================================================
 // Component
@@ -162,15 +170,18 @@ function EditAccountForm({
   const [showDeleteSheet, setShowDeleteSheet] = useState(false);
 
   const { performUpdate, isSubmitting } = useUpdateAccount();
-  const { performDelete, isDeleting, linkedCounts } = useDeleteAccount(
-    account.id
-  );
+  const {
+    performDelete,
+    isDeleting,
+    linkedCounts,
+    isLoadingCounts,
+    loadCounts,
+  } = useDeleteAccount(account.id);
 
   // Look up display values for read-only fields
   const accountTypeLabel = useMemo(() => {
-    const found = ACCOUNT_TYPES.find((t) => t.id === accountType);
-    return found?.label ?? accountType;
-  }, [accountType]);
+    return t(`type_${accountType.toLowerCase()}`);
+  }, [accountType, t]);
 
   const accountTypeIcon = useMemo((): string => {
     const emojiMap: Record<string, string> = {
@@ -455,7 +466,10 @@ function EditAccountForm({
               {t("delete_account_warning")}
             </Text>
             <TouchableOpacity
-              onPress={() => setShowDeleteSheet(true)}
+              onPress={() => {
+                setShowDeleteSheet(true);
+                loadCounts();
+              }}
               activeOpacity={0.7}
               className="flex-row items-center justify-center py-3 rounded-xl border border-red-300 dark:border-red-700"
             >
@@ -487,7 +501,7 @@ function EditAccountForm({
             disabled={!isDirty || !isValid || isCheckingUniqueness}
             variant="primary"
             size="lg"
-            className="shadow-xl shadow-nileGreen-600/20"
+            style={PRIMARY_BUTTON_SHADOW_STYLE}
           />
         </View>
       )}
@@ -514,6 +528,7 @@ function EditAccountForm({
         accountBalance={account.balance}
         currencyCode={currency}
         linkedRecords={linkedCounts}
+        isLoadingCounts={isLoadingCounts}
         isDeleting={isDeleting}
       />
     </KeyboardAvoidingView>
