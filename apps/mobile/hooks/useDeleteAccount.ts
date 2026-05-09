@@ -12,38 +12,25 @@
  * @module useDeleteAccount
  */
 
-import {
-  database,
-  type Debt,
-  type RecurringPayment,
-  type Transaction,
-  type Transfer,
-} from "@monyvi/db";
-import { Q } from "@nozbe/watermelondb";
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useToast } from "../components/ui/Toast";
 import {
   deleteAccountWithCascade,
+  EMPTY_LINKED_RECORDS_COUNTS,
+  getAccountLinkedRecordCounts,
+  type LinkedRecordsCounts,
   type ServiceResult,
 } from "../services/edit-account-service";
-import { getCurrentUserId } from "../services/supabase";
-import { queryOwned } from "../services/user-data-access";
 import { safeNotificationHaptic } from "../utils/haptics";
 import { logger } from "../utils/logger";
+import { useCurrentUser } from "./useCurrentUser";
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
-
-interface LinkedRecordsCounts {
-  readonly transactions: number;
-  readonly transfers: number;
-  readonly debts: number;
-  readonly recurringPayments: number;
-}
 
 interface UseDeleteAccountResult {
   /** Trigger the delete flow */
@@ -54,21 +41,12 @@ interface UseDeleteAccountResult {
   readonly linkedCounts: LinkedRecordsCounts;
   /** Whether linked counts are still loading */
   readonly isLoadingCounts: boolean;
+  /** Lazily load linked counts when the delete sheet is opened */
+  readonly loadCounts: () => void;
 }
 
 // ---------------------------------------------------------------------------
 // Default counts
-// ---------------------------------------------------------------------------
-
-const EMPTY_COUNTS: LinkedRecordsCounts = {
-  transactions: 0,
-  transfers: 0,
-  debts: 0,
-  recurringPayments: 0,
-};
-
-// ---------------------------------------------------------------------------
-// Hook
 // ---------------------------------------------------------------------------
 
 /**
@@ -80,75 +58,48 @@ const EMPTY_COUNTS: LinkedRecordsCounts = {
  */
 export function useDeleteAccount(accountId: string): UseDeleteAccountResult {
   const [isDeleting, setIsDeleting] = useState(false);
-  const [linkedCounts, setLinkedCounts] =
-    useState<LinkedRecordsCounts>(EMPTY_COUNTS);
-  const [isLoadingCounts, setIsLoadingCounts] = useState(true);
+  const [linkedCounts, setLinkedCounts] = useState<LinkedRecordsCounts>(
+    EMPTY_LINKED_RECORDS_COUNTS
+  );
+  const [isLoadingCounts, setIsLoadingCounts] = useState(false);
+  const [hasLoadedCounts, setHasLoadedCounts] = useState(false);
+  const isMountedRef = useRef(true);
   const { showToast } = useToast();
   const router = useRouter();
   const { t } = useTranslation("accounts");
   const { t: tCommon } = useTranslation("common");
+  const { userId } = useCurrentUser();
 
-  // Fetch linked record counts on mount
   useEffect(() => {
-    if (!accountId) {
-      setIsLoadingCounts(false);
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    setLinkedCounts(EMPTY_LINKED_RECORDS_COUNTS);
+    setHasLoadedCounts(false);
+    setIsLoadingCounts(false);
+  }, [accountId]);
+
+  const loadCounts = useCallback((): void => {
+    if (!accountId || isLoadingCounts || hasLoadedCounts) {
       return;
     }
 
-    let cancelled = false;
-
     const fetchCounts = async (): Promise<void> => {
+      setIsLoadingCounts(true);
       try {
-        const userId = await getCurrentUserId();
-        if (!userId || cancelled) {
-          return;
-        }
+        const counts = await getAccountLinkedRecordCounts(accountId);
 
-        const [transactions, transfers, debts, recurringPayments] =
-          await Promise.all([
-            queryOwned(
-              database.get<Transaction>("transactions"),
-              userId,
-              Q.where("account_id", accountId),
-              Q.where("deleted", false)
-            ).fetchCount(),
-            queryOwned(
-              database.get<Transfer>("transfers"),
-              userId,
-              Q.and(
-                Q.or(
-                  Q.where("from_account_id", accountId),
-                  Q.where("to_account_id", accountId)
-                ),
-                Q.where("deleted", false)
-              )
-            ).fetchCount(),
-            queryOwned(
-              database.get<Debt>("debts"),
-              userId,
-              Q.where("account_id", accountId),
-              Q.where("deleted", false)
-            ).fetchCount(),
-            queryOwned(
-              database.get<RecurringPayment>("recurring_payments"),
-              userId,
-              Q.where("account_id", accountId),
-              Q.where("deleted", false)
-            ).fetchCount(),
-          ]);
-
-        if (!cancelled) {
-          setLinkedCounts({
-            transactions,
-            transfers,
-            debts,
-            recurringPayments,
-          });
+        if (isMountedRef.current) {
+          setLinkedCounts(counts);
+          setHasLoadedCounts(true);
         }
       } catch (err) {
         logger.error("deleteAccount_count_fetch_failed", err);
       } finally {
-        if (!cancelled) {
+        if (isMountedRef.current) {
           setIsLoadingCounts(false);
         }
       }
@@ -157,17 +108,12 @@ export function useDeleteAccount(accountId: string): UseDeleteAccountResult {
     fetchCounts().catch((err: unknown) => {
       logger.error("deleteAccount_count_fetch_unhandled", err);
     });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [accountId]);
+  }, [accountId, isLoadingCounts, hasLoadedCounts]);
 
   const performDelete = useCallback(
     async (id: string): Promise<void> => {
       if (isDeleting) return;
 
-      const userId = await getCurrentUserId();
       if (!userId) {
         showToast({
           type: "error",
@@ -218,7 +164,7 @@ export function useDeleteAccount(accountId: string): UseDeleteAccountResult {
         setIsDeleting(false);
       }
     },
-    [isDeleting, showToast, router, t, tCommon]
+    [isDeleting, showToast, router, t, tCommon, userId]
   );
 
   return {
@@ -226,5 +172,6 @@ export function useDeleteAccount(accountId: string): UseDeleteAccountResult {
     isDeleting,
     linkedCounts,
     isLoadingCounts,
+    loadCounts,
   };
 }

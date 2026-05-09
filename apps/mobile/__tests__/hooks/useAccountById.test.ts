@@ -72,8 +72,8 @@ jest.mock("@monyvi/db", () => ({
   },
 }));
 
-jest.mock("../../hooks/useCurrentUserId", () => ({
-  useCurrentUserId: (): { userId: string; isResolvingUser: boolean } => ({
+jest.mock("../../hooks/useCurrentUser", () => ({
+  useCurrentUser: (): { userId: string; isResolvingUser: boolean } => ({
     userId: "user-1",
     isResolvingUser: false,
   }),
@@ -161,6 +161,38 @@ describe("useAccountById", () => {
       cardLast4: "1234",
       smsSenderName: "CIBSMS",
     });
+  });
+
+  it("does not refetch bank details for account emits with the same id and type", async () => {
+    const account: MockAccount = {
+      id: "acc-1",
+      userId: "user-1",
+      isBank: true,
+      bankDetails: {
+        fetch: jest.fn(() =>
+          Promise.resolve([
+            {
+              bankName: "CIB",
+              cardLast4: "1234",
+              smsSenderName: "CIBSMS",
+            },
+          ])
+        ),
+      },
+    };
+    renderHook("acc-1");
+
+    await RTR.act(async () => {
+      activeObserver?.next(account);
+      await Promise.resolve();
+    });
+
+    await RTR.act(async () => {
+      activeObserver?.next(account);
+      await Promise.resolve();
+    });
+
+    expect(account.bankDetails.fetch).toHaveBeenCalledTimes(1);
   });
 
   it("treats a foreign account id as not found", () => {

@@ -32,6 +32,7 @@ import { logger } from "@/utils/logger";
 import {
   USER_DATA_ACCESS_ERROR_CODES,
   findOwnedById,
+  getCurrentUserDataScope,
   queryChildrenOfOwnedParent,
   queryOwned,
 } from "./user-data-access";
@@ -108,6 +109,20 @@ export interface UniquenessCheckResult {
   readonly error?: string;
 }
 
+export interface LinkedRecordsCounts {
+  readonly transactions: number;
+  readonly transfers: number;
+  readonly debts: number;
+  readonly recurringPayments: number;
+}
+
+export const EMPTY_LINKED_RECORDS_COUNTS: LinkedRecordsCounts = {
+  transactions: 0,
+  transfers: 0,
+  debts: 0,
+  recurringPayments: 0,
+};
+
 type SoftDeletableRecord = Model & {
   deleted: boolean;
 };
@@ -182,6 +197,60 @@ export async function checkAccountNameUniqueness(
     logger.error("checkAccountNameUniqueness_failed", error);
     return { isUnique: false, error: message };
   }
+}
+
+export async function getAccountLinkedRecordCounts(
+  accountId: string
+): Promise<LinkedRecordsCounts> {
+  const scope = await getCurrentUserDataScope();
+
+  const [transactions, transfers, debts, recurringPayments] = await Promise.all(
+    [
+      scope
+        .queryOwned(
+          database.get<Transaction>("transactions"),
+          Q.where("account_id", accountId),
+          Q.where("deleted", false)
+        )
+        .fetchCount(),
+
+      scope
+        .queryOwned(
+          database.get<Transfer>("transfers"),
+          Q.and(
+            Q.or(
+              Q.where("from_account_id", accountId),
+              Q.where("to_account_id", accountId)
+            ),
+            Q.where("deleted", false)
+          )
+        )
+        .fetchCount(),
+
+      scope
+        .queryOwned(
+          database.get<Debt>("debts"),
+          Q.where("account_id", accountId),
+          Q.where("deleted", false)
+        )
+        .fetchCount(),
+
+      scope
+        .queryOwned(
+          database.get<RecurringPayment>("recurring_payments"),
+          Q.where("account_id", accountId),
+          Q.where("deleted", false)
+        )
+        .fetchCount(),
+    ]
+  );
+
+  return {
+    transactions,
+    transfers,
+    debts,
+    recurringPayments,
+  };
 }
 
 // ---------------------------------------------------------------------------
