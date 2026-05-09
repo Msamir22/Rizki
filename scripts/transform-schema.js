@@ -10,7 +10,7 @@
  * Usage: node scripts/transform-schema.js
  */
 
-const { execSync } = require("child_process");
+const { execFileSync, execSync } = require("child_process");
 
 const fs = require("fs");
 const path = require("path");
@@ -701,8 +701,17 @@ function main() {
   console.log("\nLinting base model files...");
   try {
     const eslintRulesDir = path.join(__dirname, "eslint-rules");
-    execSync(
-      `npx eslint "${BASE_MODELS_DIR}" --rulesdir "${eslintRulesDir}" --ext .ts --fix`,
+    execFileSync(
+      "npx",
+      [
+        "eslint",
+        BASE_MODELS_DIR,
+        "--rulesdir",
+        eslintRulesDir,
+        "--ext",
+        ".ts",
+        "--fix",
+      ],
       {
         stdio: "inherit",
       }

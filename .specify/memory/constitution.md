@@ -257,9 +257,6 @@ account's private data.
   names. Never scatter unexplained literals through code.
 - **No untracked technical debt**. Do not leave shortcuts or known issues
   without a `// TODO:` comment explaining the debt and the intended resolution.
-- **Sensitive logging**: Logs MUST NOT include raw financial data, full user
-  identifiers, access tokens, SMS bodies, or other sensitive values unless the
-  diagnostic is explicitly time-boxed and removed before merge.
 - **Static-analysis guardrails**: Custom ESLint or static-analysis rules MUST
   push developers toward approved scoped helper APIs and repositories. Wire
   every lint entry point consistently, including package scripts, Nx targets,

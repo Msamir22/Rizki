@@ -42,6 +42,15 @@ const mockSyncDatabase = jest.fn();
 const mockCheckIsAuthenticated = jest.fn();
 const mockFetchProfileCount = jest.fn();
 const mockDbGet = jest.fn();
+interface MockAuthState {
+  readonly isAuthenticated: boolean;
+  readonly user?: { readonly id?: string };
+}
+
+const mockUseAuth = jest.fn<MockAuthState, []>(() => ({
+  isAuthenticated: true,
+  user: { id: "current-user" },
+}));
 const mockWhere = jest.fn((column: string, value: unknown) => ({
   column,
   value,
@@ -64,7 +73,7 @@ jest.mock("@monyvi/db", () => ({
 }));
 
 jest.mock("@/context/AuthContext", () => ({
-  useAuth: () => ({ isAuthenticated: true, user: { id: "current-user" } }),
+  useAuth: () => mockUseAuth(),
 }));
 
 jest.mock("@nozbe/watermelondb", () => ({
@@ -128,6 +137,10 @@ describe("SyncProvider initialSyncState", () => {
     jest.useFakeTimers();
     mockCheckIsAuthenticated.mockResolvedValue(true);
     mockFetchProfileCount.mockResolvedValue(0);
+    mockUseAuth.mockReturnValue({
+      isAuthenticated: true,
+      user: { id: "current-user" },
+    });
     mockDbGet.mockReturnValue({
       query: jest.fn(() => ({ fetchCount: mockFetchProfileCount })),
     });
@@ -209,6 +222,21 @@ describe("SyncProvider initialSyncState", () => {
     expect(mockWhere).toHaveBeenCalledWith("deleted", false);
     expect(mockSyncDatabase).toHaveBeenCalledWith(expect.anything(), false);
     expect(result.current.initialSyncState).toBe("success");
+  });
+
+  it('transitions to "failed" when auth is true but the user id is missing', async () => {
+    mockUseAuth.mockReturnValue({
+      isAuthenticated: true,
+      user: {},
+    });
+    mockSyncDatabase.mockResolvedValue(undefined);
+    const { result } = renderAndCapture();
+
+    await waitForInitialSyncState(result, "failed");
+
+    expect(mockDbGet).not.toHaveBeenCalledWith("profiles");
+    expect(mockSyncDatabase).not.toHaveBeenCalled();
+    expect(result.current.initialSyncState).toBe("failed");
   });
 
   it('transitions to "failed" when sync throws before timeout', async () => {

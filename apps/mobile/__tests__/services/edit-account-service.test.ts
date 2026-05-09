@@ -78,10 +78,21 @@ jest.mock("@monyvi/db", () => {
 
   function comparisonValue(comparison: Record<string, unknown>): unknown {
     const right = comparison.right;
+    if (isRecord(right) && "operator" in right) {
+      return comparisonValue(right);
+    }
     if (isRecord(right) && "value" in right) {
       return right.value;
     }
     return right;
+  }
+
+  function comparisonOperator(comparison: Record<string, unknown>): unknown {
+    const right = comparison.right;
+    if (comparison.operator !== undefined) {
+      return comparison.operator;
+    }
+    return isRecord(right) ? right.operator : undefined;
   }
 
   function matchesClause(record: MockModelRecord, clause: unknown): boolean {
@@ -98,11 +109,13 @@ jest.mock("@monyvi/db", () => {
     const actual = recordValue(record, columnName);
     const expected = comparisonValue(comparison);
 
-    if (comparison.operator === "notEq") {
+    const operator = comparisonOperator(comparison);
+
+    if (operator === "notEq") {
       return actual !== expected;
     }
 
-    if (comparison.operator === "oneOf" && Array.isArray(expected)) {
+    if (operator === "oneOf" && Array.isArray(expected)) {
       return expected.includes(actual);
     }
 

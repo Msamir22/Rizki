@@ -103,6 +103,21 @@ async function getOwnedBudget(
   return budget;
 }
 
+async function resolveCategoryBudgetCategoryId(
+  categoryId: string | undefined,
+  scope: CurrentUserDataScope
+): Promise<string> {
+  if (!categoryId) {
+    throw new Error("Category budgets require a categoryId");
+  }
+
+  const category = await scope.findAccessibleCategory(
+    categoriesCollection(),
+    categoryId
+  );
+  return category.id;
+}
+
 export async function getBudgetById(budgetId: string): Promise<Budget> {
   const scope = await getCurrentUserDataScope();
   return getOwnedBudget(budgetId, scope);
@@ -123,12 +138,9 @@ export async function createBudget(input: CreateBudgetInput): Promise<Budget> {
 
   // Type-specific validation
   if (input.type === "CATEGORY" && !input.categoryId) {
-    // i18n-ignore — developer-facing error
     throw new Error("Category budgets require a categoryId");
   }
   if (input.period === "CUSTOM" && (!input.periodStart || !input.periodEnd)) {
-    // i18n-ignore — developer-facing error
-    // i18n-ignore — developer-facing error
     throw new Error(
       "Custom period budgets require both periodStart and periodEnd"
     );
@@ -136,8 +148,13 @@ export async function createBudget(input: CreateBudgetInput): Promise<Budget> {
 
   // F7 fix: Validate uniqueness inside database.write for atomicity
   return database.write(async () => {
+    const categoryId =
+      input.type === "CATEGORY"
+        ? await resolveCategoryBudgetCategoryId(input.categoryId, scope)
+        : undefined;
+
     await validateBudgetUniqueness(input.type, input.period, {
-      categoryId: input.categoryId,
+      categoryId,
       scope,
     });
 
@@ -145,7 +162,7 @@ export async function createBudget(input: CreateBudgetInput): Promise<Budget> {
       b.userId = scope.userId;
       b.name = input.name;
       b.type = input.type;
-      b.categoryId = input.categoryId ?? undefined;
+      b.categoryId = categoryId;
       b.amount = input.amount;
       b.currency = input.currency as CurrencyType;
       b.period = input.period;
@@ -180,8 +197,6 @@ export async function updateBudget(
     (!(input.periodStart ?? budget.periodStart) ||
       !(input.periodEnd ?? budget.periodEnd))
   ) {
-    // i18n-ignore — developer-facing error
-    // i18n-ignore — developer-facing error
     throw new Error(
       "Custom period budgets require both periodStart and periodEnd"
     );
@@ -189,19 +204,26 @@ export async function updateBudget(
 
   // F6 fix: Prevent clearing categoryId on CATEGORY budgets
   if (budget.type === "CATEGORY" && input.categoryId === "") {
-    // i18n-ignore — developer-facing error
     throw new Error("Category budgets require a categoryId");
   }
 
   // F7 fix: Validate uniqueness and apply update inside the same write for atomicity
   return database.write(async () => {
+    const categoryId =
+      budget.type === "CATEGORY"
+        ? await resolveCategoryBudgetCategoryId(
+            input.categoryId ?? budget.categoryId,
+            scope
+          )
+        : undefined;
+
     // Re-validate uniqueness if period or categoryId changed (C2 fix)
     if (input.period !== undefined || input.categoryId !== undefined) {
       await validateBudgetUniqueness(
         budget.type,
         input.period ?? budget.period,
         {
-          categoryId: input.categoryId ?? budget.categoryId,
+          categoryId,
           excludeBudgetId: budgetId,
           scope,
         }
@@ -217,7 +239,7 @@ export async function updateBudget(
       if (input.periodEnd !== undefined) b.periodEnd = input.periodEnd;
       if (input.alertThreshold !== undefined)
         b.alertThreshold = input.alertThreshold;
-      if (input.categoryId !== undefined) b.categoryId = input.categoryId;
+      if (input.categoryId !== undefined) b.categoryId = categoryId;
     });
     return budget;
   });
@@ -256,7 +278,6 @@ export async function pauseBudget(budgetId: string): Promise<void> {
 
   // M2 fix: Guard against pausing an already-paused budget
   if (budget.status === "PAUSED") {
-    // i18n-ignore — developer-facing error
     throw new Error("Budget is already paused");
   }
 
@@ -279,7 +300,6 @@ export async function resumeBudget(budgetId: string): Promise<void> {
 
   // M3 fix: Guard against resuming a non-paused budget
   if (budget.status !== "PAUSED") {
-    // i18n-ignore — developer-facing error
     throw new Error("Cannot resume a budget that is not paused");
   }
 
@@ -507,7 +527,6 @@ export async function validateBudgetUniqueness(
       type === "GLOBAL"
         ? `A Global ${period.toLowerCase()} budget already exists`
         : `A budget for this category with ${period.toLowerCase()} period already exists`;
-    // i18n-ignore — developer-facing error
     throw new Error(label);
   }
 }

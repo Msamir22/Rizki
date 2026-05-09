@@ -71,22 +71,18 @@ const MAX_PURITY_FRACTION = 1;
  */
 function validateCreateMetalHoldingData(data: CreateMetalHoldingData): void {
   if (data.name.trim().length === 0) {
-    // i18n-ignore — developer-facing error
     throw new Error("Holding name is required");
   }
   if (data.weightGrams <= 0) {
-    // i18n-ignore — developer-facing error
     throw new Error("Weight must be greater than 0");
   }
   if (data.purchasePrice < 0) {
-    // i18n-ignore — developer-facing error
     throw new Error("Purchase price cannot be negative");
   }
   if (
     data.purityFraction <= MIN_PURITY_FRACTION ||
     data.purityFraction > MAX_PURITY_FRACTION
   ) {
-    // i18n-ignore — developer-facing error
     throw new Error("Purity fraction must be in the range (0, 1]");
   }
 }

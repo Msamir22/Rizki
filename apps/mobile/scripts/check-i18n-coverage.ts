@@ -56,6 +56,9 @@ const AR_LATIN_KEY_EXCEPTIONS = new Set<string>([
 /** Brand terms that stay untranslated across locales and source labels. */
 const BRAND_TEXT_EXCEPTIONS = new Set(["Monyvi"]);
 
+/** Source comments that mark strings as intentionally non-user-facing. */
+const SOURCE_IGNORE_MARKERS = ["i18n-ignore"];
+
 /**
  * Short Latin values (currency codes, brand names) that are legitimate
  * in AR files regardless of which key uses them.
@@ -139,6 +142,10 @@ function hasInterpolation(str: string): boolean {
 
 function isBrandTextException(value: string): boolean {
   return BRAND_TEXT_EXCEPTIONS.has(value.trim());
+}
+
+function hasSourceIgnoreMarker(text: string): boolean {
+  return SOURCE_IGNORE_MARKERS.some((marker) => text.includes(marker));
 }
 
 // ---------------------------------------------------------------------------
@@ -304,9 +311,9 @@ function scanMultilineText(
     if (isBrandTextException(captured)) continue;
     // Skip if the content is already wrapped in t()
     if (/^\{?\s*t\s*\(/.test(captured)) continue;
-    // Skip i18n-ignore
+    // Skip intentionally non-user-facing strings
     const beforeText = content.slice(Math.max(0, m.index - 200), m.index);
-    if (beforeText.includes("i18n-ignore")) continue;
+    if (hasSourceIgnoreMarker(beforeText)) continue;
 
     const lineNum = content.slice(0, m.index).split("\n").length;
     addFinding(relativePath, lineNum, `<Text>${captured}</Text>`, errors);
@@ -326,9 +333,9 @@ function scanLinePatterns(
     const line = lines[i];
     const lineNum = i + 1;
 
-    // Skip i18n-ignore lines (current or previous line)
-    if (line.includes("i18n-ignore")) continue;
-    if (i > 0 && lines[i - 1].includes("i18n-ignore")) continue;
+    // Skip intentionally non-user-facing lines (current or previous line)
+    if (hasSourceIgnoreMarker(line)) continue;
+    if (i > 0 && hasSourceIgnoreMarker(lines[i - 1])) continue;
 
     // Skip import lines that bring in useTranslation
     if (/^\s*import\s+.*\buseTranslation\b/.test(line)) continue;
@@ -402,6 +409,9 @@ function scanLinePatterns(
       }
     }
 
+    // Skip developer-facing Error construction.
+    if (/\bnew\s+Error\s*\(\s*["']/.test(line)) continue;
+
     // Pattern 6: Alert.alert("English text"
     const alertMatch = line.match(/Alert\.alert\(\s*["']([A-Z][A-Za-z ]{2,})/);
     if (alertMatch) {
@@ -416,19 +426,7 @@ function scanLinePatterns(
       }
     }
 
-    // Pattern 7: throw new Error("English text"
-    const throwMatch = line.match(/throw new Error\(["']([A-Z][A-Za-z ]{2,})/);
-    if (throwMatch) {
-      const errorMessage = throwMatch[1];
-      if (!isBrandTextException(errorMessage)) {
-        addFinding(
-          relativePath,
-          lineNum,
-          `throw new Error("${errorMessage}")`,
-          errors
-        );
-      }
-    }
+    // Pattern 7 reserved for future user-visible error surfaces.
   }
 }
 

@@ -89,15 +89,20 @@ export async function performLogout(
 async function attemptSync(database: Database): Promise<boolean> {
   const activeSync = getActiveSyncPromise();
   if (activeSync) {
+    let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
     try {
       const timeout = new Promise<never>((_, reject) => {
-        setTimeout(() => {
+        timeoutHandle = setTimeout(() => {
           reject(new Error("Active sync timed out"));
         }, ACTIVE_SYNC_TIMEOUT_MS);
       });
       await Promise.race([activeSync, timeout]);
     } catch {
       // Active sync failed or timed out; try a fresh sync below.
+    } finally {
+      if (timeoutHandle !== null) {
+        clearTimeout(timeoutHandle);
+      }
     }
   }
 
@@ -122,5 +127,8 @@ async function attemptSync(database: Database): Promise<boolean> {
  * Destroy the current Supabase session. Session becomes null.
  */
 async function destroySession(): Promise<void> {
-  await supabase.auth.signOut();
+  const { error } = await supabase.auth.signOut();
+  if (error) {
+    throw error;
+  }
 }

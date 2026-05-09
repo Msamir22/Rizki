@@ -281,6 +281,18 @@ describe("logout-service", () => {
     expect(syncMocks.resetSyncState).not.toHaveBeenCalled();
   });
 
+  it("should report unknown when signOut resolves with an error", async () => {
+    const supaMocks = getSupabaseMocks();
+
+    supaMocks.signOut.mockResolvedValue({
+      error: new Error("Sign out failed"),
+    });
+
+    const result = await performLogout(db);
+
+    expect(result).toEqual({ success: false, error: "unknown" });
+  });
+
   // =========================================================================
   // Test 9: Awaits active sync before triggering new one
   // =========================================================================
@@ -304,6 +316,22 @@ describe("logout-service", () => {
 
     expect(result).toEqual({ success: true });
     expect(callOrder).toEqual(["activeSyncDone", "newSync"]);
+  });
+
+  it("should clear the active sync timeout when the active sync wins the race", async () => {
+    jest.useFakeTimers();
+    const syncMocks = getSyncMocks();
+    const clearTimeoutSpy = jest.spyOn(global, "clearTimeout");
+
+    syncMocks.getActiveSyncPromise.mockReturnValue(Promise.resolve());
+    syncMocks.syncDatabase.mockResolvedValue(undefined);
+
+    const result = await performLogout(db);
+
+    expect(result).toEqual({ success: true });
+    expect(clearTimeoutSpy).toHaveBeenCalled();
+    clearTimeoutSpy.mockRestore();
+    jest.useRealTimers();
   });
 
   // =========================================================================

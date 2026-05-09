@@ -63,6 +63,11 @@ Dependency direction: `apps/ → packages/logic → packages/db`. **Never revers
 - **Hooks (`apps/mobile/hooks/`)**: Lifecycle and subscriptions ONLY — observing
   data, managing local UI state, triggering re-renders. MUST NOT contain
   database write logic or business calculations.
+- Design hooks around UI data/lifecycle needs, not one hook per database
+  function. Prefer cohesive hooks such as `useBudgets()` for list state,
+  `useBudget(budgetId)` for detail state, and optional action hooks only when
+  reusable UI command state is needed. Avoid god hooks that bundle unrelated
+  queries, mutations, validation, calculations, and sync orchestration.
 - **Components**: Zero business logic. Receive data via props or hooks and
   render UI. `Alert.alert()` and UI concerns stay in calling component/hook,
   never in services.
@@ -288,10 +293,6 @@ chore, perf, ci.
   XSS.
 - CSRF protection, rate limiting on endpoints. Error messages don't leak
   sensitive data.
-- Logs MUST NOT include raw financial data, full user identifiers, access
-  tokens, SMS bodies, or other sensitive values unless explicitly required for a
-  time-boxed diagnostic and removed before merge. Prefer booleans, counts,
-  durations, stable error codes, and redacted identifiers.
 
 ## Testing
 
@@ -439,25 +440,3 @@ For multi-step tasks, state a brief plan:
 
 Strong success criteria let you loop independently. Weak criteria ("make it
 work") require constant clarification.
-
-<!-- SPECKIT START -->
-
-For additional context about technologies to be used, project structure, shell
-commands, and other important information, read the current plan:
-`specs/027-post-auth-bootstrap/plan.md`
-
-<!-- SPECKIT END -->
-
-## Active Technologies
-
-- TypeScript 5.x, strict mode across the monorepo + React Native + Expo managed
-  workflow, Expo Router, WatermelonDB, Supabase JS, NativeWind v4, Jest + React
-  Native Testing Library (381-post-auth-bootstrap)
-- WatermelonDB/SQLite as local source of truth; Supabase PostgreSQL as remote
-  sync target; Expo SecureStore for auth session persistence
-  (381-post-auth-bootstrap)
-
-## Recent Changes
-
-- 381-post-auth-bootstrap: Added post-auth profile bootstrap planning context
-  and shared reference-data RLS scope.

@@ -135,6 +135,7 @@ import {
   deleteTransaction,
   convertTransactionToTransfer,
   batchDeleteDisplayTransactions,
+  BALANCE_REVERSAL_ACCOUNT_NOT_FOUND_ERROR_CODE,
 } from "@/services/transaction-service";
 import { USER_DATA_ACCESS_ERROR_CODES } from "@/services/user-data-access";
 
@@ -572,7 +573,7 @@ describe("transaction-service", () => {
         batchDeleteDisplayTransactions([
           tfI,
         ] as unknown as readonly DisplayTransaction[])
-      ).rejects.toThrow("BALANCE_REVERSAL_ACCOUNT_NOT_FOUND");
+      ).rejects.toThrow(BALANCE_REVERSAL_ACCOUNT_NOT_FOUND_ERROR_CODE);
 
       expect(tfI.deleted).toBe(false);
       expect(mockDb.batch).not.toHaveBeenCalled();

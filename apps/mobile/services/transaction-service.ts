@@ -15,7 +15,7 @@ import {
 } from "@/services/user-data-access";
 
 const INVALID_ACCOUNT_BALANCE_ERROR_CODE = "INVALID_ACCOUNT_BALANCE";
-const BALANCE_REVERSAL_ACCOUNT_NOT_FOUND_ERROR_CODE =
+export const BALANCE_REVERSAL_ACCOUNT_NOT_FOUND_ERROR_CODE =
   "BALANCE_REVERSAL_ACCOUNT_NOT_FOUND";
 
 function accountsCollection(): ReturnType<typeof database.get<Account>> {
