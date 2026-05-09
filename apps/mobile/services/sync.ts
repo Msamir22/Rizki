@@ -437,9 +437,25 @@ async function pushChanges(
     const isChildTable = childConfig !== undefined;
 
     try {
-      const ownedParentIds = childConfig
-        ? await fetchOwnedParentIds(database, childConfig.parentTable, userId)
-        : null;
+      const hasChildWrites =
+        isChildTable &&
+        (tableChanges.created.length > 0 || tableChanges.updated.length > 0);
+      const hasChildDeletes = isChildTable && tableChanges.deleted.length > 0;
+      const activeParentIds =
+        childConfig && hasChildWrites
+          ? await fetchOwnedParentIds(database, childConfig.parentTable, userId)
+          : null;
+      const deleteParentIds =
+        childConfig && hasChildDeletes
+          ? await fetchOwnedParentIds(
+              database,
+              childConfig.parentTable,
+              userId,
+              {
+                includeDeleted: true,
+              }
+            )
+          : null;
 
       // Handle created records
       if (tableChanges.created.length > 0) {
@@ -449,7 +465,7 @@ async function pushChanges(
             record,
             userId,
             childConfig,
-            ownedParentIds
+            activeParentIds
           );
           return transformToSupabase(record, userId, isChildTable);
         });
@@ -468,7 +484,7 @@ async function pushChanges(
             record,
             userId,
             childConfig,
-            ownedParentIds
+            activeParentIds
           );
           const transformed = transformToSupabase(record, userId, isChildTable);
 
@@ -487,8 +503,8 @@ async function pushChanges(
           .from(table)
           .update({ deleted: true, updated_at: new Date().toISOString() });
 
-        if (childConfig && ownedParentIds) {
-          query = query.in(childConfig.foreignKey, ownedParentIds);
+        if (childConfig && deleteParentIds) {
+          query = query.in(childConfig.foreignKey, deleteParentIds);
         } else if (!isChildTable) {
           query = query.eq("user_id", userId);
         }
@@ -508,11 +524,17 @@ async function pushChanges(
 async function fetchOwnedParentIds(
   database: Database,
   parentTable: WritableSupabaseTablesNames,
-  userId: string
+  userId: string,
+  options: { readonly includeDeleted?: boolean } = {}
 ): Promise<readonly string[]> {
+  const conditions = [Q.where("user_id", userId)];
+  if (!options.includeDeleted) {
+    conditions.push(Q.where("deleted", false));
+  }
+
   const records = await database
     .get<Model>(parentTable)
-    .query(Q.where("user_id", userId))
+    .query(...conditions)
     .fetch();
 
   return records.map((record) => record.id);

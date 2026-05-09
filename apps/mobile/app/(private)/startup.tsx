@@ -44,20 +44,26 @@ export default function Index(): React.ReactNode {
   });
 
   const handleSignOut = useCallback((): void => {
-    void performLogout(database)
-      .then((result) => {
-        if (!result.success) {
-          logger.warn("onboarding.retryScreen.signOut.failed", {
-            reason: result.error ?? "unknown",
+    void (async (): Promise<void> => {
+      const result = await performLogout(database);
+      if (!result.success) {
+        logger.warn("onboarding.retryScreen.signOut.failed", {
+          reason: result.error ?? "unknown",
+        });
+
+        const fallbackResult = await performLogout(database, true);
+        if (!fallbackResult.success) {
+          logger.warn("onboarding.retryScreen.forceSignOut.failed", {
+            reason: fallbackResult.error ?? "unknown",
           });
         }
-      })
-      .catch((error: unknown) => {
-        logger.warn(
-          "onboarding.retryScreen.signOut.failed",
-          getSafeErrorLog(error)
-        );
-      });
+      }
+    })().catch((error: unknown) => {
+      logger.warn(
+        "onboarding.retryScreen.signOut.failed",
+        getSafeErrorLog(error)
+      );
+    });
   }, []);
 
   const handleRetry = useCallback((): void => {
@@ -89,7 +95,7 @@ export default function Index(): React.ReactNode {
 
   switch (outcome) {
     case "dashboard":
-      return <RedirectWithTransitionFallback href="/(tabs)" />;
+      return <RedirectWithTransitionFallback href="/(private)/(tabs)" />;
     case "retry":
       return (
         <RetrySyncScreen onRetry={handleRetry} onSignOut={handleSignOut} />
@@ -162,7 +168,7 @@ function useStartupRoutingTelemetry({
 }
 
 interface RedirectWithTransitionFallbackProps {
-  readonly href: "/(tabs)" | "/onboarding";
+  readonly href: "/(private)/(tabs)" | "/onboarding";
 }
 
 function RedirectWithTransitionFallback({

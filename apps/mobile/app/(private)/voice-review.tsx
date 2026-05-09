@@ -29,6 +29,12 @@ import { Text, TouchableOpacity, View } from "react-native";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+type PrivateTabRoute =
+  | "/(private)/(tabs)"
+  | "/(private)/(tabs)/accounts"
+  | "/(private)/(tabs)/transactions"
+  | "/(private)/(tabs)/metals";
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -71,15 +77,15 @@ export default function VoiceReviewScreen(): React.JSX.Element {
   const detectedLanguage = (params.detectedLanguage ?? "en").toUpperCase();
 
   /** Map tab indices to route paths for post-save navigation */
-  const originTabRoute = useMemo((): string => {
+  const originTabRoute = useMemo((): PrivateTabRoute => {
     const index = Number(params.originTabIndex ?? "2");
-    const TAB_ROUTES: Record<number, string> = {
-      0: "/(tabs)",
-      1: "/(tabs)/accounts",
-      2: "/(tabs)/transactions",
-      3: "/(tabs)/metals",
+    const TAB_ROUTES: Record<number, PrivateTabRoute> = {
+      0: "/(private)/(tabs)",
+      1: "/(private)/(tabs)/accounts",
+      2: "/(private)/(tabs)/transactions",
+      3: "/(private)/(tabs)/metals",
     };
-    return TAB_ROUTES[index] ?? "/(tabs)/transactions";
+    return TAB_ROUTES[index] ?? "/(private)/(tabs)/transactions";
   }, [params.originTabIndex]);
 
   // ── Save ────────────────────────────────────────────────────────────
@@ -140,7 +146,7 @@ export default function VoiceReviewScreen(): React.JSX.Element {
   }, []);
 
   const handleConfirmDiscard = useCallback((): void => {
-    router.replace(originTabRoute as never);
+    router.replace(originTabRoute);
   }, [router, originTabRoute]);
 
   // ── No transactions guard ───────────────────────────────────────────

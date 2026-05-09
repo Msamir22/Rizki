@@ -24,6 +24,24 @@ const ALLOWED_FILE_SUFFIXES = [
   "apps/mobile/services/sync.ts",
 ];
 
+const OWNED_HELPERS = new Set([
+  "queryOwned",
+  "findOwnedById",
+  "observeOwnedById",
+  "findOwned",
+]);
+
+const CATEGORY_HELPERS = new Set([
+  "queryAccessibleCategories",
+  "findAccessibleCategory",
+]);
+
+const CHILD_HELPERS = new Set([
+  "queryChildrenOfOwnedParent",
+  "queryChildrenOfOwnedParents",
+  "assertChildRecordParentOwned",
+]);
+
 function normalizePath(fileName) {
   return fileName.replace(/\\/g, "/");
 }
@@ -69,7 +87,7 @@ function getLiteralString(node) {
   return null;
 }
 
-function getDatabaseGetTable(callExpression) {
+function getDatabaseGetTable(callExpression, databaseVariables) {
   if (!callExpression || callExpression.type !== "CallExpression") {
     return null;
   }
@@ -83,47 +101,39 @@ function getDatabaseGetTable(callExpression) {
     return null;
   }
 
-  if (
-    callee.object.type !== "Identifier" ||
-    callee.object.name !== "database"
-  ) {
+  if (callee.object.type !== "Identifier") {
+    return null;
+  }
+
+  if (!databaseVariables.has(callee.object.name)) {
     return null;
   }
 
   return getLiteralString(callExpression.arguments[0]);
 }
 
-function isScopedHelperCall(callExpression) {
+function getScopedHelperKind(callExpression) {
   if (!callExpression || callExpression.type !== "CallExpression") {
-    return false;
+    return null;
   }
 
   const callee = callExpression.callee;
   if (callee.type === "Identifier") {
-    return (
-      callee.name === "queryOwned" ||
-      callee.name === "queryAccessibleCategories" ||
-      callee.name === "findOwnedById" ||
-      callee.name === "observeOwnedById" ||
-      callee.name === "queryChildrenOfOwnedParent" ||
-      callee.name === "queryChildrenOfOwnedParents"
-    );
+    if (OWNED_HELPERS.has(callee.name)) return "owned";
+    if (CATEGORY_HELPERS.has(callee.name)) return "mixed";
+    if (CHILD_HELPERS.has(callee.name)) return "child";
+    return null;
   }
 
   if (callee.type !== "MemberExpression") {
-    return false;
+    return null;
   }
 
   const propertyName = getPropertyName(callee);
-  return (
-    propertyName === "queryOwned" ||
-    propertyName === "queryAccessibleCategories" ||
-    propertyName === "findOwned" ||
-    propertyName === "findAccessibleCategory" ||
-    propertyName === "queryChildrenOfOwnedParent" ||
-    propertyName === "queryChildrenOfOwnedParents" ||
-    propertyName === "assertChildRecordParentOwned"
-  );
+  if (OWNED_HELPERS.has(propertyName)) return "owned";
+  if (CATEGORY_HELPERS.has(propertyName)) return "mixed";
+  if (CHILD_HELPERS.has(propertyName)) return "child";
+  return null;
 }
 
 function isProtectedTable(tableName) {
@@ -139,7 +149,11 @@ function getTableKind(tableName) {
   return MIXED_VISIBILITY_TABLES.has(tableName) ? "mixed" : "owned";
 }
 
-function getCollectionNameFromMemberObject(node, collectionVariables) {
+function getCollectionNameFromNode(
+  node,
+  collectionVariables,
+  databaseVariables
+) {
   if (!node) return null;
 
   if (node.type === "Identifier") {
@@ -147,10 +161,22 @@ function getCollectionNameFromMemberObject(node, collectionVariables) {
   }
 
   if (node.type === "CallExpression") {
-    return getDatabaseGetTable(node);
+    return getDatabaseGetTable(node, databaseVariables);
   }
 
   return null;
+}
+
+function getCollectionNameFromMemberObject(
+  node,
+  collectionVariables,
+  databaseVariables
+) {
+  return getCollectionNameFromNode(
+    node,
+    collectionVariables,
+    databaseVariables
+  );
 }
 
 function getMessage(tableName, accessKind) {
@@ -164,6 +190,23 @@ function getMessage(tableName, accessKind) {
   }
 
   return `Avoid direct ${accessKind} access to user-owned table '${tableName}'. Use getCurrentUserDataScope(), queryOwned(), findOwnedById(), or observeOwnedById() instead.`;
+}
+
+function getInvalidScopedHelperMessage(tableName, helperKind) {
+  const tableKind = getTableKind(tableName);
+  if (tableKind === helperKind) {
+    return null;
+  }
+
+  if (tableKind === "child") {
+    return `Avoid ${helperKind} scoped helper access to child-owned table '${tableName}'. Use user-data-access child helpers with a verified owned parent instead.`;
+  }
+
+  if (tableKind === "mixed") {
+    return `Avoid ${helperKind} scoped helper access to mixed-visibility table '${tableName}'. Use user-data-access category helpers so system rows and current-user rows are handled together.`;
+  }
+
+  return `Avoid ${helperKind} scoped helper access to user-owned table '${tableName}'. Use user-data-access owned helpers instead.`;
 }
 
 module.exports = {
@@ -189,6 +232,7 @@ module.exports = {
     }
 
     const collectionVariables = new Map();
+    const databaseVariables = new Set(["database"]);
 
     return {
       VariableDeclarator(node) {
@@ -196,14 +240,40 @@ module.exports = {
           return;
         }
 
-        const tableName = getDatabaseGetTable(node.init);
+        if (
+          node.init?.type === "Identifier" &&
+          databaseVariables.has(node.init.name)
+        ) {
+          databaseVariables.add(node.id.name);
+          return;
+        }
+
+        const tableName = getDatabaseGetTable(node.init, databaseVariables);
         if (tableName && isProtectedTable(tableName)) {
           collectionVariables.set(node.id.name, tableName);
         }
       },
 
       CallExpression(node) {
-        if (isScopedHelperCall(node)) {
+        const helperKind = getScopedHelperKind(node);
+        if (helperKind) {
+          const tableName = getCollectionNameFromNode(
+            node.arguments[0],
+            collectionVariables,
+            databaseVariables
+          );
+          if (!tableName || !isProtectedTable(tableName)) {
+            return;
+          }
+
+          const message = getInvalidScopedHelperMessage(tableName, helperKind);
+          if (message) {
+            context.report({
+              node,
+              messageId: "unsafeAccess",
+              data: { message },
+            });
+          }
           return;
         }
 
@@ -223,7 +293,8 @@ module.exports = {
 
         const tableName = getCollectionNameFromMemberObject(
           callee.object,
-          collectionVariables
+          collectionVariables,
+          databaseVariables
         );
         if (!tableName || !isProtectedTable(tableName)) {
           return;

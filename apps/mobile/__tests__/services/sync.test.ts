@@ -312,6 +312,35 @@ describe("syncDatabase", () => {
     expect(mockInsert).not.toHaveBeenCalled();
   });
 
+  it("rejects child-table inserts when the parent is soft-deleted", async () => {
+    mockForeignProfilesFetch.mockResolvedValue([]);
+    mockSynchronize.mockImplementation(
+      async (args: {
+        pushChanges: (input: {
+          changes: Record<string, unknown>;
+          lastPulledAt: number | null;
+        }) => Promise<unknown>;
+      }) => {
+        await args.pushChanges({
+          changes: {
+            asset_metals: {
+              created: [{ id: "metal-1", asset_id: "asset-deleted" }],
+              updated: [],
+              deleted: [],
+            },
+          },
+          lastPulledAt: null,
+        });
+      }
+    );
+
+    await expect(syncDatabase(mockDatabase)).rejects.toThrow(
+      "Refusing to sync foreign local changes"
+    );
+    expect(mockWatermelonWhere).toHaveBeenCalledWith("deleted", false);
+    expect(mockInsert).not.toHaveBeenCalled();
+  });
+
   it("rejects child-table updates when parent lookup fails", async () => {
     mockForeignProfilesFetch.mockRejectedValue(
       new Error("parent lookup failed")

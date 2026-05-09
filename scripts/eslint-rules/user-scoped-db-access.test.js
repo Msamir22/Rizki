@@ -43,6 +43,14 @@ ruleTester.run("user-scoped-db-access", rule, {
     },
     {
       code: `
+        const scope = await getCurrentUserDataScope();
+        const asset = await scope.findOwned(database.get("assets"), assetId);
+        const metals = await scope.queryChildrenOfOwnedParent(database.get("asset_metals"), asset, "asset_id").fetch();
+      `,
+      filename: "apps/mobile/services/asset-reader.ts",
+    },
+    {
+      code: `
         const rates = database.get("market_rates").query(Q.take(1));
       `,
       filename: "apps/mobile/hooks/useMarketRates.ts",
@@ -111,6 +119,37 @@ ruleTester.run("user-scoped-db-access", rule, {
       `,
       filename: "apps/mobile/hooks/useBalanceSnapshots.ts",
       errors: [{ message: /user-owned table 'daily_snapshot_balance'/ }],
+    },
+    {
+      code: `
+        const db = database;
+        const transactions = await db.get("transactions").query(Q.where("deleted", false)).fetch();
+      `,
+      filename: "apps/mobile/hooks/useTransactions.ts",
+      errors: [{ message: /user-owned table 'transactions'/ }],
+    },
+    {
+      code: `
+        const db = database;
+        const transactionsCollection = db.get("transactions");
+        const transaction = await transactionsCollection.find(id);
+      `,
+      filename: "apps/mobile/hooks/useTransaction.ts",
+      errors: [{ message: /user-owned table 'transactions'/ }],
+    },
+    {
+      code: `
+        const metals = await queryOwned(database.get("asset_metals"), userId).fetch();
+      `,
+      filename: "apps/mobile/services/asset-reader.ts",
+      errors: [{ message: /child-owned table 'asset_metals'/ }],
+    },
+    {
+      code: `
+        const category = await scope.findOwned(database.get("categories"), id);
+      `,
+      filename: "apps/mobile/services/category-reader.ts",
+      errors: [{ message: /mixed-visibility table 'categories'/ }],
     },
   ],
 });

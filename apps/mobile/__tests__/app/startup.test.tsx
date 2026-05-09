@@ -36,7 +36,7 @@ const RTR: ReactTestRendererModule = require("react-test-renderer");
 
 const mockUseSync = jest.fn();
 const mockUseProfile = jest.fn();
-const mockPerformLogout = jest.fn().mockResolvedValue(undefined);
+const mockPerformLogout = jest.fn().mockResolvedValue({ success: true });
 const mockRouterReplace = jest.fn();
 
 // Tag the Redirect element with its `href` so the test can assert the target
@@ -69,7 +69,8 @@ jest.mock("@/hooks/useProfile", () => ({
 }));
 
 jest.mock("@/services/logout-service", () => ({
-  performLogout: (): Promise<void> => mockPerformLogout() as Promise<void>,
+  performLogout: (...args: unknown[]): Promise<unknown> =>
+    mockPerformLogout(...args) as Promise<unknown>,
 }));
 
 jest.mock("@/utils/logger", () => ({
@@ -206,6 +207,7 @@ describe("(private)/startup.tsx routing gate", () => {
   beforeEach(() => {
     jest.useFakeTimers();
     jest.clearAllMocks();
+    mockPerformLogout.mockResolvedValue({ success: true });
   });
 
   afterEach(() => {
@@ -234,7 +236,7 @@ describe("(private)/startup.tsx routing gate", () => {
     expect(renderer.toJSON()).not.toBeNull();
   });
 
-  it("redirects to /(tabs) when sync succeeded and onboarding is already completed", () => {
+  it("redirects to /(private)/(tabs) when sync succeeded and onboarding is already completed", () => {
     setState({
       syncState: "success",
       onboardingCompleted: true,
@@ -244,7 +246,7 @@ describe("(private)/startup.tsx routing gate", () => {
     expect(
       renderer.root.findAllByProps({ testID: "startup-loading" })
     ).not.toHaveLength(0);
-    expect(mockRouterReplace).toHaveBeenCalledWith("/(tabs)");
+    expect(mockRouterReplace).toHaveBeenCalledWith("/(private)/(tabs)");
   });
 
   it("redirects to /onboarding when sync succeeded and onboarding is NOT completed", () => {
@@ -277,7 +279,7 @@ describe("(private)/startup.tsx routing gate", () => {
     });
     const renderer = renderGateWithEffects();
     expect(findRedirectHref(renderer)).toBeUndefined();
-    expect(mockRouterReplace).toHaveBeenCalledWith("/(tabs)");
+    expect(mockRouterReplace).toHaveBeenCalledWith("/(private)/(tabs)");
   });
 
   it("routes an onboarded user to the dashboard even when sync TIMED OUT — offline-first guarantee", () => {
@@ -287,7 +289,7 @@ describe("(private)/startup.tsx routing gate", () => {
     });
     const renderer = renderGateWithEffects();
     expect(findRedirectHref(renderer)).toBeUndefined();
-    expect(mockRouterReplace).toHaveBeenCalledWith("/(tabs)");
+    expect(mockRouterReplace).toHaveBeenCalledWith("/(private)/(tabs)");
   });
 
   // Race-condition guards — `useProfile.isLoading` flips false on the FIRST
@@ -397,6 +399,31 @@ describe("(private)/startup.tsx routing gate", () => {
     node?.props.onSignOut?.();
 
     expect(mockPerformLogout).toHaveBeenCalledTimes(1);
+  });
+
+  it("forces fallback sign-out when the retry screen logout cannot sync first", async () => {
+    mockPerformLogout
+      .mockResolvedValueOnce({ success: false, error: "sync_failed" })
+      .mockResolvedValueOnce({ success: true });
+    setState({ syncState: "failed", onboardingCompleted: false });
+    const renderer = renderGate();
+
+    const nodes = renderer.root.findAllByProps({ testID: "retry-screen" });
+    const node = nodes[0] as { props: { onSignOut?: () => void } } | undefined;
+    expect(node).toBeDefined();
+
+    RTR.act(() => {
+      node?.props.onSignOut?.();
+    });
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(mockPerformLogout).toHaveBeenCalledTimes(2);
+    expect(mockPerformLogout).toHaveBeenNthCalledWith(
+      2,
+      expect.anything(),
+      true
+    );
   });
 
   it("wires the retry screen's Retry callback to retryInitialSync", () => {
