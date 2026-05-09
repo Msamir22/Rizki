@@ -63,9 +63,64 @@ Dependency direction: `apps/ → packages/logic → packages/db`. **Never revers
 - **Hooks (`apps/mobile/hooks/`)**: Lifecycle and subscriptions ONLY — observing
   data, managing local UI state, triggering re-renders. MUST NOT contain
   database write logic or business calculations.
+- Design hooks around UI data/lifecycle needs, not one hook per database
+  function. Prefer cohesive hooks such as `useBudgets()` for list state,
+  `useBudget(budgetId)` for detail state, and optional action hooks only when
+  reusable UI command state is needed. Avoid god hooks that bundle unrelated
+  queries, mutations, validation, calculations, and sync orchestration.
 - **Components**: Zero business logic. Receive data via props or hooks and
   render UI. `Alert.alert()` and UI concerns stay in calling component/hook,
   never in services.
+
+## Authenticated Runtime & User-Scoped Data
+
+- Private route UI MUST NOT be visible or interactable until the auth state is
+  resolved and the required startup account/profile state has settled. Use
+  route/shell-level gates for this UX guarantee; do not rely on per-card loading
+  guards as the primary way to protect private screens.
+- Auth/session/profile gates are UX boundaries, not data security boundaries.
+  Every WatermelonDB read/write for user-owned data MUST still be scoped to the
+  current authenticated user through approved helper APIs or repositories (for
+  example `getCurrentUserDataScope`, `queryOwned`, `findOwnedById`,
+  `observeOwnedById`, or repository methods that wrap them).
+- Components MUST NOT import the raw `database` object or construct WatermelonDB
+  queries/subscriptions directly. Components receive data, loading, and error
+  state from hooks or props. Hooks may observe data and derive UI state, while
+  services/repositories own persistence and mutation logic.
+- Logout MAY preserve local offline data. Therefore local rows from another
+  account must never influence routing, visible UI state, sync payloads,
+  financial calculations, or current-user queries.
+- Profile and onboarding routing decisions MUST be based only on the scoped
+  current-user profile. If the scoped profile is missing while sync/startup is
+  still in progress, show the account loading or recovery state; never default
+  to onboarding or use a foreign local profile row.
+- Private providers that subscribe to user data MUST either mount only inside
+  the authenticated private runtime or explicitly no-op and clear state while
+  auth is resolving or signed out. Prefer one private runtime boundary over
+  scattering auth guards across leaf components.
+- User-owned child tables that do not store `user_id` directly MUST be scoped
+  through an owned parent record for reads, writes, push, and delete sync. A
+  soft-deleted owned parent still counts as owned when pushing child deletions.
+- Shared/system tables with mixed visibility, such as system categories
+  (`user_id IS NULL`) plus current-user custom categories, MUST use explicit
+  accessible-scope helpers. Do not use unqualified full-table reads in
+  authenticated UI.
+
+## Sync Correctness
+
+- WatermelonDB remains the user-facing source of truth, but sync correctness is
+  part of data safety. Pull and push failures MUST fail the sync operation; do
+  not convert remote errors into empty successful changes.
+- Failed pull operations MUST NOT advance WatermelonDB sync metadata as if the
+  pull succeeded. Failed push operations MUST NOT allow local dirty changes to
+  be marked synced.
+- Sync pull/push queries MUST be scoped to the authenticated user and to
+  explicitly allowed shared/system data only. RLS is required on Supabase, but
+  client-side sync code must still avoid requesting or applying data outside the
+  current user's scope.
+- Startup UX should block only what is required to make a safe routing decision
+  (auth plus scoped profile/account state). After routing is safe, prefer
+  screen-level skeletons over a global blocking sync overlay.
 
 ## Live SMS Detection & Notifications
 
@@ -112,6 +167,9 @@ Dependency direction: `apps/ → packages/logic → packages/db`. **Never revers
 - Use `FlatList` (not manual `.map()`) for long lists with `keyExtractor`. Use
   `useMemo`/`useCallback` for perf-critical components.
 - Clean up side effects in `useEffect` return function.
+- Long-running animations, subscriptions, timers, and retry loops MUST be
+  cancelled or unsubscribed during cleanup. This includes Reanimated infinite
+  animations via `cancelAnimation` where applicable.
 - Use `react-native-safe-area-context`, `KeyboardAvoidingView`, and
   `SafeAreaProvider` for safe areas. No hardcoded safe area padding.
   `SafeAreaProvider` at the root MUST pass
@@ -247,6 +305,16 @@ chore, perf, ci.
   usage when touching affected tests.
 - Fix implementation, not tests (unless tests are wrong).
 
+## Tooling Guardrails
+
+- When adding architectural ESLint rules or custom static-analysis guardrails,
+  wire every lint entry point consistently: package scripts, Nx targets,
+  lint-staged, VSCode/IDE settings, CI, and any scripts that invoke ESLint
+  directly.
+- Custom rules should push developers toward approved scoped helper APIs and
+  repositories, not merely ban one raw query pattern while leaving equivalent
+  unsafe access paths open.
+
 ## Android Emulator & Metro Debugging
 
 - When testing Android behavior, first look for available Android debugging
@@ -372,25 +440,3 @@ For multi-step tasks, state a brief plan:
 
 Strong success criteria let you loop independently. Weak criteria ("make it
 work") require constant clarification.
-
-<!-- SPECKIT START -->
-
-For additional context about technologies to be used, project structure, shell
-commands, and other important information, read the current plan:
-`specs/027-post-auth-bootstrap/plan.md`
-
-<!-- SPECKIT END -->
-
-## Active Technologies
-
-- TypeScript 5.x, strict mode across the monorepo + React Native + Expo managed
-  workflow, Expo Router, WatermelonDB, Supabase JS, NativeWind v4, Jest + React
-  Native Testing Library (381-post-auth-bootstrap)
-- WatermelonDB/SQLite as local source of truth; Supabase PostgreSQL as remote
-  sync target; Expo SecureStore for auth session persistence
-  (381-post-auth-bootstrap)
-
-## Recent Changes
-
-- 381-post-auth-bootstrap: Added post-auth profile bootstrap planning context
-  and shared reference-data RLS scope.
