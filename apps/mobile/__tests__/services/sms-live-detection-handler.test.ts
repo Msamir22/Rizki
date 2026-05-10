@@ -41,6 +41,7 @@ const mockShowTransactionCreatedNotification = jest.fn<
   Promise<void>,
   unknown[]
 >();
+const mockGetCurrentUserId = jest.fn<Promise<string | null>, []>();
 
 jest.mock("@/services/notification-service", () => ({
   ACTION_CONFIRM: "CONFIRM",
@@ -75,6 +76,10 @@ jest.mock("@/services/transaction-service", () => ({
 jest.mock("@/services/transfer-service", () => ({
   createSmsAtmTransfer: (input: unknown): Promise<SmsAtmTransferResult> =>
     mockCreateSmsAtmTransfer(input),
+}));
+
+jest.mock("@/services/supabase", () => ({
+  getCurrentUserId: (): Promise<string | null> => mockGetCurrentUserId(),
 }));
 
 import {
@@ -116,6 +121,14 @@ function createPayload(
   };
 }
 
+function getRegisteredHandler(): NotificationActionHandler {
+  if (!mockRegisteredHandler) {
+    throw new Error("Expected notification action handler to be registered");
+  }
+
+  return mockRegisteredHandler;
+}
+
 describe("sms-live-detection-handler notification actions", () => {
   beforeEach(() => {
     mockRegisteredHandler = null;
@@ -140,6 +153,8 @@ describe("sms-live-detection-handler notification actions", () => {
     mockShowTransactionNotification.mockResolvedValue();
     mockShowTransactionCreatedNotification.mockReset();
     mockShowTransactionCreatedNotification.mockResolvedValue();
+    mockGetCurrentUserId.mockReset();
+    mockGetCurrentUserId.mockResolvedValue("user-1");
     mockHasExistingSmsBodyHash.mockReset();
     mockHasExistingSmsBodyHash.mockResolvedValue(false);
     mockCreateTransaction.mockReset();
@@ -151,7 +166,7 @@ describe("sms-live-detection-handler notification actions", () => {
   it("passes the SMS body hash when confirming a regular SMS transaction", async () => {
     initializeDetectionActionHandler();
 
-    await mockRegisteredHandler?.("CONFIRM", createPayload());
+    await getRegisteredHandler()("CONFIRM", createPayload());
 
     expect(mockCreateTransaction).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -165,10 +180,26 @@ describe("sms-live-detection-handler notification actions", () => {
     mockHasExistingSmsBodyHash.mockResolvedValueOnce(true);
     initializeDetectionActionHandler();
 
-    await mockRegisteredHandler?.("CONFIRM", createPayload());
+    await getRegisteredHandler()("CONFIRM", createPayload());
 
     expect(mockCreateTransaction).not.toHaveBeenCalled();
     expect(mockCreateSmsAtmTransfer).not.toHaveBeenCalled();
+  });
+
+  it("serializes concurrent saves for the same SMS hash", async () => {
+    mockHasExistingSmsBodyHash.mockImplementation(() =>
+      Promise.resolve(mockCreateTransaction.mock.calls.length > 0)
+    );
+    initializeDetectionActionHandler();
+    const handler = getRegisteredHandler();
+
+    await Promise.all([
+      handler("CONFIRM", createPayload()),
+      handler("CONFIRM", createPayload()),
+    ]);
+
+    expect(mockHasExistingSmsBodyHash).toHaveBeenCalledTimes(2);
+    expect(mockCreateTransaction).toHaveBeenCalledTimes(1);
   });
 
   it("auto-confirms and notifies the user that the transaction was created", async () => {

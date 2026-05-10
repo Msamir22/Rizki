@@ -35,6 +35,7 @@ export interface LiveSmsEvent {
 export interface LiveSmsProcessingResult {
   readonly status: LiveSmsProcessingStatus;
   readonly smsBodyHash?: string;
+  readonly isRetryable?: boolean;
   readonly transactions: readonly ParsedSmsTransaction[];
 }
 
@@ -44,13 +45,15 @@ interface LiveSmsProcessingOptions {
 }
 
 const EMPTY_TRANSACTIONS: readonly ParsedSmsTransaction[] = [];
+const inFlightSmsBodyHashes = new Set<string>();
 
 function createResult(
   status: LiveSmsProcessingStatus,
   smsBodyHash?: string,
-  transactions: readonly ParsedSmsTransaction[] = EMPTY_TRANSACTIONS
+  transactions: readonly ParsedSmsTransaction[] = EMPTY_TRANSACTIONS,
+  isRetryable?: boolean
 ): LiveSmsProcessingResult {
-  return { status, smsBodyHash, transactions };
+  return { status, smsBodyHash, isRetryable, transactions };
 }
 
 async function loadAiContext(): Promise<ParseSmsContext> {
@@ -72,17 +75,21 @@ export async function processLiveSmsEvent(
   event: LiveSmsEvent,
   options: LiveSmsProcessingOptions = {}
 ): Promise<LiveSmsProcessingResult> {
+  if (!isLikelyFinancialSms(event.body)) {
+    return createResult("ignored");
+  }
+
   const canRun = await reconcileLiveDetectionPreference();
   if (!canRun) {
     return createResult("disabled");
   }
 
-  if (!isLikelyFinancialSms(event.body)) {
-    return createResult("ignored");
-  }
-
   try {
     const smsBodyHash = await computeSmsHash(event.body);
+
+    if (inFlightSmsBodyHashes.has(smsBodyHash)) {
+      return createResult("duplicate", smsBodyHash);
+    }
 
     if (options.isRecentlyProcessed?.(smsBodyHash)) {
       return createResult("duplicate", smsBodyHash);
@@ -92,33 +99,43 @@ export async function processLiveSmsEvent(
       return createResult("duplicate", smsBodyHash);
     }
 
-    const candidate: SmsCandidate = {
-      message: {
-        id: `live-${event.deliveryMode}-${event.timestamp}`,
-        address: event.sender,
-        body: event.body,
-        date: event.timestamp,
-        read: false,
-      },
-      smsBodyHash,
-    };
-    const aiResult = await parseSmsWithAi([candidate], await loadAiContext());
+    inFlightSmsBodyHashes.add(smsBodyHash);
+    try {
+      const candidate: SmsCandidate = {
+        message: {
+          id: `live-${event.deliveryMode}-${event.timestamp}`,
+          address: event.sender,
+          body: event.body,
+          date: event.timestamp,
+          read: false,
+        },
+        smsBodyHash,
+      };
+      const aiResult = await parseSmsWithAi([candidate], await loadAiContext());
 
-    if (aiResult.hasError === true) {
-      return createResult("ai_failed", smsBodyHash);
+      if (aiResult.hasError === true) {
+        return createResult(
+          "ai_failed",
+          smsBodyHash,
+          EMPTY_TRANSACTIONS,
+          aiResult.isRetryable !== false
+        );
+      }
+
+      options.markRecentlyProcessed?.(smsBodyHash);
+
+      if (aiResult.transactions.length === 0) {
+        return createResult("ignored", smsBodyHash);
+      }
+
+      return createResult("parsed", smsBodyHash, aiResult.transactions);
+    } finally {
+      inFlightSmsBodyHashes.delete(smsBodyHash);
     }
-
-    options.markRecentlyProcessed?.(smsBodyHash);
-
-    if (aiResult.transactions.length === 0) {
-      return createResult("ignored", smsBodyHash);
-    }
-
-    return createResult("parsed", smsBodyHash, aiResult.transactions);
   } catch (error: unknown) {
     logger.error("liveSms.process.failed", error, {
       deliveryMode: event.deliveryMode,
     });
-    return createResult("ai_failed");
+    return createResult("ai_failed", undefined, EMPTY_TRANSACTIONS, true);
   }
 }

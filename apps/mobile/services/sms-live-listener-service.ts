@@ -25,6 +25,7 @@ import {
   Platform,
 } from "react-native";
 import { processLiveSmsEvent } from "./sms-live-processor";
+import { logger } from "@/utils/logger";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -43,6 +44,7 @@ interface NativeSmsEvent {
 interface NativeSmsModules {
   readonly SmsEventModule?: {
     readonly getConstants?: () => unknown;
+    readonly setListenerReady?: (isReady: boolean) => Promise<void> | void;
   };
 }
 
@@ -79,11 +81,25 @@ function ensureSmsEventModuleInitialized(): void {
   const { SmsEventModule } = NativeModules as NativeSmsModules;
 
   if (!SmsEventModule) {
-    console.warn("[sms-live-listener] SmsEventModule is unavailable");
+    logger.warn("smsLiveListener.nativeModuleUnavailable");
     return;
   }
 
   SmsEventModule.getConstants?.();
+}
+
+function setNativeListenerReady(isReady: boolean): void {
+  const { SmsEventModule } = NativeModules as NativeSmsModules;
+  const result = SmsEventModule?.setListenerReady?.(isReady);
+
+  if (result && typeof result.catch === "function") {
+    result.catch((error: unknown) => {
+      logger.warn("smsLiveListener.listenerReadyFlagFailed", {
+        isReady,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    });
+  }
 }
 
 /**
@@ -110,10 +126,7 @@ async function processNativeSmsEvent(event: NativeSmsEvent): Promise<void> {
       }
     }
   } catch (err) {
-    console.error(
-      "[sms-live-listener] Failed to process SMS:",
-      err instanceof Error ? err.message : String(err)
-    );
+    logger.error("smsLiveListener.processNativeEventFailed", err);
   }
 }
 
@@ -143,12 +156,12 @@ function markRecentlyProcessed(smsBodyHash: string): void {
  */
 export function startSmsListener(): void {
   if (Platform.OS !== "android") {
-    console.log("[sms-live-listener] SMS listening only available on Android");
+    logger.info("smsLiveListener.androidOnly");
     return;
   }
 
   if (isListening) {
-    console.log("[sms-live-listener] Already listening");
+    logger.info("smsLiveListener.alreadyListening");
     return;
   }
 
@@ -159,22 +172,18 @@ export function startSmsListener(): void {
       NATIVE_SMS_EVENT,
       (event: NativeSmsEvent) => {
         processNativeSmsEvent(event).catch((err: unknown) => {
-          console.error(
-            "[sms-live-listener] Processing error:",
-            err instanceof Error ? err.message : String(err)
-          );
+          logger.error("smsLiveListener.processFailed", err);
         });
       }
     );
 
     isListening = true;
-    console.log("[sms-live-listener] Started listening for native SMS events");
+    setNativeListenerReady(true);
+    logger.info("smsLiveListener.started");
   } catch (err) {
-    console.error(
-      "[sms-live-listener] Failed to start:",
-      err instanceof Error ? err.message : String(err)
-    );
+    logger.error("smsLiveListener.startFailed", err);
     isListening = false;
+    setNativeListenerReady(false);
   }
 }
 
@@ -193,7 +202,8 @@ export function stopSmsListener(): void {
   }
 
   isListening = false;
-  console.log("[sms-live-listener] Stopped listening");
+  setNativeListenerReady(false);
+  logger.info("smsLiveListener.stopped");
 }
 
 /**

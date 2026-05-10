@@ -11,6 +11,11 @@ import type { Database } from "@nozbe/watermelondb";
 import { fetch } from "@react-native-community/netinfo";
 import { supabase } from "./supabase";
 import { getActiveSyncPromise, syncDatabase } from "./sync";
+import {
+  setAutoConfirm,
+  setLiveDetectionEnabled,
+} from "./sms-live-detection-handler";
+import { stopSmsListener } from "./sms-live-listener-service";
 
 // =============================================================================
 // Types
@@ -67,6 +72,7 @@ export async function performLogout(
       }
     }
 
+    await disableLiveSmsAutomation();
     await destroySession();
 
     return { success: true };
@@ -121,6 +127,12 @@ async function attemptSync(database: Database): Promise<boolean> {
   }
 
   return false;
+}
+
+async function disableLiveSmsAutomation(): Promise<void> {
+  stopSmsListener();
+  await setLiveDetectionEnabled(false);
+  await setAutoConfirm(false);
 }
 
 /**

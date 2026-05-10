@@ -30,18 +30,20 @@ import {
 } from "./notification-service";
 import { resolveAccountForSms } from "./sms-account-resolver";
 import { hasExistingSmsBodyHash } from "./sms-dedup-service";
+import { getCurrentUserId } from "./supabase";
 import { createTransaction } from "./transaction-service";
 import { createSmsAtmTransfer } from "./transfer-service";
+import { logger } from "@/utils/logger";
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
 /** AsyncStorage key for the auto-confirm preference */
-const AUTO_CONFIRM_KEY = "@monyvi/sms_auto_confirm";
+const AUTO_CONFIRM_KEY_PREFIX = "@monyvi/sms_auto_confirm";
 
 /** AsyncStorage key for the live detection enabled preference */
-const LIVE_DETECTION_KEY = "@monyvi/sms_live_detection_enabled";
+const LIVE_DETECTION_KEY_PREFIX = "@monyvi/sms_live_detection_enabled";
 
 const LIVE_SMS_PERMISSIONS = [
   PermissionsAndroid.PERMISSIONS.READ_SMS,
@@ -58,6 +60,42 @@ const LIVE_SMS_PERMISSIONS = [
  */
 let reviewingActive = false;
 const transactionQueue: ParsedSmsTransaction[] = [];
+const smsSaveLocks = new Map<string, Promise<void>>();
+
+async function getUserScopedPreferenceKey(
+  keyPrefix: string
+): Promise<string | null> {
+  const userId = (await getCurrentUserId())?.trim();
+  return userId ? `${keyPrefix}:${userId}` : null;
+}
+
+async function withSmsSaveLock(
+  smsBodyHash: string,
+  operation: () => Promise<boolean>
+): Promise<boolean> {
+  const previous = smsSaveLocks.get(smsBodyHash) ?? Promise.resolve();
+  let releaseCurrentLock: () => void = () => {};
+  const current = previous
+    .catch(() => undefined)
+    .then(
+      () =>
+        new Promise<void>((resolve) => {
+          releaseCurrentLock = resolve;
+        })
+    );
+
+  smsSaveLocks.set(smsBodyHash, current);
+  await previous.catch(() => undefined);
+
+  try {
+    return await operation();
+  } finally {
+    releaseCurrentLock();
+    if (smsSaveLocks.get(smsBodyHash) === current) {
+      smsSaveLocks.delete(smsBodyHash);
+    }
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Preference helpers
@@ -68,7 +106,12 @@ const transactionQueue: ParsedSmsTransaction[] = [];
  * Defaults to false (ask me each time).
  */
 export async function isAutoConfirmEnabled(): Promise<boolean> {
-  const value = await AsyncStorage.getItem(AUTO_CONFIRM_KEY);
+  const key = await getUserScopedPreferenceKey(AUTO_CONFIRM_KEY_PREFIX);
+  if (!key) {
+    return false;
+  }
+
+  const value = await AsyncStorage.getItem(key);
   return value === "true";
 }
 
@@ -76,7 +119,12 @@ export async function isAutoConfirmEnabled(): Promise<boolean> {
  * Set the auto-confirm preference.
  */
 export async function setAutoConfirm(enabled: boolean): Promise<void> {
-  await AsyncStorage.setItem(AUTO_CONFIRM_KEY, String(enabled));
+  const key = await getUserScopedPreferenceKey(AUTO_CONFIRM_KEY_PREFIX);
+  if (!key) {
+    return;
+  }
+
+  await AsyncStorage.setItem(key, String(enabled));
 }
 
 /**
@@ -84,7 +132,12 @@ export async function setAutoConfirm(enabled: boolean): Promise<void> {
  * Defaults to false (opt-in).
  */
 export async function isLiveDetectionEnabled(): Promise<boolean> {
-  const value = await AsyncStorage.getItem(LIVE_DETECTION_KEY);
+  const key = await getUserScopedPreferenceKey(LIVE_DETECTION_KEY_PREFIX);
+  if (!key) {
+    return false;
+  }
+
+  const value = await AsyncStorage.getItem(key);
   return value === "true";
 }
 
@@ -92,7 +145,12 @@ export async function isLiveDetectionEnabled(): Promise<boolean> {
  * Set the live detection enabled preference.
  */
 export async function setLiveDetectionEnabled(enabled: boolean): Promise<void> {
-  await AsyncStorage.setItem(LIVE_DETECTION_KEY, String(enabled));
+  const key = await getUserScopedPreferenceKey(LIVE_DETECTION_KEY_PREFIX);
+  if (!key) {
+    return;
+  }
+
+  await AsyncStorage.setItem(key, String(enabled));
 }
 
 /**
@@ -151,10 +209,19 @@ async function saveDetectedTransaction(
   parsed: ParsedSmsTransaction,
   accountId: string
 ): Promise<boolean> {
+  return withSmsSaveLock(parsed.smsBodyHash, () =>
+    saveDetectedTransactionWithoutLock(parsed, accountId)
+  );
+}
+
+async function saveDetectedTransactionWithoutLock(
+  parsed: ParsedSmsTransaction,
+  accountId: string
+): Promise<boolean> {
   if (await hasExistingSmsBodyHash(parsed.smsBodyHash)) {
-    console.info(
-      `[sms-detection] Skipped duplicate SMS transaction: ${parsed.smsBodyHash}`
-    );
+    logger.info("smsDetection.duplicateSkipped", {
+      smsBodyHash: parsed.smsBodyHash,
+    });
     return false;
   }
 
@@ -175,9 +242,11 @@ async function saveDetectedTransaction(
       );
     }
 
-    console.info(
-      `[sms-detection] Saved ATM transfer: ${parsed.amount} ${parsed.currency}`
-    );
+    logger.info("smsDetection.atmTransferSaved", {
+      amount: parsed.amount,
+      currency: parsed.currency,
+      smsBodyHash: parsed.smsBodyHash,
+    });
     return true;
   }
 
@@ -195,9 +264,12 @@ async function saveDetectedTransaction(
     smsBodyHash: parsed.smsBodyHash,
   });
 
-  console.log(
-    `[sms-detection] Saved transaction: ${parsed.type} ${parsed.amount} ${parsed.currency}`
-  );
+  logger.info("smsDetection.transactionSaved", {
+    amount: parsed.amount,
+    currency: parsed.currency,
+    type: parsed.type,
+    smsBodyHash: parsed.smsBodyHash,
+  });
   return true;
 }
 
@@ -225,9 +297,11 @@ export async function handleDetectedSms(
   // T046: Queue if the user is on the review page
   if (reviewingActive) {
     transactionQueue.push(parsed);
-    console.log(
-      `[sms-detection] Queued transaction (review active): ${parsed.type} ${parsed.amount}`
-    );
+    logger.info("smsDetection.transactionQueued", {
+      amount: parsed.amount,
+      type: parsed.type,
+      smsBodyHash: parsed.smsBodyHash,
+    });
     return;
   }
 
@@ -240,10 +314,12 @@ export async function handleDetectedSms(
     );
 
     if (!resolved) {
-      // No account configured — show notification asking to set up
-      console.warn(
-        "[sms-detection] No account resolved for SMS — prompting user"
-      );
+      // No account configured: show notification asking to set up.
+      logger.warn("smsDetection.accountResolutionMissing", {
+        senderDisplayName: parsed.senderDisplayName,
+        currency: parsed.currency,
+        smsBodyHash: parsed.smsBodyHash,
+      });
       await showTransactionNeedsAccountNotification(parsed);
       return;
     }
@@ -266,10 +342,9 @@ export async function handleDetectedSms(
       );
     }
   } catch (err) {
-    console.error(
-      "[sms-detection] Failed to handle detected SMS:",
-      err instanceof Error ? err.message : String(err)
-    );
+    logger.error("smsDetection.handleFailed", err, {
+      smsBodyHash: parsed.smsBodyHash,
+    });
   }
 }
 
@@ -321,7 +396,9 @@ export async function flushQueuedTransactions(): Promise<number> {
   }
 
   const queued = transactionQueue.splice(0);
-  console.log(`[sms-detection] Flushing ${queued.length} queued transactions`);
+  logger.info("smsDetection.flushingQueuedTransactions", {
+    count: queued.length,
+  });
 
   for (const parsed of queued) {
     await handleDetectedSms(parsed);

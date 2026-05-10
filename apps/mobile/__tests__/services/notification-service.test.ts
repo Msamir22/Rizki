@@ -4,6 +4,7 @@ import * as Notifications from "expo-notifications";
 import {
   ACTION_CONFIRM,
   ACTION_DISCARD,
+  clearHandledNotificationKeysForTests,
   getNotificationPermissionStatus,
   hasNotificationPermission,
   openNotificationSettings,
@@ -35,6 +36,7 @@ jest.mock("expo-notifications", () => ({
 }));
 
 const mockOpenSettings = jest.fn<Promise<void>, []>(() => Promise.resolve());
+const originalPlatformOS = Platform.OS;
 
 const mockGetPermissionsAsync =
   Notifications.getPermissionsAsync as jest.MockedFunction<
@@ -142,6 +144,11 @@ function createPermissionStatus({
 describe("notification-service", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    clearHandledNotificationKeysForTests();
+    Object.defineProperty(Platform, "OS", {
+      configurable: true,
+      value: originalPlatformOS,
+    });
     jest.spyOn(Linking, "openSettings").mockImplementation(mockOpenSettings);
   });
 
@@ -284,7 +291,7 @@ describe("notification-service", () => {
     });
   });
 
-  it("dismisses a notification before handling a confirm action", async () => {
+  it("dismisses a notification after handling a confirm action", async () => {
     const handler = jest.fn(() => Promise.resolve());
     registerNotificationActionHandler(handler);
     const listener =
@@ -293,13 +300,13 @@ describe("notification-service", () => {
     listener(createNotificationResponse(ACTION_CONFIRM, "notification-1"));
     await flushPromises();
 
-    expect(mockDismissNotificationAsync).toHaveBeenCalledWith("notification-1");
     expect(handler).toHaveBeenCalledWith(
       ACTION_CONFIRM,
       expect.objectContaining({
         resolvedAccountId: "account-1",
       })
     );
+    expect(mockDismissNotificationAsync).toHaveBeenCalledWith("notification-1");
   });
 
   it("dismisses a notification when the user discards it", async () => {
@@ -320,6 +327,38 @@ describe("notification-service", () => {
         resolvedAccountId: "account-1",
       })
     );
+  });
+
+  it("keeps a notification recoverable when confirm handling fails", async () => {
+    const handler = jest.fn(() => Promise.reject(new Error("save failed")));
+    registerNotificationActionHandler(handler);
+    const listener =
+      mockAddNotificationResponseReceivedListener.mock.calls[0][0];
+
+    listener(
+      createNotificationResponse(
+        ACTION_CONFIRM,
+        "notification-failed",
+        "hash-failed"
+      )
+    );
+    await flushPromises();
+
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(mockDismissNotificationAsync).not.toHaveBeenCalledWith(
+      "notification-failed"
+    );
+
+    listener(
+      createNotificationResponse(
+        ACTION_CONFIRM,
+        "notification-failed",
+        "hash-failed"
+      )
+    );
+    await flushPromises();
+
+    expect(handler).toHaveBeenCalledTimes(2);
   });
 
   it("does not run the action handler twice for the same SMS notification", async () => {

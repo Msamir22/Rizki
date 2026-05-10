@@ -9,6 +9,7 @@
  */
 
 import { AppRegistry } from "react-native";
+import HeadlessJsTaskRetryError from "react-native/Libraries/ReactNative/HeadlessJsTaskError";
 import { handleDetectedSms } from "./sms-live-detection-handler";
 import { processLiveSmsEvent } from "./sms-live-processor";
 
@@ -19,33 +20,8 @@ interface SmsTaskData {
   readonly timestamp: number;
 }
 
-/** Name used in both AppRegistry.registerHeadlessTask and the native service */
+/** Name used in both AppRegistry.registerHeadlessTask and the native service. */
 const SMS_DETECTION_TASK = "SmsDetectionTask";
-
-type HeadlessJsTaskErrorConstructor = new () => Error;
-
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const HeadlessJsTaskErrorModule =
-  require("react-native/Libraries/ReactNative/HeadlessJsTaskError") as
-    | HeadlessJsTaskErrorConstructor
-    | { readonly default: HeadlessJsTaskErrorConstructor };
-
-function resolveHeadlessJsTaskErrorConstructor(): HeadlessJsTaskErrorConstructor {
-  let moduleValue: unknown = HeadlessJsTaskErrorModule;
-
-  while (
-    typeof moduleValue !== "function" &&
-    typeof moduleValue === "object" &&
-    moduleValue !== null &&
-    "default" in moduleValue
-  ) {
-    moduleValue = (moduleValue as { readonly default: unknown }).default;
-  }
-
-  return moduleValue as HeadlessJsTaskErrorConstructor;
-}
-
-const HeadlessJsTaskRetryError = resolveHeadlessJsTaskErrorConstructor();
 
 /**
  * Headless JS task handler.
@@ -60,7 +36,7 @@ async function smsDetectionTask(taskData: SmsTaskData): Promise<void> {
     deliveryMode: "headless",
   });
 
-  if (result.status === "ai_failed") {
+  if (result.status === "ai_failed" && result.isRetryable !== false) {
     throw new HeadlessJsTaskRetryError();
   }
 

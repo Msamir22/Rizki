@@ -104,12 +104,24 @@ class SmsEventModule(reactContext: ReactApplicationContext) :
         }
     }
 
+    @ReactMethod
+    fun setListenerReady(isReady: Boolean, promise: Promise) {
+        try {
+            setJsListenerReady(isReady)
+            promise.resolve(null)
+        } catch (error: Exception) {
+            promise.reject("listener_ready_failed", error)
+        }
+    }
+
     companion object {
         const val MODULE_NAME = "SmsEventModule"
         const val EVENT_NAME = "onSmsReceived"
         private const val PERMISSION_PREFS_NAME = "sms_permission_state"
 
         private var reactContextRef: ReactApplicationContext? = null
+        @Volatile
+        private var hasJsListener = false
 
         private fun requestedPreferenceKey(permission: String): String =
             "requested_$permission"
@@ -123,6 +135,10 @@ class SmsEventModule(reactContext: ReactApplicationContext) :
             reactContextRef = context
         }
 
+        fun setJsListenerReady(isReady: Boolean) {
+            hasJsListener = isReady
+        }
+
         /**
          * Emit an SMS event to JavaScript. Called by SmsBroadcastReceiver
          * when the app process is alive.
@@ -132,6 +148,7 @@ class SmsEventModule(reactContext: ReactApplicationContext) :
         fun emitSmsReceived(sender: String, body: String, timestamp: Double): Boolean {
             val context = reactContextRef ?: return false
             if (!context.hasActiveReactInstance()) return false
+            if (!hasJsListener) return false
 
             return try {
                 val params = Arguments.createMap().apply {

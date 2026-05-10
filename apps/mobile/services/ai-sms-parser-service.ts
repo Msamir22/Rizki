@@ -51,6 +51,7 @@ type AiSmsTransaction = z.infer<typeof AiSmsTransactionSchema>;
 export interface AiParseResult {
   readonly transactions: readonly ParsedSmsTransaction[];
   readonly hasError?: boolean;
+  readonly isRetryable?: boolean;
 }
 
 /** Context sent alongside SMS messages to the Edge Function. */
@@ -106,21 +107,28 @@ interface ChunkAiResult {
   readonly transactions: readonly AiSmsTransaction[];
   /** True if the Edge Function call failed (not a legitimate empty result). */
   readonly hasError: boolean;
+  /** False for permanent failures such as auth/config 4xx responses. */
+  readonly isRetryable?: boolean;
 }
 
 /**
  * Safely parse and validate the Edge Function response.
  * Uses Zod schema validation for each transaction entry.
- * Returns empty transactions if the response shape is unexpected.
+ * Marks unexpected response shapes as errors so retry-capable callers can
+ * recover instead of treating malformed responses as legitimate empty results.
  */
 function parseAiResponse(data: unknown): ChunkAiResult {
-  const emptyResult: ChunkAiResult = { transactions: [], hasError: false };
+  const errorResult: ChunkAiResult = {
+    transactions: [],
+    hasError: true,
+    isRetryable: true,
+  };
 
   if (typeof data !== "object" || data === null) {
     logger.warn("[ai-sms-parser] parseAiResponse: data is not an object", {
       dataType: typeof data,
     });
-    return emptyResult;
+    return errorResult;
   }
 
   const obj = data as Record<string, unknown>;
@@ -129,7 +137,7 @@ function parseAiResponse(data: unknown): ChunkAiResult {
       "[ai-sms-parser] parseAiResponse: no 'transactions' array in response",
       { keys: Object.keys(obj) }
     );
-    return emptyResult;
+    return errorResult;
   }
 
   const transactions: AiSmsTransaction[] = [];
@@ -162,6 +170,14 @@ function parseAiResponse(data: unknown): ChunkAiResult {
   }
 
   return { transactions, hasError: false };
+}
+
+function isRetryableAiFailure(status: number | undefined): boolean {
+  if (status === undefined) {
+    return true;
+  }
+
+  return status === 408 || status === 429 || status >= 500;
 }
 
 function parseDate(dateStr: string, fallbackMs: number): Date {
@@ -246,8 +262,6 @@ async function invokeParseChunk(
   messagesPayload: readonly MessagePayload[],
   context: ParseSmsContext
 ): Promise<ChunkAiResult> {
-  const errorResult: ChunkAiResult = { transactions: [], hasError: true };
-
   const response = await supabase.functions.invoke("parse-sms", {
     body: {
       messages: messagesPayload,
@@ -290,7 +304,11 @@ async function invokeParseChunk(
         chunkSize: messagesPayload.length,
       }
     );
-    return errorResult;
+    return {
+      transactions: [],
+      hasError: true,
+      isRetryable: isRetryableAiFailure(status),
+    };
   }
 
   return parseAiResponse(response.data);
@@ -390,6 +408,7 @@ export async function parseSmsWithAi(
     let totalChunks = chunkQueue.length;
     let chunksCompleted = 0;
     let hasError = false;
+    let hasRetryableError = false;
     const allResults: ParsedSmsTransaction[] = [];
 
     let chunkIndex = 0;
@@ -413,6 +432,7 @@ export async function parseSmsWithAi(
       // Only retry-with-split on actual errors, not legitimate empty results
       if (
         chunkResult.hasError &&
+        chunkResult.isRetryable !== false &&
         currentChunk.messages.length > 0 &&
         !currentChunk.isRetry &&
         currentChunk.messages.length > MIN_CHUNK_SIZE_FOR_SPLIT
@@ -447,6 +467,9 @@ export async function parseSmsWithAi(
 
       if (chunkResult.hasError) {
         hasError = true;
+        if (chunkResult.isRetryable !== false) {
+          hasRetryableError = true;
+        }
       }
 
       // Chunk succeeded (or it's a retry that returned no results — we accept that)
@@ -469,13 +492,17 @@ export async function parseSmsWithAi(
       chunkIndex++;
     }
 
-    return { transactions: allResults, hasError };
+    return {
+      transactions: allResults,
+      hasError,
+      isRetryable: hasError ? hasRetryableError : undefined,
+    };
   } catch (err: unknown) {
     logger.error(
       "[ai-sms-parser] Unexpected error during parseSmsWithAi",
       err,
       { candidateCount: candidates.length }
     );
-    return { transactions: [], hasError: true };
+    return { transactions: [], hasError: true, isRetryable: true };
   }
 }

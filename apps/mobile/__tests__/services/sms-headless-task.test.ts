@@ -27,15 +27,7 @@ jest.mock("@/services/sms-live-detection-handler", () => ({
 }));
 
 import { registerSmsHeadlessTask } from "@/services/sms-headless-task";
-
-interface HeadlessJsTaskErrorModule {
-  readonly default: new () => Error;
-}
-
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const headlessJsTaskErrorModule =
-  require("react-native/Libraries/ReactNative/HeadlessJsTaskError") as HeadlessJsTaskErrorModule;
-const HeadlessJsTaskError = headlessJsTaskErrorModule.default;
+import HeadlessJsTaskError from "react-native/Libraries/ReactNative/HeadlessJsTaskError";
 
 function createParsedTransaction(): ParsedSmsTransaction {
   return {
@@ -109,6 +101,25 @@ describe("sms-headless-task", () => {
         timestamp: 1778414400000,
       })
     ).rejects.toBeInstanceOf(HeadlessJsTaskError);
+    expect(mockHandleDetectedSms).not.toHaveBeenCalled();
+  });
+
+  it("does not retry permanent AI parsing failures", async () => {
+    mockProcessLiveSmsEvent.mockResolvedValue({
+      status: "ai_failed",
+      smsBodyHash: "hash-headless",
+      isRetryable: false,
+      transactions: [],
+    });
+    const task = getRegisteredTask();
+
+    await expect(
+      task({
+        sender: "NBE",
+        body: "Purchase EGP 7.25 at DOUBLE CONFIRM TEST using card ending 1234",
+        timestamp: 1778414400000,
+      })
+    ).resolves.toBeUndefined();
     expect(mockHandleDetectedSms).not.toHaveBeenCalled();
   });
 });

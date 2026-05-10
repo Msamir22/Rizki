@@ -342,7 +342,6 @@ export default function SettingsScreen(): React.JSX.Element {
     }, [
       enableLiveDetectionWithGrantedSms,
       openSettings,
-      openNotificationSettings,
       pendingSmsScanMode,
       permissionRecovery,
       persistLiveDetectionEnabled,
@@ -403,7 +402,6 @@ export default function SettingsScreen(): React.JSX.Element {
   );
 
   const currencyInfo = CURRENCY_INFO_MAP[preferredCurrency];
-  const isLiveDetectionSwitchOn = liveDetection || isLiveDetectionEnabling;
 
   /**
    * Navigate to the scan page, showing permission recovery if needed.
@@ -560,7 +558,7 @@ export default function SettingsScreen(): React.JSX.Element {
           <View className="p-4 rounded-2xl bg-white dark:bg-slate-800">
             <View className="flex-row items-center gap-3">
               <View className="w-8 bg-blue-600 dark:bg-blue-500 h-8 rounded-lg justify-center items-center">
-                <Ionicons name="language" size={20} color="#FFF" />
+                <Ionicons name="language" size={20} color={palette.slate[25]} />
               </View>
               <View className="flex-1">
                 <Dropdown<string>
@@ -592,11 +590,11 @@ export default function SettingsScreen(): React.JSX.Element {
 
           <View className="flex-row items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-800">
             <View className="flex-row items-center gap-3">
-              <View className="w-8 dark:bg-[#6366f1] bg-[#fb923c] h-8 rounded-lg justify-center items-center">
+              <View className="w-8 dark:bg-indigo-500 bg-orange-400 h-8 rounded-lg justify-center items-center">
                 <Ionicons
                   name={isDark ? "moon" : "sunny"}
                   size={20}
-                  color="#FFF"
+                  color={palette.slate[25]}
                 />
               </View>
               <Text className="text-base font-medium text-slate-900 dark:text-slate-50">
@@ -606,8 +604,11 @@ export default function SettingsScreen(): React.JSX.Element {
             <Switch
               value={isDark}
               onValueChange={toggleTheme}
-              trackColor={{ false: "#767577", true: palette.nileGreen[500] }}
-              thumbColor={isDark ? "#FFF" : "#f4f3f4"}
+              trackColor={{
+                false: palette.slate[400],
+                true: palette.nileGreen[500],
+              }}
+              thumbColor={isDark ? palette.slate[25] : palette.slate[100]}
             />
           </View>
         </View>
@@ -704,7 +705,11 @@ export default function SettingsScreen(): React.JSX.Element {
               >
                 <View className="flex-row items-center gap-3">
                   <View className="w-8 bg-orange-600 dark:bg-orange-500 h-8 rounded-lg justify-center items-center">
-                    <Ionicons name="refresh" size={20} color="#FFF" />
+                    <Ionicons
+                      name="refresh"
+                      size={20}
+                      color={palette.slate[25]}
+                    />
                   </View>
                   <Text className="text-base font-medium text-slate-900 dark:text-slate-50">
                     {t("full_rescan")}
@@ -744,10 +749,16 @@ export default function SettingsScreen(): React.JSX.Element {
               </View>
               <Switch
                 testID="live-sms-detection-switch"
-                value={isLiveDetectionSwitchOn}
+                value={liveDetection}
                 onValueChange={handleToggleLiveDetection}
-                trackColor={{ false: "#767577", true: palette.nileGreen[500] }}
-                thumbColor={isLiveDetectionSwitchOn ? "#FFF" : "#f4f3f4"}
+                disabled={isLiveDetectionEnabling}
+                trackColor={{
+                  false: palette.slate[400],
+                  true: palette.nileGreen[500],
+                }}
+                thumbColor={
+                  liveDetection ? palette.slate[25] : palette.slate[100]
+                }
               />
             </View>
 
@@ -757,7 +768,11 @@ export default function SettingsScreen(): React.JSX.Element {
             >
               <View className="flex-row items-center gap-3 flex-1">
                 <View className="w-8 bg-indigo-600 dark:bg-indigo-500 h-8 rounded-lg justify-center items-center">
-                  <Ionicons name="checkmark-circle" size={20} color="#FFF" />
+                  <Ionicons
+                    name="checkmark-circle"
+                    size={20}
+                    color={palette.slate[25]}
+                  />
                 </View>
                 <View className="flex-1">
                   <Text className="text-base font-medium text-slate-900 dark:text-slate-50">
@@ -772,8 +787,13 @@ export default function SettingsScreen(): React.JSX.Element {
                 value={autoConfirmSms}
                 onValueChange={handleToggleAutoConfirm}
                 disabled={!liveDetection}
-                trackColor={{ false: "#767577", true: palette.nileGreen[500] }}
-                thumbColor={autoConfirmSms ? "#FFF" : "#f4f3f4"}
+                trackColor={{
+                  false: palette.slate[400],
+                  true: palette.nileGreen[500],
+                }}
+                thumbColor={
+                  autoConfirmSms ? palette.slate[25] : palette.slate[100]
+                }
               />
             </View>
           </View>
@@ -784,8 +804,8 @@ export default function SettingsScreen(): React.JSX.Element {
           {/* Profile */}
           <TouchableOpacity className="flex-row items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-800">
             <View className="flex-row items-center gap-3">
-              <View className="w-8 dark:bg-[#3b82f6] bg-[#fb923c] h-8 rounded-lg justify-center items-center">
-                <Ionicons name="person" size={20} color="#FFF" />
+              <View className="w-8 dark:bg-blue-500 bg-orange-400 h-8 rounded-lg justify-center items-center">
+                <Ionicons name="person" size={20} color={palette.slate[25]} />
               </View>
               <View className="flex-1">
                 <Text className="text-base font-medium text-slate-900 dark:text-slate-50">
@@ -812,8 +832,12 @@ export default function SettingsScreen(): React.JSX.Element {
           {/* Notifications */}
           <TouchableOpacity className="flex-row items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-800 mt-0.5">
             <View className="flex-row items-center gap-3">
-              <View className="w-8 dark:bg-[#f43f5e] bg-[#fb923c] h-8 rounded-lg justify-center items-center">
-                <Ionicons name="notifications" size={20} color="#FFF" />
+              <View className="w-8 dark:bg-rose-500 bg-orange-400 h-8 rounded-lg justify-center items-center">
+                <Ionicons
+                  name="notifications"
+                  size={20}
+                  color={palette.slate[25]}
+                />
               </View>
               <Text className="text-base font-medium text-slate-900 dark:text-slate-50">
                 {t("notifications")}
@@ -835,9 +859,13 @@ export default function SettingsScreen(): React.JSX.Element {
           <View className="flex-row items-center gap-3">
             <View className="w-8 dark:bg-red-700 bg-red-600 h-8 rounded-lg justify-center items-center">
               {isLoggingOut ? (
-                <ActivityIndicator size={16} color="#FFF" />
+                <ActivityIndicator size={16} color={palette.slate[25]} />
               ) : (
-                <Ionicons name="log-out-outline" size={20} color="#FFF" />
+                <Ionicons
+                  name="log-out-outline"
+                  size={20}
+                  color={palette.slate[25]}
+                />
               )}
             </View>
             <Text className="text-base font-medium text-red-600 dark:text-red-400">

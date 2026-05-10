@@ -213,6 +213,20 @@ function getLiveDetectionSwitchValue(
   return switchNode.props.value === true;
 }
 
+function getLiveDetectionSwitchDisabled(
+  screen: ReturnType<typeof render>
+): boolean {
+  const switchNode = screen.getByTestId(
+    "live-sms-detection-switch"
+  ) as unknown as {
+    readonly props: {
+      readonly disabled?: boolean;
+    };
+  };
+
+  return switchNode.props.disabled === true;
+}
+
 describe("Settings live SMS permission recovery", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -383,7 +397,7 @@ describe("Settings live SMS permission recovery", () => {
     expect(mockStartSmsListener).not.toHaveBeenCalled();
   });
 
-  it("keeps the live detection switch on while enable work is pending", async () => {
+  it("keeps the live detection switch off while enable work is pending", async () => {
     mockSmsPermissionStatus = "granted";
     mockLiveDetectionPermissionStatus = "granted";
     const notificationCheck = createDeferred<NotificationPermissionStatus>();
@@ -400,7 +414,8 @@ describe("Settings live SMS permission recovery", () => {
       true
     );
 
-    expect(getLiveDetectionSwitchValue(screen)).toBe(true);
+    expect(getLiveDetectionSwitchValue(screen)).toBe(false);
+    expect(getLiveDetectionSwitchDisabled(screen)).toBe(true);
     expect(mockSetLiveDetectionEnabled).not.toHaveBeenCalledWith(true);
 
     notificationCheck.resolve("granted");
@@ -409,6 +424,7 @@ describe("Settings live SMS permission recovery", () => {
       expect(mockSetLiveDetectionEnabled).toHaveBeenCalledWith(true);
     });
     expect(getLiveDetectionSwitchValue(screen)).toBe(true);
+    expect(getLiveDetectionSwitchDisabled(screen)).toBe(false);
   });
 
   it("enables live detection after retrying notification permission successfully", async () => {

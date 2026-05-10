@@ -98,6 +98,15 @@ jest.mock("@/services/supabase", () => {
   };
 });
 
+jest.mock("@/services/sms-live-detection-handler", () => ({
+  setAutoConfirm: jest.fn(() => Promise.resolve()),
+  setLiveDetectionEnabled: jest.fn(() => Promise.resolve()),
+}));
+
+jest.mock("@/services/sms-live-listener-service", () => ({
+  stopSmsListener: jest.fn(),
+}));
+
 interface SupabaseMocks {
   signOut: jest.Mock;
 }

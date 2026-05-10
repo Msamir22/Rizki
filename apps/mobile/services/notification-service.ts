@@ -267,15 +267,16 @@ async function handleNotificationActionResponse(
     return;
   }
 
-  await dismissDeliveredNotification(notificationId);
-
   try {
     await actionHandler(actionId, data);
+    await dismissDeliveredNotification(notificationId);
   } catch (err: unknown) {
-    console.error(
-      "[notification-service] Action handler failed:",
-      err instanceof Error ? err.message : String(err)
-    );
+    handledNotificationKeys.delete(notificationKey);
+    logger.error("[notification-service] Action handler failed", err, {
+      actionId,
+      notificationId,
+      smsBodyHash: data.transactionData.smsBodyHash,
+    });
   }
 }
 
@@ -296,16 +297,23 @@ function markNotificationKeyHandled(notificationKey: string): boolean {
   return true;
 }
 
+export function clearHandledNotificationKeysForTests(): void {
+  if (!__DEV__) {
+    return;
+  }
+
+  handledNotificationKeys.clear();
+}
+
 async function dismissDeliveredNotification(
   notificationId: string
 ): Promise<void> {
   try {
     await Notifications.dismissNotificationAsync(notificationId);
   } catch (err: unknown) {
-    console.error(
-      "[notification-service] Failed to dismiss notification:",
-      err instanceof Error ? err.message : String(err)
-    );
+    logger.error("[notification-service] Failed to dismiss notification", err, {
+      notificationId,
+    });
   }
 }
 
