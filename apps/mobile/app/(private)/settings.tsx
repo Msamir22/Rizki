@@ -269,8 +269,8 @@ export default function SettingsScreen(): React.JSX.Element {
   }, [isAndroid, reconcileStoredLiveDetection]);
 
   const persistLiveDetectionEnabled = useCallback(async (): Promise<void> => {
-    setLiveDetection(true);
     await setLiveDetectionEnabled(true);
+    setLiveDetection(true);
     startSmsListener();
   }, []);
 
