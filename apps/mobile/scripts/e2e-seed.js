@@ -1,0 +1,362 @@
+const { createHmac } = require("node:crypto");
+const { createClient } = require("@supabase/supabase-js");
+
+const LOCAL_SUPABASE_URL = "http://127.0.0.1:54321";
+const LOCAL_ANDROID_SUPABASE_URL = "http://10.0.2.2:54321";
+const LOCAL_JWT_SECRET =
+  "super-secret-jwt-token-with-at-least-32-characters-long";
+const LOCAL_E2E_EMAIL = "e2e@monyvi.test";
+const LOCAL_E2E_PASSWORD = "Password123!";
+
+const E2E_USER_FULL_NAME = "Monyvi E2E";
+const FIXED_NOW = "2026-04-08T12:00:00.000Z";
+
+const ACCOUNT_IDS = {
+  cash: "00000000-0000-0000-0002-000000000001",
+  bank: "00000000-0000-0000-0002-000000000002",
+  wallet: "00000000-0000-0000-0002-000000000003",
+};
+
+const BANK_DETAIL_IDS = {
+  nbe: "00000000-0000-0000-0003-000000000001",
+  qnb: "00000000-0000-0000-0003-000000000002",
+};
+
+const CATEGORY_IDS = {
+  shopping: "00000000-0000-0000-0001-000000000004",
+  income: "00000000-0000-0000-0001-000000000011",
+  other: "00000000-0000-0000-0001-000000000013",
+};
+
+const E2E_TABLE_DELETE_ORDER = [
+  "transactions",
+  "transfers",
+  "recurring_payments",
+  "budgets",
+  "debts",
+  "assets",
+  "daily_snapshot_assets",
+  "daily_snapshot_balance",
+  "daily_snapshot_net_worth",
+  "bank_details",
+  "accounts",
+  "user_category_settings",
+  "categories",
+  "profiles",
+];
+
+function base64Url(value) {
+  return Buffer.from(JSON.stringify(value)).toString("base64url");
+}
+
+function createLocalSupabaseJwt(role) {
+  const header = { alg: "HS256", typ: "JWT" };
+  const payload = {
+    iss: "supabase",
+    ref: "localhost",
+    role,
+    iat: 1644431792,
+    exp: 4102444800,
+  };
+  const signingInput = `${base64Url(header)}.${base64Url(payload)}`;
+  const signature = createHmac("sha256", LOCAL_JWT_SECRET)
+    .update(signingInput)
+    .digest("base64url");
+
+  return `${signingInput}.${signature}`;
+}
+
+const LOCAL_SUPABASE_ANON_KEY = createLocalSupabaseJwt("anon");
+const LOCAL_SUPABASE_SERVICE_ROLE_KEY = createLocalSupabaseJwt("service_role");
+
+function requiredRemoteEnv(env, name) {
+  const value = env[name];
+  if (value) return value;
+  throw new Error(`${name} is required when E2E_SUPABASE_MODE=remote`);
+}
+
+function getE2eSeedConfig(env = process.env) {
+  const mode = env.E2E_SUPABASE_MODE === "remote" ? "remote" : "local";
+  const isLocal = mode === "local";
+
+  return {
+    mode,
+    supabaseUrl:
+      env.E2E_SUPABASE_URL ??
+      env.SUPABASE_URL ??
+      (isLocal
+        ? LOCAL_SUPABASE_URL
+        : requiredRemoteEnv(env, "EXPO_PUBLIC_SUPABASE_URL")),
+    appSupabaseUrl:
+      env.EXPO_PUBLIC_SUPABASE_URL ??
+      (isLocal ? LOCAL_ANDROID_SUPABASE_URL : env.E2E_SUPABASE_URL),
+    serviceRoleKey:
+      env.SUPABASE_SERVICE_ROLE_KEY ??
+      (isLocal
+        ? LOCAL_SUPABASE_SERVICE_ROLE_KEY
+        : requiredRemoteEnv(env, "SUPABASE_SERVICE_ROLE_KEY")),
+    anonKey:
+      env.EXPO_PUBLIC_SUPABASE_ANON_KEY ??
+      (isLocal
+        ? LOCAL_SUPABASE_ANON_KEY
+        : requiredRemoteEnv(env, "EXPO_PUBLIC_SUPABASE_ANON_KEY")),
+    email:
+      env.MAESTRO_E2E_EMAIL ??
+      (isLocal ? LOCAL_E2E_EMAIL : requiredRemoteEnv(env, "MAESTRO_E2E_EMAIL")),
+    password:
+      env.MAESTRO_E2E_PASSWORD ??
+      (isLocal
+        ? LOCAL_E2E_PASSWORD
+        : requiredRemoteEnv(env, "MAESTRO_E2E_PASSWORD")),
+  };
+}
+
+async function assertNoError(result, label) {
+  if (result && result.error) {
+    throw new Error(`${label} failed: ${result.error.message}`);
+  }
+  return result;
+}
+
+async function ensureE2eUser(client, config) {
+  const usersResult = await assertNoError(
+    await client.auth.admin.listUsers(),
+    "list E2E users"
+  );
+  const existingUser = usersResult.data.users.find(
+    (user) => user.email === config.email
+  );
+  if (existingUser) return existingUser.id;
+
+  const createResult = await assertNoError(
+    await client.auth.admin.createUser({
+      email: config.email,
+      password: config.password,
+      email_confirm: true,
+      user_metadata: { full_name: E2E_USER_FULL_NAME },
+    }),
+    "create E2E user"
+  );
+
+  return createResult.data.user.id;
+}
+
+async function deleteScopedRows(client, table, userId) {
+  if (table === "bank_details") {
+    const deleteBuilder = client.from(table).delete();
+    if (typeof deleteBuilder.in !== "function") {
+      return assertNoError(
+        await deleteBuilder.eq("account_id", ACCOUNT_IDS.bank),
+        `delete ${table}`
+      );
+    }
+
+    return assertNoError(
+      await deleteBuilder.in("account_id", Object.values(ACCOUNT_IDS)),
+      `delete ${table}`
+    );
+  }
+
+  return assertNoError(
+    await client.from(table).delete().eq("user_id", userId),
+    `delete ${table}`
+  );
+}
+
+async function upsertRows(client, table, rows, options) {
+  const result = await client.from(table).upsert(rows, options);
+  await assertNoError(result, `upsert ${table}`);
+}
+
+function buildSeedRows(userId) {
+  return {
+    profile: {
+      user_id: userId,
+      display_name: E2E_USER_FULL_NAME,
+      preferred_currency: "EGP",
+      preferred_language: "en",
+      theme: "SYSTEM",
+      sms_detection_enabled: false,
+      onboarding_completed: true,
+      setup_guide_completed: true,
+      onboarding_flags: {},
+      notification_settings: {
+        sms_transaction_confirmation: true,
+        recurring_reminders: true,
+        budget_alerts: true,
+        low_balance_warnings: false,
+      },
+      deleted: false,
+      created_at: FIXED_NOW,
+      updated_at: FIXED_NOW,
+    },
+    accounts: [
+      {
+        id: ACCOUNT_IDS.cash,
+        user_id: userId,
+        name: "E2E Cash",
+        type: "CASH",
+        balance: 2500,
+        currency: "EGP",
+        is_default: true,
+        deleted: false,
+        created_at: FIXED_NOW,
+        updated_at: FIXED_NOW,
+      },
+      {
+        id: ACCOUNT_IDS.bank,
+        user_id: userId,
+        name: "E2E NBE Bank",
+        type: "BANK",
+        balance: 12430.55,
+        currency: "EGP",
+        is_default: false,
+        deleted: false,
+        created_at: FIXED_NOW,
+        updated_at: FIXED_NOW,
+      },
+      {
+        id: ACCOUNT_IDS.wallet,
+        user_id: userId,
+        name: "E2E Wallet",
+        type: "DIGITAL_WALLET",
+        balance: 950,
+        currency: "EGP",
+        is_default: false,
+        deleted: false,
+        created_at: FIXED_NOW,
+        updated_at: FIXED_NOW,
+      },
+    ],
+    bankDetails: [
+      {
+        id: BANK_DETAIL_IDS.nbe,
+        account_id: ACCOUNT_IDS.bank,
+        bank_name: "NBE",
+        card_last_4: "4321",
+        sms_sender_name: "NBE",
+        account_number: "00004321",
+        deleted: false,
+        created_at: FIXED_NOW,
+        updated_at: FIXED_NOW,
+      },
+      {
+        id: BANK_DETAIL_IDS.qnb,
+        account_id: ACCOUNT_IDS.bank,
+        bank_name: "QNB",
+        card_last_4: "5566",
+        sms_sender_name: "QNB",
+        account_number: "00005566",
+        deleted: false,
+        created_at: FIXED_NOW,
+        updated_at: FIXED_NOW,
+      },
+    ],
+    transactions: [
+      {
+        id: "00000000-0000-0000-0004-000000000001",
+        user_id: userId,
+        account_id: ACCOUNT_IDS.cash,
+        amount: 125,
+        currency: "EGP",
+        type: "EXPENSE",
+        category_id: CATEGORY_IDS.shopping,
+        counterparty: "E2E Grocery",
+        note: "Seeded expense",
+        date: "2026-04-07",
+        source: "MANUAL",
+        is_draft: false,
+        deleted: false,
+        created_at: FIXED_NOW,
+        updated_at: FIXED_NOW,
+      },
+      {
+        id: "00000000-0000-0000-0004-000000000002",
+        user_id: userId,
+        account_id: ACCOUNT_IDS.bank,
+        amount: 3000,
+        currency: "EGP",
+        type: "INCOME",
+        category_id: CATEGORY_IDS.income,
+        counterparty: "E2E Payroll",
+        note: "Seeded income",
+        date: "2026-04-06",
+        source: "MANUAL",
+        is_draft: false,
+        deleted: false,
+        created_at: FIXED_NOW,
+        updated_at: FIXED_NOW,
+      },
+    ],
+    transfers: [
+      {
+        id: "00000000-0000-0000-0005-000000000001",
+        user_id: userId,
+        from_account_id: ACCOUNT_IDS.bank,
+        to_account_id: ACCOUNT_IDS.cash,
+        amount: 500,
+        currency: "EGP",
+        exchange_rate: null,
+        converted_amount: null,
+        notes: "Seeded cash withdrawal",
+        date: "2026-04-05",
+        deleted: false,
+        created_at: FIXED_NOW,
+        updated_at: FIXED_NOW,
+      },
+    ],
+  };
+}
+
+async function seedE2eData(client, config) {
+  const userId = config.userId ?? (await ensureE2eUser(client, config));
+  const rows = buildSeedRows(userId);
+
+  for (const table of E2E_TABLE_DELETE_ORDER) {
+    await deleteScopedRows(client, table, userId);
+  }
+
+  await upsertRows(client, "profiles", rows.profile, {
+    onConflict: "user_id",
+  });
+  await upsertRows(client, "accounts", rows.accounts, { onConflict: "id" });
+  await upsertRows(client, "bank_details", rows.bankDetails, {
+    onConflict: "id",
+  });
+  await upsertRows(client, "transactions", rows.transactions, {
+    onConflict: "id",
+  });
+  await upsertRows(client, "transfers", rows.transfers, { onConflict: "id" });
+
+  return { userId };
+}
+
+async function main() {
+  const config = getE2eSeedConfig();
+  const client = createClient(config.supabaseUrl, config.serviceRoleKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+
+  const action = process.argv[2] ?? "seed";
+  if (action !== "seed" && action !== "reset") {
+    throw new Error(`Unknown e2e seed action: ${action}`);
+  }
+
+  const result = await seedE2eData(client, config);
+  console.log(
+    `Seeded E2E data for ${config.email} (${result.userId}) on ${config.mode} Supabase`
+  );
+}
+
+if (require.main === module) {
+  main().catch((error) => {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exit(1);
+  });
+}
+
+module.exports = {
+  E2E_TABLE_DELETE_ORDER,
+  getE2eSeedConfig,
+  seedE2eData,
+};

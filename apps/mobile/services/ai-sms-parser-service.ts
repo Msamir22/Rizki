@@ -13,6 +13,8 @@
 import { z } from "zod";
 import { supabase } from "./supabase";
 import { logger } from "@/utils/logger";
+import { shouldUseFixtureSmsParser } from "@/config/e2e-test-config";
+import { parseSmsWithFixtureAi } from "./testing/ai-sms-fixture-parser";
 
 import type { Category } from "@monyvi/db";
 import {
@@ -357,11 +359,6 @@ interface ChunkWork {
  * @returns Parsed transactions only (account suggestions derived separately)
  * @throws Never — returns empty array on total failure
  */
-import { MOCK_PARSED_TRANSACTIONS } from "./mock-parsed-transactions";
-
-// Toggle this to true to return mock parsed transactions and save AI tokens.
-const USE_MOCK_DATA = false;
-
 export async function parseSmsWithAi(
   candidates: readonly SmsCandidate[],
   context: ParseSmsContext,
@@ -370,11 +367,8 @@ export async function parseSmsWithAi(
   const emptyResult: AiParseResult = { transactions: [], hasError: false };
   if (candidates.length === 0) return emptyResult;
 
-  if (USE_MOCK_DATA) {
-    logger.info(
-      "[ai-sms-parser] Using MOCK parsed transactions to save AI tokens"
-    );
-    return { transactions: [...MOCK_PARSED_TRANSACTIONS], hasError: false };
+  if (shouldUseFixtureSmsParser()) {
+    return parseSmsWithFixtureAi(candidates, context, onProgress);
   }
 
   // Build validation set once for the entire parse session
