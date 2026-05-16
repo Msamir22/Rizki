@@ -299,7 +299,7 @@ describe("sms-account-matcher - source-aware transaction matching", () => {
         tx({
           originLabel: "QNB",
           cardLast4: "5566",
-        } as Partial<ReviewableTransaction>),
+        }),
       ],
       "user-1",
       20,
