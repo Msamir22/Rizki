@@ -22,21 +22,12 @@ function getTestEnvValue(name: PublicEnvName): string | undefined {
   return testGlobal.process?.env[name];
 }
 
-function isJestRuntime(): boolean {
-  const testGlobal = globalThis as typeof globalThis & TestGlobal;
-  return testGlobal.process?.env.NODE_ENV === "test";
-}
-
 function getPublicMonyviTestModeEnv(): string | undefined {
-  return isJestRuntime()
-    ? getTestEnvValue("EXPO_PUBLIC_MONYVI_TEST_MODE")
-    : process.env.EXPO_PUBLIC_MONYVI_TEST_MODE;
+  return getTestEnvValue("EXPO_PUBLIC_MONYVI_TEST_MODE");
 }
 
 function getPublicAiSmsParserModeEnv(): string | undefined {
-  return isJestRuntime()
-    ? getTestEnvValue("EXPO_PUBLIC_AI_SMS_PARSER_MODE")
-    : process.env.EXPO_PUBLIC_AI_SMS_PARSER_MODE;
+  return getTestEnvValue("EXPO_PUBLIC_AI_SMS_PARSER_MODE");
 }
 
 export function getMonyviTestMode(): MonyviTestMode {
