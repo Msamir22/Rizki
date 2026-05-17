@@ -37,6 +37,22 @@ function candidateFromFixture(fixtureId: string): SmsCandidate {
   };
 }
 
+function candidateWithOverrides(
+  fixtureId: string,
+  overrides: Partial<SmsCandidate["message"]> & {
+    readonly smsFingerprint: string;
+  }
+): SmsCandidate {
+  const candidate = candidateFromFixture(fixtureId);
+  return {
+    message: {
+      ...candidate.message,
+      ...overrides,
+    },
+    smsFingerprint: overrides.smsFingerprint,
+  };
+}
+
 const context = {
   categories: [
     category("other", "Other"),
@@ -91,6 +107,49 @@ describe("ai-sms-fixture-parser", () => {
     expect(result.transactions.map((tx) => tx.amount)).toEqual([850, 7.25]);
   });
 
+  it("deduplicates exact duplicate candidates while preserving the source fingerprint", async () => {
+    const result = await parseSmsWithFixtureAi(
+      [
+        candidateFromFixture("nbe_debit_purchase"),
+        candidateFromFixture("nbe_debit_purchase"),
+      ],
+      context
+    );
+
+    expect(result.transactions).toHaveLength(1);
+    expect(result.transactions[0]).toMatchObject({
+      smsFingerprint: "fingerprint-nbe_debit_purchase",
+      deduplicationHash: "fingerprint-nbe_debit_purchase",
+    });
+  });
+
+  it("keeps same-body candidates with different received timestamps as distinct fingerprints", async () => {
+    const first = candidateWithOverrides("nbe_debit_purchase", {
+      date: 1775658180000,
+      smsFingerprint: "fingerprint-nbe_debit_purchase-first",
+    });
+    const second = candidateWithOverrides("nbe_debit_purchase", {
+      date: 1775658240000,
+      smsFingerprint: "fingerprint-nbe_debit_purchase-second",
+    });
+
+    const result = await parseSmsWithFixtureAi([first, second], context);
+
+    expect(result.transactions).toHaveLength(2);
+    expect(
+      result.transactions.map((transaction) => transaction.smsFingerprint)
+    ).toEqual([
+      "fingerprint-nbe_debit_purchase-first",
+      "fingerprint-nbe_debit_purchase-second",
+    ]);
+    expect(
+      result.transactions.map((transaction) => transaction.deduplicationHash)
+    ).toEqual([
+      "fingerprint-nbe_debit_purchase-first",
+      "fingerprint-nbe_debit_purchase-second",
+    ]);
+  });
+
   it("filters untrusted fixture output without treating it as a parser error", async () => {
     const result = await parseSmsWithFixtureAi(
       [candidateFromFixture("untrusted_offer")],
@@ -122,6 +181,21 @@ describe("ai-sms-fixture-parser", () => {
       hasError: true,
       isRetryable: false,
     });
+  });
+
+  it("keeps parsed transactions before a fixture failure in the same batch", async () => {
+    const result = await parseSmsWithFixtureAi(
+      [
+        candidateFromFixture("nbe_debit_purchase"),
+        candidateFromFixture("retryable_ai_failure"),
+      ],
+      context
+    );
+
+    expect(result.hasError).toBe(true);
+    expect(result.isRetryable).toBe(true);
+    expect(result.transactions).toHaveLength(1);
+    expect(result.transactions[0]?.counterparty).toBe("CARREFOUR CAIRO");
   });
 
   it("covers real emulator SMS bodies used by live and batch SMS E2E journeys", async () => {
