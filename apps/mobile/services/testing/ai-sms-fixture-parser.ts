@@ -80,7 +80,7 @@ export function parseSmsWithFixtureAi(
 
     if (fixture.parserFailure) {
       return Promise.resolve({
-        transactions: [],
+        transactions,
         hasError: true,
         isRetryable: fixture.parserFailure === "retryable",
       });

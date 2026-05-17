@@ -8,6 +8,9 @@ describe("e2e-seed script helpers", () => {
   it("uses safe local defaults only for local Supabase mode", () => {
     const config = getE2eSeedConfig({
       E2E_SUPABASE_MODE: "local",
+      E2E_LOCAL_JWT_SECRET: "local-test-jwt-secret-with-enough-length",
+      MAESTRO_E2E_EMAIL: "e2e@monyvi.test",
+      MAESTRO_E2E_PASSWORD: "Password123!",
     });
 
     expect(config.mode).toBe("local");
@@ -16,6 +19,27 @@ describe("e2e-seed script helpers", () => {
     expect(config.email).toBe("e2e@monyvi.test");
     expect(config.password).toBe("Password123!");
     expect(config.serviceRoleKey).toContain("eyJ");
+  });
+
+  it("fails fast when local E2E credentials are missing", () => {
+    expect(() =>
+      getE2eSeedConfig({
+        E2E_SUPABASE_MODE: "local",
+      })
+    ).toThrow("E2E_LOCAL_JWT_SECRET");
+  });
+
+  it("uses explicit local Supabase keys without requiring the local JWT secret", () => {
+    const config = getE2eSeedConfig({
+      E2E_SUPABASE_MODE: "local",
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: "anon-key",
+      SUPABASE_SERVICE_ROLE_KEY: "service-role-key",
+      MAESTRO_E2E_EMAIL: "e2e@monyvi.test",
+      MAESTRO_E2E_PASSWORD: "Password123!",
+    });
+
+    expect(config.anonKey).toBe("anon-key");
+    expect(config.serviceRoleKey).toBe("service-role-key");
   });
 
   it("requires explicit service role and credentials for remote Supabase mode", () => {
@@ -42,7 +66,12 @@ describe("e2e-seed script helpers", () => {
     const client = createMockClient(operations);
 
     await seedE2eData(client, {
-      ...getE2eSeedConfig({ E2E_SUPABASE_MODE: "local" }),
+      ...getE2eSeedConfig({
+        E2E_SUPABASE_MODE: "local",
+        E2E_LOCAL_JWT_SECRET: "local-test-jwt-secret-with-enough-length",
+        MAESTRO_E2E_EMAIL: "e2e@monyvi.test",
+        MAESTRO_E2E_PASSWORD: "Password123!",
+      }),
       userId: "user-e2e",
     });
 
@@ -53,10 +82,39 @@ describe("e2e-seed script helpers", () => {
     expect(operations).toContain("upsert:transactions:2");
     expect(operations).toContain("upsert:transfers:1");
   });
+
+  it("syncs credentials when the E2E auth user already exists", async () => {
+    const operations: string[] = [];
+    const client = createMockClient(operations);
+
+    await seedE2eData(client, {
+      ...getE2eSeedConfig({
+        E2E_SUPABASE_MODE: "local",
+        E2E_LOCAL_JWT_SECRET: "local-test-jwt-secret-with-enough-length",
+        MAESTRO_E2E_EMAIL: "e2e@monyvi.test",
+        MAESTRO_E2E_PASSWORD: "Password123!",
+      }),
+    });
+
+    expect(operations).toContain("update-user:user-e2e");
+  });
 });
 
 function createMockClient(operations: string[]): unknown {
   return {
+    auth: {
+      admin: {
+        listUsers: () =>
+          Promise.resolve({
+            data: { users: [{ id: "user-e2e", email: "e2e@monyvi.test" }] },
+            error: null,
+          }),
+        updateUserById: (userId: string) => {
+          operations.push(`update-user:${userId}`);
+          return Promise.resolve({ error: null });
+        },
+      },
+    },
     from: (table: string) => ({
       delete: () => ({
         eq: (column: string, value: string) => {

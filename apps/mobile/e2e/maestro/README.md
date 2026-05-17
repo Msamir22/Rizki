@@ -9,13 +9,18 @@ End-to-end tests for the Monyvi mobile app using
 # 1. Start local Supabase from the repo root
 npx supabase start
 
-# 2. Start emulator + Metro in E2E fixture mode (separate terminal)
+# 2. Export local E2E credentials (same terminal/session)
+$env:E2E_LOCAL_JWT_SECRET="<JWT_SECRET from: npx supabase status -o env>"
+$env:MAESTRO_E2E_EMAIL="e2e@monyvi.test"
+$env:MAESTRO_E2E_PASSWORD="<local test password>"
+
+# 3. Start emulator + Metro in E2E fixture mode (separate terminal)
 $env:EXPO_PUBLIC_MONYVI_TEST_MODE="e2e"
 $env:EXPO_PUBLIC_AI_SMS_PARSER_MODE="fixture"
 $env:EXPO_PUBLIC_SUPABASE_URL="http://10.0.2.2:54321"
 npm run start:android
 
-# 3. Seed deterministic E2E data, then run a test through the wrapper
+# 4. Seed deterministic E2E data, then run a test through the wrapper
 npm run e2e:seed -w @monyvi/mobile
 npm run e2e:flow -w @monyvi/mobile -- e2e/maestro/transactions/create-transaction.yaml
 ```
@@ -54,6 +59,7 @@ credentials.
 | `EXPO_PUBLIC_AI_SMS_PARSER_MODE` | Set to `fixture` to avoid live AI parsing in E2E   |
 | `MAESTRO_E2E_EMAIL`              | Seeded E2E test account email                      |
 | `MAESTRO_E2E_PASSWORD`           | Seeded E2E test account password                   |
+| `E2E_LOCAL_JWT_SECRET`           | Local Supabase JWT secret for generated local keys |
 | `SUPABASE_SERVICE_ROLE_KEY`      | Seed/reset access; local mode has a safe local key |
 
 By default the CI suite runs live SMS journeys `01` through `14`. Journey `15`

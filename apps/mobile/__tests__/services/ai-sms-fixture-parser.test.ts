@@ -8,7 +8,7 @@ function category(
   displayName: string,
   id = `cat-${systemName}`
 ): Category {
-  const value: Category = { id, systemName, displayName };
+  const value = { id, systemName, displayName } as unknown as Category;
   return value;
 }
 
@@ -115,6 +115,21 @@ describe("ai-sms-fixture-parser", () => {
       hasError: true,
       isRetryable: false,
     });
+  });
+
+  it("keeps parsed transactions before a fixture failure in the same batch", async () => {
+    const result = await parseSmsWithFixtureAi(
+      [
+        candidateFromFixture("nbe_debit_purchase"),
+        candidateFromFixture("retryable_ai_failure"),
+      ],
+      context
+    );
+
+    expect(result.hasError).toBe(true);
+    expect(result.isRetryable).toBe(true);
+    expect(result.transactions).toHaveLength(1);
+    expect(result.transactions[0]?.counterparty).toBe("CARREFOUR CAIRO");
   });
 
   it("covers real emulator SMS bodies used by background live journeys", async () => {

@@ -22,7 +22,7 @@ function category(
   displayName: string,
   id = `cat-${systemName}`
 ): Category {
-  const value: Category = { id, systemName, displayName };
+  const value = { id, systemName, displayName } as unknown as Category;
   return value;
 }
 

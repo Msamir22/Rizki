@@ -3,10 +3,6 @@ const { createClient } = require("@supabase/supabase-js");
 
 const LOCAL_SUPABASE_URL = "http://127.0.0.1:54321";
 const LOCAL_ANDROID_SUPABASE_URL = "http://10.0.2.2:54321";
-const LOCAL_JWT_SECRET =
-  "super-secret-jwt-token-with-at-least-32-characters-long";
-const LOCAL_E2E_EMAIL = "e2e@monyvi.test";
-const LOCAL_E2E_PASSWORD = "Password123!";
 
 const E2E_USER_FULL_NAME = "Monyvi E2E";
 const FIXED_NOW = "2026-04-08T12:00:00.000Z";
@@ -49,7 +45,7 @@ function base64Url(value) {
   return Buffer.from(JSON.stringify(value)).toString("base64url");
 }
 
-function createLocalSupabaseJwt(role) {
+function createLocalSupabaseJwt(jwtSecret, role) {
   const header = { alg: "HS256", typ: "JWT" };
   const payload = {
     iss: "supabase",
@@ -59,15 +55,12 @@ function createLocalSupabaseJwt(role) {
     exp: 4102444800,
   };
   const signingInput = `${base64Url(header)}.${base64Url(payload)}`;
-  const signature = createHmac("sha256", LOCAL_JWT_SECRET)
+  const signature = createHmac("sha256", jwtSecret)
     .update(signingInput)
     .digest("base64url");
 
   return `${signingInput}.${signature}`;
 }
-
-const LOCAL_SUPABASE_ANON_KEY = createLocalSupabaseJwt("anon");
-const LOCAL_SUPABASE_SERVICE_ROLE_KEY = createLocalSupabaseJwt("service_role");
 
 function requiredRemoteEnv(env, name) {
   const value = env[name];
@@ -75,9 +68,23 @@ function requiredRemoteEnv(env, name) {
   throw new Error(`${name} is required when E2E_SUPABASE_MODE=remote`);
 }
 
+function requiredLocalEnv(env, name) {
+  const value = env[name];
+  if (value) return value;
+  throw new Error(`${name} is required when E2E_SUPABASE_MODE=local`);
+}
+
 function getE2eSeedConfig(env = process.env) {
   const mode = env.E2E_SUPABASE_MODE === "remote" ? "remote" : "local";
   const isLocal = mode === "local";
+  const localJwtSecret = isLocal ? env.E2E_LOCAL_JWT_SECRET : null;
+
+  function getLocalJwt(role) {
+    return createLocalSupabaseJwt(
+      localJwtSecret ?? requiredLocalEnv(env, "E2E_LOCAL_JWT_SECRET"),
+      role
+    );
+  }
 
   return {
     mode,
@@ -93,20 +100,22 @@ function getE2eSeedConfig(env = process.env) {
     serviceRoleKey:
       env.SUPABASE_SERVICE_ROLE_KEY ??
       (isLocal
-        ? LOCAL_SUPABASE_SERVICE_ROLE_KEY
+        ? getLocalJwt("service_role")
         : requiredRemoteEnv(env, "SUPABASE_SERVICE_ROLE_KEY")),
     anonKey:
       env.EXPO_PUBLIC_SUPABASE_ANON_KEY ??
       (isLocal
-        ? LOCAL_SUPABASE_ANON_KEY
+        ? getLocalJwt("anon")
         : requiredRemoteEnv(env, "EXPO_PUBLIC_SUPABASE_ANON_KEY")),
     email:
       env.MAESTRO_E2E_EMAIL ??
-      (isLocal ? LOCAL_E2E_EMAIL : requiredRemoteEnv(env, "MAESTRO_E2E_EMAIL")),
+      (isLocal
+        ? requiredLocalEnv(env, "MAESTRO_E2E_EMAIL")
+        : requiredRemoteEnv(env, "MAESTRO_E2E_EMAIL")),
     password:
       env.MAESTRO_E2E_PASSWORD ??
       (isLocal
-        ? LOCAL_E2E_PASSWORD
+        ? requiredLocalEnv(env, "MAESTRO_E2E_PASSWORD")
         : requiredRemoteEnv(env, "MAESTRO_E2E_PASSWORD")),
   };
 }
@@ -126,7 +135,17 @@ async function ensureE2eUser(client, config) {
   const existingUser = usersResult.data.users.find(
     (user) => user.email === config.email
   );
-  if (existingUser) return existingUser.id;
+  if (existingUser) {
+    await assertNoError(
+      await client.auth.admin.updateUserById(existingUser.id, {
+        password: config.password,
+        email_confirm: true,
+        user_metadata: { full_name: E2E_USER_FULL_NAME },
+      }),
+      "sync E2E user credentials"
+    );
+    return existingUser.id;
+  }
 
   const createResult = await assertNoError(
     await client.auth.admin.createUser({
