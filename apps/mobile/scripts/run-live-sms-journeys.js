@@ -537,16 +537,25 @@ function swipeRecentsCardAway(cardBounds) {
   ]);
 }
 
-function clearLiveSmsActionProbeRows() {
-  const markerFilters = actionProbeMarkers
+function buildLiveSmsActionProbeCleanupSql() {
+  const transactionMarkerFilters = actionProbeMarkers
     .map(
       (marker) => `counterparty like '%${marker}%' or note like '%${marker}%'`
     )
     .join(" or ");
+  const transferMarkerFilters = actionProbeMarkers
+    .map((marker) => `notes like '%${marker}%'`)
+    .join(" or ");
   const sql = [
-    `delete from transactions where ${markerFilters};`,
-    `delete from transfers where ${markerFilters};`,
+    `delete from transactions where ${transactionMarkerFilters};`,
+    `delete from transfers where ${transferMarkerFilters};`,
   ].join(" ");
+
+  return sql;
+}
+
+function clearLiveSmsActionProbeRows() {
+  const sql = buildLiveSmsActionProbeCleanupSql();
 
   adb(["shell", "run-as", appId, "sqlite3", "watermelon.db"], {
     capture: true,
@@ -869,7 +878,13 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error(error instanceof Error ? error.message : String(error));
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((error) => {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exit(1);
+  });
+}
+
+module.exports = {
+  buildLiveSmsActionProbeCleanupSql,
+};
