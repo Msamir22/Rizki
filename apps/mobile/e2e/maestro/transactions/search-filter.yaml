@@ -35,7 +35,8 @@ appId: com.monyvi.app
 # Step 7: Deselect "Income" to filter it out
 - tapOn: "Income"
 
-# Step 8: Close filter modal (tap outside or confirm)
+# Step 8: Close filter modal
+- tapOn: "Done"
 - waitForAnimationToEnd
 
 # Step 9: Verify transactions page still visible
@@ -47,4 +48,5 @@ appId: com.monyvi.app
 
 - waitForAnimationToEnd
 - tapOn: "Income"
+- tapOn: "Done"
 - waitForAnimationToEnd
