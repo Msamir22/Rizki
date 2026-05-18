@@ -18,16 +18,14 @@ appId: com.monyvi.app
 
 - waitForAnimationToEnd
 
-# Step 4: Verify category picker modal opens
-# The modal should show category options
-- assertVisible: "Select Category"
+# Step 4: Verify quick edit modal opens
+- assertVisible: "Edit Category"
 
-# Step 5: Tap a different category from the list
-# Tap on any visible category name (e.g., first one in the list)
+# Step 5: Tap a different category chip from the quick edit modal
 - tapOn:
-    index: 0
-    text: ".*"
-    optional: true
+    id: "category-chip-.*"
+    index: 1
 
 # Step 6: Wait for modal to close and card to update
 - waitForAnimationToEnd
+- assertVisible: "Transactions"

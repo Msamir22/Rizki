@@ -10,6 +10,7 @@ const {
   run,
   wait,
 } = require("./e2e-preflight");
+const { getE2eSeedConfig } = require("./e2e-seed");
 
 const mobileRoot = join(__dirname, "..");
 const flowDir = join("e2e", "maestro", "live-sms-detection");
@@ -25,6 +26,8 @@ const actionProbeMarkers = [
   "BACKGROUND CONFIRM MARKET",
   "CLOSED CONFIRM MARKET",
 ];
+const releaseOnlyJourneyIds = new Set(["15"]);
+const isReleaseRun = process.env.E2E_RELEASE_BUILD === "1";
 
 function clearPermissionFlags(permission) {
   adb(
@@ -137,6 +140,40 @@ function runFlow(flow) {
   }
 
   run(maestroBin, ["test", join(flowDir, flow)], { cwd: mobileRoot });
+}
+
+function applyLocalE2eDefaults() {
+  if (process.env.E2E_SUPABASE_MODE !== "local") return;
+
+  process.env.E2E_SUPABASE_MODE = "local";
+  process.env.EXPO_PUBLIC_MONYVI_TEST_MODE ??= "e2e";
+  process.env.EXPO_PUBLIC_AI_SMS_PARSER_MODE ??= "fixture";
+  process.env.EXPO_PUBLIC_SUPABASE_URL ??= "http://10.0.2.2:54321";
+
+  if (process.env.E2E_SKIP_AUTH_BOOTSTRAP === "1") return;
+
+  const config = getE2eSeedConfig({
+    ...process.env,
+    E2E_SUPABASE_MODE: "local",
+  });
+
+  process.env.EXPO_PUBLIC_SUPABASE_URL = config.appSupabaseUrl;
+  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ??= config.anonKey;
+  process.env.MAESTRO_E2E_EMAIL ??= config.email;
+  process.env.MAESTRO_E2E_PASSWORD ??= config.password;
+}
+
+async function bootstrapCleanAuthenticatedSession() {
+  if (process.env.E2E_SUPABASE_MODE !== "local") return;
+  if (process.env.E2E_SKIP_AUTH_BOOTSTRAP === "1") return;
+
+  applyLocalE2eDefaults();
+  run(process.execPath, [join(__dirname, "e2e-seed.js"), "seed"], {
+    cwd: mobileRoot,
+  });
+  adb(["shell", "pm", "clear", appId]);
+  await ensureE2eAppReady();
+  runFlow("../helpers/ci-auth-bootstrap.yaml");
 }
 
 function getXmlAttribute(nodeText, attribute) {
@@ -500,19 +537,27 @@ function swipeRecentsCardAway(cardBounds) {
   ]);
 }
 
-function clearLiveSmsActionProbeRows() {
-  const markerFilters = actionProbeMarkers
+function buildLiveSmsActionProbeCleanupSql() {
+  const transactionMarkerFilters = actionProbeMarkers
     .map(
       (marker) => `counterparty like '%${marker}%' or note like '%${marker}%'`
     )
     .join(" or ");
+  const transferMarkerFilters = actionProbeMarkers
+    .map((marker) => `notes like '%${marker}%'`)
+    .join(" or ");
   const sql = [
-    `delete from transactions where ${markerFilters};`,
-    `delete from transfers where ${markerFilters};`,
+    `delete from transactions where ${transactionMarkerFilters};`,
+    `delete from transfers where ${transferMarkerFilters};`,
   ].join(" ");
 
+  return sql;
+}
+
+function clearLiveSmsActionProbeRows() {
+  const sql = buildLiveSmsActionProbeCleanupSql();
+
   adb(["shell", "run-as", appId, "sqlite3", "watermelon.db"], {
-    allowFailure: true,
     capture: true,
     input: sql,
   });
@@ -571,6 +616,15 @@ function sendBackgroundSms() {
     "BACKGROUND LIVE SMS TEST",
     "63\\.21",
   ]);
+}
+
+function sendForegroundSms() {
+  sendEmulatorSms(
+    "QNB",
+    "Purchase EGP 64.32 at FOREGROUND LIVE SMS TEST using card ending 5566"
+  );
+  wait(1000);
+  runFlow("live-sms-journey-16-foreground-real-sms-verification.yaml");
 }
 
 function sendBackgroundConfirmSms() {
@@ -761,14 +815,51 @@ const journeys = {
       runFlow("live-sms-journey-15-killed-app-confirm-verification.yaml");
     },
   },
+  16: {
+    flow: "live-sms-journey-16-foreground-real-sms.yaml",
+    prepare: () => {
+      grantSmsPermissions();
+      grantNotificationPermission();
+      collapseSystemUi();
+    },
+    after: sendForegroundSms,
+  },
 };
 
+function compareJourneyIds(left, right) {
+  return Number(left) - Number(right);
+}
+
+function getDefaultJourneyIds() {
+  if (isReleaseRun) {
+    return [...releaseOnlyJourneyIds].sort(compareJourneyIds);
+  }
+
+  return Object.keys(journeys)
+    .filter((id) => !releaseOnlyJourneyIds.has(id))
+    .sort(compareJourneyIds);
+}
+
+function normalizeJourneyId(id) {
+  return id.padStart(2, "0");
+}
+
+function logInfo(event, fields) {
+  process.stdout.write(
+    `${JSON.stringify({ level: "info", event, ...fields })}\n`
+  );
+}
+
 async function main() {
+  applyLocalE2eDefaults();
+
   const requested = process.argv.slice(2);
   const selected =
     requested.length > 0
-      ? requested.map((id) => id.padStart(2, "0"))
-      : Object.keys(journeys);
+      ? requested.map(normalizeJourneyId)
+      : getDefaultJourneyIds();
+
+  await bootstrapCleanAuthenticatedSession();
 
   for (const id of selected) {
     const journey = journeys[id];
@@ -776,18 +867,24 @@ async function main() {
       throw new Error(`Unknown live SMS journey: ${id}`);
     }
 
-    console.log(`\n=== Live SMS journey ${id}: ${journey.flow} ===`);
+    logInfo("liveSmsJourney.started", { id, flow: journey.flow });
     journey.prepare();
     forceStopApp();
     await ensureE2eAppReady();
     runFlow(journey.flow);
     await journey.after?.();
     collapseSystemUi();
-    console.log(`✓ Live SMS journey ${id} passed`);
+    logInfo("liveSmsJourney.passed", { id, flow: journey.flow });
   }
 }
 
-main().catch((error) => {
-  console.error(error instanceof Error ? error.message : String(error));
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((error) => {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exit(1);
+  });
+}
+
+module.exports = {
+  buildLiveSmsActionProbeCleanupSql,
+};

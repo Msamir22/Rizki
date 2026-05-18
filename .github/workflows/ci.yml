@@ -123,7 +123,7 @@ jobs:
         timeout-minutes: 30
 
       - name: Start local Supabase
-        run: npx supabase start
+        run: npm run supabase:start:local
         timeout-minutes: 10
 
       - name: Prepare local E2E environment
@@ -182,10 +182,7 @@ jobs:
           arch: x86_64
           profile: pixel_7
           disable-animations: true
-          script: |
-            adb install -r monyvi-android-debug/app-debug.apk
-            adb reverse tcp:8081 tcp:8081
-            npm run e2e:ci -w @monyvi/mobile
+          script: bash apps/mobile/scripts/run-android-e2e-ci.sh
 
       - name: Stop Metro
         if: always()
@@ -201,5 +198,6 @@ jobs:
           name: android-e2e-logs
           path: |
             metro.log
+            android-e2e-logcat.log
             ~/.maestro/tests
           retention-days: 7
